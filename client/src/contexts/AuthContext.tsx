@@ -41,21 +41,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // TODO: Remplacer par l'appel API réel
-      // Pour l'instant, données mockées
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simule une requête API
+      const { login: loginService } = await import('../services/authService');
+      const { user, token } = await loginService({ email, password });
       
-      // Mock user - À remplacer par la vraie authentification
-      const mockUser: User = {
-        id: '1',
-        email,
-        firstName: 'John',
-        lastName: 'Doe',
-        role: 'ADMINISTRATION',
-      };
-      
-      setUser(mockUser);
-      localStorage.setItem('user', JSON.stringify(mockUser));
+      setUser(user);
+      localStorage.setItem('user', JSON.stringify(user));
+      localStorage.setItem('token', token);
     } catch (error) {
       console.error('Login error:', error);
       throw error;
@@ -64,17 +55,22 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    const { logout: logoutService } = await import('../services/authService');
+    await logoutService();
     setUser(null);
-    localStorage.removeItem('user');
   };
 
-  // Récupérer l'utilisateur depuis localStorage au chargement
+  // Récupérer l'utilisateur depuis l'API au chargement
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
+    const loadUser = async () => {
+      const { getCurrentUser } = await import('../services/authService');
+      const user = await getCurrentUser();
+      if (user) {
+        setUser(user);
+      }
+    };
+    loadUser();
   }, []);
 
   const value: AuthContextType = {

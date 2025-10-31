@@ -18,6 +18,8 @@ export interface LoginResponse {
   token: string;
 }
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
 /**
  * Authentifie un utilisateur
  * 
@@ -25,29 +27,21 @@ export interface LoginResponse {
  * @returns L'utilisateur authentifié et un token JWT
  */
 export const login = async (credentials: LoginCredentials): Promise<LoginResponse> => {
-  // TODO: Remplacer par l'appel API réel
-  // const response = await fetch('/api/auth/login', {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify(credentials),
-  // });
-  // return response.json();
+  const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(credentials),
+  });
 
-  // Données mockées pour le développement
-  await new Promise(resolve => setTimeout(resolve, 1000)); // Simule une latence réseau
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors de la connexion');
+  }
 
-  const mockUser: User = {
-    id: '1',
-    email: credentials.email,
-    firstName: 'John',
-    lastName: 'Doe',
-    phone: '+221 77 123 45 67',
-    role: 'ADMINISTRATION' as UserRole,
-  };
-
+  const data = await response.json();
   return {
-    user: mockUser,
-    token: 'mock-jwt-token-' + Date.now(),
+    user: data.user,
+    token: data.token,
   };
 };
 
@@ -55,8 +49,7 @@ export const login = async (credentials: LoginCredentials): Promise<LoginRespons
  * Déconnecte l'utilisateur
  */
 export const logout = async (): Promise<void> => {
-  // TODO: Appel API pour invalider le token
-  // await fetch('/api/auth/logout', { method: 'POST' });
+  // Nettoyer le localStorage (le token sera invalidé côté serveur lors de sa prochaine utilisation)
   localStorage.removeItem('user');
   localStorage.removeItem('token');
 };
@@ -65,18 +58,28 @@ export const logout = async (): Promise<void> => {
  * Récupère l'utilisateur actuellement connecté
  */
 export const getCurrentUser = async (): Promise<User | null> => {
-  // TODO: Appel API réel
-  // const token = localStorage.getItem('token');
-  // const response = await fetch('/api/auth/me', {
-  //   headers: { Authorization: `Bearer ${token}` },
-  // });
-  // return response.json();
-
-  const storedUser = localStorage.getItem('user');
-  if (storedUser) {
-    return JSON.parse(storedUser);
+  const token = localStorage.getItem('token');
+  if (!token) {
+    return null;
   }
-  return null;
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) {
+      throw new Error('Token invalide');
+    }
+
+    const data = await response.json();
+    return data.user;
+  } catch (error) {
+    // Si le token est invalide, nettoyer le localStorage
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    return null;
+  }
 };
 
 /**

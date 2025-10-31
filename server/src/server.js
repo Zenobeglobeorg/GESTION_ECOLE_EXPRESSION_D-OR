@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import authRoutes from './api/authRoutes.js';
 
 dotenv.config();
 
@@ -20,8 +21,10 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'Expression d\'Or API is running' });
 });
 
-// Routes API (à implémenter)
-// app.use('/api/auth', authRoutes);
+// Routes API
+app.use('/api/auth', authRoutes);
+
+// Routes à implémenter
 // app.use('/api/users', userRoutes);
 // app.use('/api/students', studentRoutes);
 // app.use('/api/grades', gradeRoutes);
