@@ -1,10 +1,10 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 
 // Types pour les rôles utilisateurs
 export type UserRole = 'SUPER_ADMIN' | 'ADMINISTRATION' | 'TEACHER' | 'PARENT';
 
 export interface User {
-  id: string;
+  id: number;
   email: string;
   firstName: string;
   lastName: string;

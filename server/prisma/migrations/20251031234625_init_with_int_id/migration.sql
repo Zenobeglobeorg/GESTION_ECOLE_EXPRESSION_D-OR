@@ -3,7 +3,7 @@ CREATE TYPE "UserRole" AS ENUM ('SUPER_ADMIN', 'ADMINISTRATION', 'TEACHER', 'PAR
 
 -- CreateTable
 CREATE TABLE "users" (
-    "id" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
     "email" TEXT NOT NULL,
     "passwordHash" TEXT NOT NULL,
     "firstName" TEXT NOT NULL,

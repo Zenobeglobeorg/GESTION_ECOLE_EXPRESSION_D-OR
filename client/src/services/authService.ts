@@ -1,4 +1,4 @@
-import { User, UserRole } from '../contexts/AuthContext';
+import type { User, UserRole } from '../contexts/AuthContext';
 
 /**
  * Service d'authentification
@@ -78,6 +78,7 @@ export const getCurrentUser = async (): Promise<User | null> => {
     // Si le token est invalide, nettoyer le localStorage
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    console.log('Error:', error);
     return null;
   }
 };
@@ -85,8 +86,8 @@ export const getCurrentUser = async (): Promise<User | null> => {
 /**
  * Authentification SSO (Single Sign-On)
  */
-export const loginWithSSO = async (provider: 'google' | 'microsoft'): Promise<LoginResponse> => {
+/*export const loginWithSSO = async (provider: 'google' | 'microsoft'): Promise<LoginResponse> => {
   // TODO: Implémenter l'authentification SSO
   throw new Error('SSO not implemented yet');
-};
+};*/
 

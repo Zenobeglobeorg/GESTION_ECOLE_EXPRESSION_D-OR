@@ -14,15 +14,17 @@ datasource db {
 // Ceci est un schéma de base qui sera étendu progressivement
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
   passwordHash String
-  firstName String
-  lastName  String
-  phone     String?
-  role      UserRole @default(PARENT)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  firstName    String
+  lastName     String
+  phone        String?
+  role         UserRole @default(PARENT)
+  customRoleId Int?
+  customRole   Role?    @relation(fields: [customRoleId], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@map("users")
 }
@@ -32,5 +34,40 @@ enum UserRole {
   ADMINISTRATION
   TEACHER
   PARENT
+}
+
+model Role {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique // "Directeur", "Secrétaire", "Comptable", etc.
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  permissions Permission[]
+  users        User[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique // "users.create", "grades.validate", etc.
+  name        String   // "Créer des utilisateurs"
+  description String?
+  category    String   // "users", "students", "grades", etc.
+  
+  roles       Role[]
+
+  @@map("permissions")
+}
+
+model RoleToPermission {
+  roleId       Int
+  permissionId Int
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  
+  @@unique([roleId, permissionId])
+  @@map("_role_to_permission")
 }
 
