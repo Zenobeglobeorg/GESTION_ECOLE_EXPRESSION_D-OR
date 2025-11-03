@@ -6,6 +6,10 @@ import { DashboardSuperAdmin } from './pages/superadmin/DashboardSuperAdmin';
 import { AdminAccountsPage } from './pages/superadmin/AdminAccountsPage';
 import { UsersManagementPage } from './pages/superadmin/UsersManagementPage';
 import { RolesPermissionsPage } from './pages/superadmin/RolesPermissionsPage';
+import { DashboardAdmin } from './pages/administration/DashboardAdmin';
+import { StudentRegistrationPage } from './pages/administration/StudentRegistrationPage';
+import { DashboardTeacher } from './pages/teacher/DashboardTeacher';
+import { DashboardParent } from './pages/parent/DashboardParent';
 import { useAuth } from './hooks/useAuth';
 
 // Composant pour rediriger selon le rôle (doit être à l'intérieur du contexte)
@@ -27,11 +31,11 @@ const DashboardRoute = () => {
     case 'SUPER_ADMIN':
       return <Navigate to="/superadmin" replace />;
     case 'ADMINISTRATION':
-      return <div>Dashboard Admin (à implémenter)</div>;
+      return <Navigate to="/admin" replace />;
     case 'TEACHER':
-      return <div>Dashboard Enseignant (à implémenter)</div>;
+      return <Navigate to="/teacher" replace />;
     case 'PARENT':
-      return <div>Dashboard Parent (à implémenter)</div>;
+      return <Navigate to="/parent" replace />;
     default:
       return <Navigate to="/login" replace />;
   }
@@ -87,6 +91,53 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
                 <RolesPermissionsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/superadmin/students/new"
+            element={
+              <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                <StudentRegistrationPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Routes Administration */}
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute allowedRoles={['ADMINISTRATION']}>
+                <DashboardAdmin />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/students/new"
+            element={
+              <ProtectedRoute allowedRoles={['ADMINISTRATION']}>
+                <StudentRegistrationPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Routes Enseignant */}
+          <Route
+            path="/teacher"
+            element={
+              <ProtectedRoute allowedRoles={['TEACHER']}>
+                <DashboardTeacher />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Routes Parent */}
+          <Route
+            path="/parent"
+            element={
+              <ProtectedRoute allowedRoles={['PARENT']}>
+                <DashboardParent />
               </ProtectedRoute>
             }
           />

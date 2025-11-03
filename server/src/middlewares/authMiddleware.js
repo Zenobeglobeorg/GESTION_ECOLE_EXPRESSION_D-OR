@@ -37,4 +37,50 @@ export const requireRole = (...roles) => {
   };
 };
 
+// Vérifie qu'un utilisateur possède une permission spécifique
+export const requirePermission = (permissionKey) => {
+  return async (req, res, next) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ error: 'Non authentifié' });
+      }
+
+      // Super-Admin a toutes les permissions
+      if (req.user.role === 'SUPER_ADMIN') {
+        return next();
+      }
+
+      // Les admins peuvent être contrôlés via rôles personnalisés
+      const { PrismaClient } = await import('@prisma/client');
+      const prisma = new PrismaClient();
+
+      // Vérifier si l'utilisateur a un customRole qui possède la permission
+      const user = await prisma.user.findUnique({
+        where: { id: req.user.id },
+        select: {
+          role: true,
+          customRole: {
+            select: {
+              permissions: {
+                where: { key: permissionKey },
+                select: { id: true },
+              },
+            },
+          },
+        },
+      });
+
+      const hasPermission = Boolean(user?.customRole?.permissions?.length);
+      if (!hasPermission) {
+        return res.status(403).json({ error: 'Permission refusée' });
+      }
+
+      next();
+    } catch (err) {
+      console.error('requirePermission error:', err);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  };
+};
+
 

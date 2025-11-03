@@ -2,6 +2,11 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './api/authRoutes.js';
+import userRoutes from './api/userRoutes.js';
+import roleRoutes from './api/roleRoutes.js';
+import permissionRoutes from './api/permissionRoutes.js';
+import studentRoutes from './api/studentRoutes.js';
+import parentRoutes from './api/parentRoutes.js';
 
 dotenv.config();
 
@@ -23,10 +28,14 @@ app.get('/health', (req, res) => {
 
 // Routes API
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/roles', roleRoutes);
+app.use('/api/permissions', permissionRoutes);
+app.use('/api/students', studentRoutes);
+app.use('/api/parents', parentRoutes);
 
 // Routes à implémenter
-// app.use('/api/users', userRoutes);
-// app.use('/api/students', studentRoutes);
+// app.use('/api/classes', classRoutes);
 // app.use('/api/grades', gradeRoutes);
 
 // Route 404

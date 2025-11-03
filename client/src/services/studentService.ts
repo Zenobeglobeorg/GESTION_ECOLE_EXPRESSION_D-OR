@@ -1,105 +1,197 @@
-/**
- * Service de gestion des élèves
- * 
- * Contient toutes les fonctions pour interagir avec les données des élèves.
- * Utilise des données mockées pour le développement frontend-first.
- */
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 export interface Student {
-  id: string;
+  id: number;
   firstName: string;
   lastName: string;
   dateOfBirth: string;
-  classId: string;
-  className?: string;
-  parentIds: string[];
-  medicalInfo?: string;
+  classId?: number;
+  class?: {
+    id: number;
+    name: string;
+    level?: string;
+  };
+  schoolOfOrigin?: string;
+  hasDisability: boolean;
+  isOrphan: boolean;
+  orphanType?: string;
+  enrollmentDate: string;
+  fatherName?: string;
+  fatherAddress?: string;
+  fatherContact?: string;
+  motherName?: string;
+  motherAddress?: string;
+  motherContact?: string;
+  guardianName?: string;
+  guardianContact?: string;
+  authorizedPerson1Name?: string;
+  authorizedPerson1Tel?: string;
+  authorizedPerson2Name?: string;
+  authorizedPerson2Tel?: string;
+  paymentOption: 'MONTHLY' | 'QUARTERLY' | 'ANNUAL';
+  lastPaymentDate?: string;
+  parentId: number;
+  parent: {
+    id: number;
+    email: string;
+    firstName: string;
+    lastName: string;
+  };
+}
+
+export interface CreateStudentData {
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string;
+  classId?: number;
+  schoolOfOrigin?: string;
+  hasDisability?: boolean;
+  isOrphan?: boolean;
+  orphanType?: string;
+  fatherName?: string;
+  fatherAddress?: string;
+  fatherContact?: string;
+  motherName?: string;
+  motherAddress?: string;
+  motherContact?: string;
+  guardianName?: string;
+  guardianContact?: string;
+  authorizedPerson1Name?: string;
+  authorizedPerson1Tel?: string;
+  authorizedPerson2Name?: string;
+  authorizedPerson2Tel?: string;
+  paymentOption?: 'MONTHLY' | 'QUARTERLY' | 'ANNUAL';
+  lastPaymentDate?: string;
+  parentEmail: string;
+}
+
+export interface CreateStudentResponse {
+  student: Student;
+  parent: {
+    id: number;
+    email: string;
+    firstName: string;
+    lastName: string;
+    wasCreated: boolean;
+  };
 }
 
 /**
- * Récupère tous les élèves d'une classe
+ * Récupère le token JWT depuis localStorage
  */
-export const getStudentsByClass = async (classId: string): Promise<Student[]> => {
-  // TODO: Appel API réel
-  // const response = await fetch(`/api/classes/${classId}/students`);
-  // return response.json();
-
-  // Données mockées
-  await new Promise(resolve => setTimeout(resolve, 500));
-
-  return [
-    {
-      id: '1',
-      firstName: 'Aminata',
-      lastName: 'Diop',
-      dateOfBirth: '2015-03-15',
-      classId,
-      className: 'CM1 A',
-      parentIds: ['1'],
-    },
-    {
-      id: '2',
-      firstName: 'Ibrahima',
-      lastName: 'Diallo',
-      dateOfBirth: '2015-07-22',
-      classId,
-      className: 'CM1 A',
-      parentIds: ['2'],
-    },
-    {
-      id: '3',
-      firstName: 'Fatou',
-      lastName: 'Sarr',
-      dateOfBirth: '2015-11-08',
-      classId,
-      className: 'CM1 A',
-      parentIds: ['3'],
-    },
-  ];
+const getToken = (): string | null => {
+  return localStorage.getItem('token');
 };
 
 /**
- * Récupère les informations d'un élève spécifique
+ * Récupère tous les élèves
  */
-export const getStudentById = async (studentId: string): Promise<Student | null> => {
-  // TODO: Appel API réel
-  // const response = await fetch(`/api/students/${studentId}`);
-  // return response.json();
+export const getStudents = async (): Promise<Student[]> => {
+  const token = getToken();
+  if (!token) throw new Error('Non authentifié');
 
-  await new Promise(resolve => setTimeout(resolve, 300));
+  const response = await fetch(`${API_BASE_URL}/api/students`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
 
-  return {
-    id: studentId,
-    firstName: 'Aminata',
-    lastName: 'Diop',
-    dateOfBirth: '2015-03-15',
-    classId: '1',
-    className: 'CM1 A',
-    parentIds: ['1'],
-    medicalInfo: 'Aucune allergie connue',
-  };
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors de la récupération des élèves');
+  }
+
+  return response.json();
 };
 
 /**
- * Récupère tous les élèves associés à un parent
+ * Crée un nouvel élève
  */
-export const getStudentsByParent = async (parentId: string): Promise<Student[]> => {
-  // TODO: Appel API réel
-  // const response = await fetch(`/api/parents/${parentId}/students`);
-  // return response.json();
+export const createStudent = async (studentData: CreateStudentData): Promise<CreateStudentResponse> => {
+  const token = getToken();
+  if (!token) throw new Error('Non authentifié');
 
-  await new Promise(resolve => setTimeout(resolve, 500));
-
-  return [
-    {
-      id: '1',
-      firstName: 'Aminata',
-      lastName: 'Diop',
-      dateOfBirth: '2015-03-15',
-      classId: '1',
-      className: 'CM1 A',
-      parentIds: [parentId],
+  const response = await fetch(`${API_BASE_URL}/api/students`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
     },
-  ];
+    body: JSON.stringify(studentData),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors de la création de l\'élève');
+  }
+
+  return response.json();
 };
 
+/**
+ * Récupère un élève par ID
+ */
+export const getStudentById = async (studentId: number): Promise<Student> => {
+  const token = getToken();
+  if (!token) throw new Error('Non authentifié');
+
+  const response = await fetch(`${API_BASE_URL}/api/students/${studentId}`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors de la récupération de l\'élève');
+  }
+
+  return response.json();
+};
+
+/**
+ * Met à jour un élève
+ */
+export const updateStudent = async (studentId: number, studentData: Partial<CreateStudentData>): Promise<Student> => {
+  const token = getToken();
+  if (!token) throw new Error('Non authentifié');
+
+  const response = await fetch(`${API_BASE_URL}/api/students/${studentId}`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(studentData),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors de la mise à jour de l\'élève');
+  }
+
+  return response.json();
+};
+
+/**
+ * Supprime un élève
+ */
+export const deleteStudent = async (studentId: number): Promise<void> => {
+  const token = getToken();
+  if (!token) throw new Error('Non authentifié');
+
+  const response = await fetch(`${API_BASE_URL}/api/students/${studentId}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors de la suppression de l\'élève');
+  }
+};

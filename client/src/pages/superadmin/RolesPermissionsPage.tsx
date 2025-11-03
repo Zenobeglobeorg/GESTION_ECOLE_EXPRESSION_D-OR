@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sidebar } from '../../components/layout/Sidebar';
 import { MobileSidebar } from '../../components/layout/MobileSidebar';
 import { Navbar } from '../../components/layout/Navbar';
@@ -6,21 +6,9 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
-
-interface Permission {
-  id: number;
-  key: string;
-  name: string;
-  description?: string;
-  category: string;
-}
-
-interface Role {
-  id: number;
-  name: string;
-  description?: string;
-  permissions: Permission[];
-}
+import * as roleService from '../../services/roleService';
+import * as permissionService from '../../services/permissionService';
+import type { Permission, Role } from '../../services/roleService';
 
 export const RolesPermissionsPage = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -29,12 +17,37 @@ export const RolesPermissionsPage = () => {
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [roles, setRoles] = useState<Role[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [roleFormData, setRoleFormData] = useState({
     name: '',
     description: '',
     selectedPermissions: [] as number[],
   });
+
+  // Charger les données au montage
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const [rolesData, permissionsData] = await Promise.all([
+        roleService.getRoles(),
+        permissionService.getPermissions(),
+      ]);
+      setRoles(rolesData);
+      setPermissions(permissionsData);
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors du chargement des données');
+      console.error('Erreur:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Groupement des permissions par catégorie
   const permissionsByCategory = permissions.reduce((acc, perm) => {
@@ -47,14 +60,27 @@ export const RolesPermissionsPage = () => {
 
   const handleCreateRole = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Appel API pour créer le rôle
-    console.log('Créer rôle:', roleFormData);
-    setIsCreateRoleModalOpen(false);
-    setRoleFormData({
-      name: '',
-      description: '',
-      selectedPermissions: [],
-    });
+    try {
+      setError(null);
+      if (roleFormData.selectedPermissions.length === 0) {
+        throw new Error('Veuillez sélectionner au moins une permission');
+      }
+      await roleService.createRole({
+        name: roleFormData.name,
+        description: roleFormData.description,
+        permissionIds: roleFormData.selectedPermissions,
+      });
+      setIsCreateRoleModalOpen(false);
+      setRoleFormData({
+        name: '',
+        description: '',
+        selectedPermissions: [],
+      });
+      await loadData(); // Recharger les données
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors de la création du rôle');
+      console.error('Erreur:', err);
+    }
   };
 
   const handleTogglePermission = (permissionId: number) => {
@@ -68,8 +94,17 @@ export const RolesPermissionsPage = () => {
 
   const handleDeleteRole = async (roleId: number) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer ce rôle ? Les utilisateurs avec ce rôle devront être réassignés.')) {
-      // TODO: Appel API pour supprimer
-      console.log('Supprimer rôle:', roleId);
+      try {
+        setError(null);
+        await roleService.deleteRole(roleId);
+        if (selectedRole?.id === roleId) {
+          setSelectedRole(null);
+        }
+        await loadData(); // Recharger les données
+      } catch (err: any) {
+        setError(err.message || 'Erreur lors de la suppression du rôle');
+        console.error('Erreur:', err);
+      }
     }
   };
 
@@ -81,41 +116,6 @@ export const RolesPermissionsPage = () => {
     { key: 'system', label: 'Système', icon: '🔧' },
   ];
 
-  // Permissions par défaut (à remplacer par les vraies permissions de la DB)
-  const defaultPermissions: Permission[] = [
-    // Users
-    { id: 1, key: 'users.create', name: 'Créer des utilisateurs', category: 'users', description: 'Créer des comptes Enseignants et Parents' },
-    { id: 2, key: 'users.read', name: 'Lire les utilisateurs', category: 'users', description: 'Consulter la liste des utilisateurs' },
-    { id: 3, key: 'users.update', name: 'Modifier les utilisateurs', category: 'users', description: 'Modifier les informations des utilisateurs' },
-    { id: 4, key: 'users.delete', name: 'Supprimer des utilisateurs', category: 'users', description: 'Supprimer ou suspendre des utilisateurs' },
-    
-    // Students
-    { id: 5, key: 'students.create', name: 'Créer des dossiers élèves', category: 'students', description: 'Créer de nouveaux dossiers élèves' },
-    { id: 6, key: 'students.read', name: 'Consulter les dossiers', category: 'students', description: 'Voir les informations des élèves' },
-    { id: 7, key: 'students.update', name: 'Modifier les dossiers', category: 'students', description: 'Modifier les dossiers élèves' },
-    { id: 8, key: 'students.delete', name: 'Archiver des dossiers', category: 'students', description: 'Archiver des dossiers élèves' },
-    
-    // Academic
-    { id: 9, key: 'classes.create', name: 'Créer des classes', category: 'academic', description: 'Créer de nouvelles classes' },
-    { id: 10, key: 'classes.manage', name: 'Gérer les classes', category: 'academic', description: 'Gérer les classes et matières' },
-    { id: 11, key: 'grades.validate', name: 'Valider les notes', category: 'academic', description: 'Valider les notes saisies par les enseignants' },
-    { id: 12, key: 'grades.modify', name: 'Modifier les notes', category: 'academic', description: 'Modifier les notes après validation' },
-    { id: 13, key: 'reports.generate', name: 'Générer les bulletins', category: 'academic', description: 'Générer les bulletins de notes' },
-    
-    // Administration
-    { id: 14, key: 'attendance.manage', name: 'Gérer les présences', category: 'administration', description: 'Gérer les présences et absences' },
-    { id: 15, key: 'fees.manage', name: 'Gérer les frais', category: 'administration', description: 'Gérer les frais de scolarité' },
-    { id: 16, key: 'schedule.manage', name: 'Gérer les emplois du temps', category: 'administration', description: 'Créer et modifier les emplois du temps' },
-    { id: 17, key: 'announcements.create', name: 'Créer des annonces', category: 'administration', description: 'Créer des annonces générales' },
-    
-    // System
-    { id: 18, key: 'system.settings', name: 'Paramètres système', category: 'system', description: 'Accéder aux paramètres système' },
-  ];
-
-  // Initialiser les permissions si elles sont vides
-  if (permissions.length === 0) {
-    setPermissions(defaultPermissions);
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -143,11 +143,23 @@ export const RolesPermissionsPage = () => {
             </Button>
           </div>
 
+          {/* Message d'erreur */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+              {error}
+            </div>
+          )}
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Liste des Rôles */}
             <div className="lg:col-span-1">
               <Card title="Rôles Créés" className="border-0 shadow-lg">
-                {roles.length === 0 ? (
+                {isLoading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                    <p className="text-gray-500 text-sm">Chargement...</p>
+                  </div>
+                ) : roles.length === 0 ? (
                   <div className="text-center py-8">
                     <p className="text-gray-500 text-sm">Aucun rôle personnalisé créé</p>
                     <p className="text-gray-400 text-xs mt-1">Créez votre premier rôle</p>
@@ -297,7 +309,7 @@ export const RolesPermissionsPage = () => {
             
             <div className="max-h-96 overflow-y-auto space-y-6 border border-gray-200 rounded-lg p-4">
               {categories.map((category) => {
-                const categoryPerms = defaultPermissions.filter(p => p.category === category.key);
+                const categoryPerms = permissions.filter(p => p.category === category.key);
                 
                 return (
                   <div key={category.key}>

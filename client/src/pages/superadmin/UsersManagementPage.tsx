@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sidebar } from '../../components/layout/Sidebar';
 import { MobileSidebar } from '../../components/layout/MobileSidebar';
 import { Navbar } from '../../components/layout/Navbar';
@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
 import type { UserRole } from '../../contexts/AuthContext';
+import * as userService from '../../services/userService';
 
 interface User {
   id: number;
@@ -24,6 +25,8 @@ export const UsersManagementPage = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<UserRole | 'ALL'>('ALL');
   const [users, setUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     email: '',
@@ -34,6 +37,25 @@ export const UsersManagementPage = () => {
     role: 'ADMINISTRATION' as UserRole,
   });
 
+  // Charger les utilisateurs au montage
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const loadUsers = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const data = await userService.getUsers();
+      setUsers(data);
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors du chargement des utilisateurs');
+      console.error('Erreur:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Filtrer les utilisateurs par rôle
   const filteredUsers = selectedRole === 'ALL' 
     ? users 
@@ -41,29 +63,41 @@ export const UsersManagementPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Appel API pour créer l'utilisateur
-    console.log('Créer utilisateur:', formData);
-    setIsCreateModalOpen(false);
-    setFormData({
-      email: '',
-      password: '',
-      firstName: '',
-      lastName: '',
-      phone: '',
-      role: 'ADMINISTRATION',
-    });
+    try {
+      setError(null);
+      await userService.createUser(formData);
+      setIsCreateModalOpen(false);
+      setFormData({
+        email: '',
+        password: '',
+        firstName: '',
+        lastName: '',
+        phone: '',
+        role: 'ADMINISTRATION',
+      });
+      await loadUsers(); // Recharger la liste
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors de la création de l\'utilisateur');
+      console.error('Erreur:', err);
+    }
   };
 
   const handleDelete = async (userId: number) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
-      // TODO: Appel API pour supprimer
-      console.log('Supprimer utilisateur:', userId);
+      try {
+        setError(null);
+        await userService.deleteUser(userId);
+        await loadUsers(); // Recharger la liste
+      } catch (err: any) {
+        setError(err.message || 'Erreur lors de la suppression');
+        console.error('Erreur:', err);
+      }
     }
   };
 
   const handleSuspend = async (userId: number) => {
     if (window.confirm('Êtes-vous sûr de vouloir suspendre cet utilisateur ?')) {
-      // TODO: Appel API pour suspendre
+      // TODO: Implémenter la suspension (nécessite un champ isActive dans le modèle User)
       console.log('Suspendre utilisateur:', userId);
     }
   };
@@ -166,9 +200,21 @@ export const UsersManagementPage = () => {
             </div>
           </Card>
 
+          {/* Message d'erreur */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+              {error}
+            </div>
+          )}
+
           {/* Tableau des utilisateurs */}
           <Card className="border-0 shadow-lg">
-            {filteredUsers.length === 0 ? (
+            {isLoading ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-gray-600">Chargement des utilisateurs...</p>
+              </div>
+            ) : filteredUsers.length === 0 ? (
               <div className="text-center py-12">
                 <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
                   <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

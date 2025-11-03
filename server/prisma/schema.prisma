@@ -10,9 +10,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// À COMPLÉTER selon les besoins du projet
-// Ceci est un schéma de base qui sera étendu progressivement
-
+// Modèle Utilisateur
 model User {
   id           Int      @id @default(autoincrement())
   email        String   @unique
@@ -26,6 +24,10 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  // Relations
+  students     Student[] // Un parent peut avoir plusieurs enfants
+  classes      Class[]   // Classes assignées (pour enseignants)
+
   @@map("users")
 }
 
@@ -36,38 +38,263 @@ enum UserRole {
   PARENT
 }
 
+// Modèle Rôles Personnalisés
 model Role {
   id          Int      @id @default(autoincrement())
-  name        String   @unique // "Directeur", "Secrétaire", "Comptable", etc.
+  name        String   @unique
   description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
   permissions Permission[]
+  // Opposite side of RoleToPermission relation
+  roleToPermissions RoleToPermission[] @relation("RoleToPermission_role")
   users        User[]
 
   @@map("roles")
 }
 
+// Modèle Permissions
 model Permission {
   id          Int      @id @default(autoincrement())
-  key         String   @unique // "users.create", "grades.validate", etc.
-  name        String   // "Créer des utilisateurs"
+  key         String   @unique
+  name        String
   description String?
-  category    String   // "users", "students", "grades", etc.
+  category    String
   
   roles       Role[]
+  // Opposite side of RoleToPermission relation
+  roleToPermissions RoleToPermission[] @relation("RoleToPermission_permission")
 
   @@map("permissions")
 }
 
+// Table de jonction Rôles-Permissions
 model RoleToPermission {
   roleId       Int
   permissionId Int
-  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
-  
+
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade, name: "RoleToPermission_role")
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade, name: "RoleToPermission_permission")
+
   @@unique([roleId, permissionId])
   @@map("_role_to_permission")
 }
 
+// Add explicit opposite relation fields on Role and Permission models:
+
+// model Role {
+//   ...
+//   roleToPermissions RoleToPermission[]
+// }
+
+// model Permission {
+//   ...
+//   roleToPermissions RoleToPermission[]
+// }
+
+// Modèle Élève
+model Student {
+  id                Int      @id @default(autoincrement())
+  firstName         String
+  lastName          String
+  dateOfBirth       DateTime
+  classId           Int?
+  class             Class?   @relation(fields: [classId], references: [id])
+  schoolOfOrigin     String?  // École de provenance
+  hasDisability     Boolean  @default(false)
+  isOrphan          Boolean  @default(false)
+  orphanType        String?  // "Père", "Mère", ou les deux
+  enrollmentDate    DateTime @default(now())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Informations sur les parents/tuteurs
+  fatherName        String?
+  fatherAddress     String?
+  fatherContact     String?
+  motherName        String?
+  motherAddress     String?
+  motherContact     String?
+  guardianName      String?
+  guardianContact   String?
+
+  // Personnes autorisées à faire sortir l'élève
+  authorizedPerson1Name String?
+  authorizedPerson1Tel  String?
+  authorizedPerson2Name String?
+  authorizedPerson2Tel  String?
+
+  // Option de paiement
+  paymentOption     PaymentOption @default(MONTHLY)
+  lastPaymentDate   DateTime?     // Date limite de paiement (05 MARS 2026)
+
+  // Relation avec le(s) parent(s)
+  parentId          Int
+  parent            User     @relation(fields: [parentId], references: [id])
+
+  // Autres relations
+  grades            Grade[]
+  attendances       Attendance[]
+
+  @@map("students")
+}
+
+enum PaymentOption {
+  MONTHLY      // Option 1 : Tous les mois (le 5 du mois)
+  QUARTERLY    // Option 2 : Tous les trimestres
+  ANNUAL       // Option 3 : Une ou deux tranches (scolarité annuelle)
+}
+
+// Modèle Classe
+model Class {
+  id            Int       @id @default(autoincrement())
+  name          String    @unique // Ex: "CM1 A", "Pré-primaire"
+  level         String    // "Pré-primaire", "Primaire"
+  academicYear  String    // "2024-2025"
+  teacherId     Int?
+  teacher       User?     @relation(fields: [teacherId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  students      Student[]
+  schedules     Schedule[]
+  attendances   Attendance[] // Présences pour cette classe
+
+  @@map("classes")
+}
+
+// Modèle Note
+model Grade {
+  id            Int      @id @default(autoincrement())
+  studentId     Int
+  student       Student  @relation(fields: [studentId], references: [id])
+  evaluationId  Int
+  evaluation    Evaluation @relation(fields: [evaluationId], references: [id])
+  score         Float?   // Note sur 10 (pour primaire)
+  evaluationText String? // "Acquis", "Non acquis", smileys (pour pré-primaire)
+  teacherComments String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("grades")
+}
+
+// Modèle Évaluation
+model Evaluation {
+  id            Int      @id @default(autoincrement())
+  name          String
+  palierId      Int
+  palier        Palier   @relation(fields: [palierId], references: [id])
+  competencyId  Int
+  competency    Competency @relation(fields: [competencyId], references: [id])
+  date          DateTime
+  type          EvaluationType
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  grades        Grade[]
+
+  @@map("evaluations")
+}
+
+enum EvaluationType {
+  NUMERIC  // Note sur 10
+  SMILEY   // Smileys pour pré-primaire
+  ACQUIRED // Acquis / Non acquis
+}
+
+// Modèle Palier (Période mensuelle)
+model Palier {
+  id              Int      @id @default(autoincrement())
+  name            String   // Ex: "Paliers 1 - Octobre"
+  startDate       DateTime
+  endDate         DateTime
+  academicYearId  Int
+  academicYear    AcademicYear @relation(fields: [academicYearId], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  evaluations     Evaluation[]
+
+  @@map("paliers")
+}
+
+// Modèle Année Académique
+model AcademicYear {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique // "2024-2025"
+  startDate   DateTime
+  endDate     DateTime
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  paliers     Palier[]
+
+  @@map("academic_years")
+}
+
+// Modèle Compétence
+model Competency {
+  id          Int      @id @default(autoincrement())
+  name        String
+  subjectId   Int
+  subject     Subject  @relation(fields: [subjectId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  evaluations Evaluation[]
+
+  @@map("competencies")
+}
+
+// Modèle Matière
+model Subject {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique // "MATHÉMATIQUES", "FRANÇAIS", "EDM&EAS"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  competencies Competency[]
+  schedules    Schedule[]
+
+  @@map("subjects")
+}
+
+// Modèle Présence
+model Attendance {
+  id          Int      @id @default(autoincrement())
+  studentId  Int
+  student    Student  @relation(fields: [studentId], references: [id])
+  classId    Int
+  class      Class    @relation(fields: [classId], references: [id])
+  date       DateTime
+  status     AttendanceStatus
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("attendances")
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+}
+
+// Modèle Emploi du Temps
+model Schedule {
+  id          Int      @id @default(autoincrement())
+  classId     Int
+  class       Class    @relation(fields: [classId], references: [id])
+  dayOfWeek   Int      // 1 = Lundi, 2 = Mardi, etc.
+  startTime   String   // "07:30"
+  endTime     String   // "14:30"
+  subjectId   Int?
+  subject     Subject? @relation(fields: [subjectId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("schedules")
+}
