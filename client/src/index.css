@@ -1,1 +1,13 @@
 @import "tailwindcss";
+
+/* 1. Configuration du Mode Sombre (Obligatoire pour v4) */
+/* Cela dit à Tailwind : "Active le mode sombre quand la classe 'dark' est présente" */
+@variant dark (&:where(.dark, .dark *));
+
+/* 2. Styles globaux */
+@layer base {
+  body {
+    /* Fond clair/sombre et texte noir/blanc */
+    @apply bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-300;
+  }
+}

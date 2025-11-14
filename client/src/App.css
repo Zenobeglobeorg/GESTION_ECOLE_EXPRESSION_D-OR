@@ -1,9 +1,4 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
-}
+
 
 .logo {
   height: 6em;
@@ -39,4 +34,21 @@
 
 .read-the-docs {
   color: #888;
+}
+
+/* Animation de fondu pour le changement de page dans parent */
+@keyframes fadeInPage {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Classe à appliquer sur le conteneur de l'Outlet */
+.page-transition {
+  animation: fadeInPage 0.4s ease-out forwards;
 }

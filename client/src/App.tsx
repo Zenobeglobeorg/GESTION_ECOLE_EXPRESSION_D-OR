@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
+import './index.css'
 import { ProtectedRoute } from './components/routing/ProtectedRoute';
 import { LoginPage } from './pages/public/LoginPage';
 import { DashboardSuperAdmin } from './pages/superadmin/DashboardSuperAdmin';
@@ -9,8 +11,16 @@ import { RolesPermissionsPage } from './pages/superadmin/RolesPermissionsPage';
 import { DashboardAdmin } from './pages/administration/DashboardAdmin';
 import { StudentRegistrationPage } from './pages/administration/StudentRegistrationPage';
 import { DashboardTeacher } from './pages/teacher/DashboardTeacher';
-import { DashboardParent } from './pages/parent/DashboardParent';
+import { ParentLayout } from './components/parent/ParentLayout';
+import { ParentDashboardHome } from './pages/parent/ParentDashboardHome';
+import ProfilParentPage from './pages/parent/ProfilParentPage';
+import EmploiDuTempsPage from './pages/parent/EmploiDuTempsPage';
+import PresencesPage from './pages/parent/PresencesPage';
+import FraisScolaritePage from './pages/parent/FraisScolaritePage';
+import NotificationsPage from './pages/parent/NotificationsPage';
+import SettingsPage from './pages/parent/SettingsPage';
 import { useAuth } from './hooks/useAuth';
+import NotesBulletinsPage from './pages/parent/NotesBulletinsPage';
 
 // Composant pour rediriger selon le rôle (doit être à l'intérieur du contexte)
 const DashboardRoute = () => {
@@ -44,6 +54,7 @@ const DashboardRoute = () => {
 function App() {
   return (
     <AuthProvider>
+      <ThemeProvider>
       <BrowserRouter>
         <Routes>
           {/* Routes publiques */}
@@ -137,15 +148,25 @@ function App() {
             path="/parent"
             element={
               <ProtectedRoute allowedRoles={['PARENT']}>
-                <DashboardParent />
+                <ParentLayout />
               </ProtectedRoute>
             }
-          />
-
+          >
+            <Route index element={<ParentDashboardHome />} />
+            <Route path="profile" element={<ProfilParentPage />} />
+            <Route path="grades" element={<NotesBulletinsPage />} />
+            <Route path="schedule" element={<EmploiDuTempsPage />} />
+            <Route path="attendance" element={<PresencesPage />} />
+            <Route path="fees" element={<FraisScolaritePage />} />
+            <Route path="notification" element={<NotificationsPage />} />
+            <Route path="settings" element={<SettingsPage />} />
+          </Route>
           {/* Route par défaut */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
+         
         </Routes>
       </BrowserRouter>
+      </ThemeProvider>
     </AuthProvider>
   );
 }
