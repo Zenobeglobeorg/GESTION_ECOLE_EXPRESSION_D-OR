@@ -15,8 +15,7 @@ export const DashboardSuperAdmin = () => {
       title: 'Comptes Administration',
       value: '0',
       icon: '👥',
-      color: 'bg-blue-500',
-      gradient: 'from-blue-500 to-blue-600',
+      gradient: 'from-yellow-400 via-yellow-500 to-yellow-600',
       description: 'Comptes créés',
       change: '+0%',
     },
@@ -24,8 +23,7 @@ export const DashboardSuperAdmin = () => {
       title: 'Enseignants',
       value: '0',
       icon: '👨‍🏫',
-      color: 'bg-green-500',
-      gradient: 'from-green-500 to-green-600',
+      gradient: 'from-blue-500 via-blue-600 to-blue-700',
       description: 'Enseignants actifs',
       change: '+0%',
     },
@@ -33,8 +31,7 @@ export const DashboardSuperAdmin = () => {
       title: 'Parents',
       value: '0',
       icon: '👨‍👩‍👧',
-      color: 'bg-purple-500',
-      gradient: 'from-purple-500 to-purple-600',
+      gradient: 'from-yellow-500 via-yellow-600 to-yellow-700',
       description: 'Familles inscrites',
       change: '+0%',
     },
@@ -42,8 +39,7 @@ export const DashboardSuperAdmin = () => {
       title: 'Élèves',
       value: '0',
       icon: '🎓',
-      color: 'bg-yellow-500',
-      gradient: 'from-yellow-400 to-yellow-500',
+      gradient: 'from-blue-400 via-blue-500 to-blue-600',
       description: 'Élèves inscrits',
       change: '+0%',
     },
@@ -78,7 +74,7 @@ export const DashboardSuperAdmin = () => {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
         </svg>
       ),
-      color: 'bg-purple-50 text-purple-600 hover:bg-purple-100',
+      color: 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100',
     },
     {
       label: 'Vue globale',
@@ -88,7 +84,7 @@ export const DashboardSuperAdmin = () => {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
         </svg>
       ),
-      color: 'bg-green-50 text-green-600 hover:bg-green-100',
+      color: 'bg-blue-50 text-blue-700 hover:bg-blue-100',
     },
   ];
 
@@ -132,37 +128,26 @@ export const DashboardSuperAdmin = () => {
 
           {/* Statistiques avec design amélioré */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {stats.map((stat, index) => {
-              const isYellow = stat.color === 'bg-yellow-500';
-              const gradientClass = isYellow 
-                ? 'bg-gradient-to-br from-yellow-400 to-yellow-500'
-                : stat.gradient.includes('blue')
-                ? 'bg-gradient-to-br from-blue-500 to-blue-600'
-                : stat.gradient.includes('green')
-                ? 'bg-gradient-to-br from-green-500 to-green-600'
-                : 'bg-gradient-to-br from-purple-500 to-purple-600';
-              
-              return (
-                <Card
-                  key={index}
-                  className={`overflow-hidden hover:shadow-xl transition-all duration-300 border-0 ${gradientClass} transform hover:scale-105`}
-                >
-                  <div className="p-6 text-white">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="w-12 h-12 rounded-lg bg-white bg-opacity-20 backdrop-blur-sm flex items-center justify-center text-2xl">
-                        {stat.icon}
-                      </div>
-                      <span className="text-xs font-semibold bg-white bg-opacity-20 backdrop-blur-sm px-2 py-1 rounded">
-                        {stat.change}
-                      </span>
+            {stats.map((stat, index) => (
+              <Card
+                key={index}
+                className={`overflow-hidden hover:shadow-xl transition-all duration-300 border-0 bg-gradient-to-br ${stat.gradient} transform hover:scale-105`}
+              >
+                <div className="p-6 text-white">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-12 h-12 rounded-lg bg-white bg-opacity-20 backdrop-blur-sm flex items-center justify-center text-2xl">
+                      {stat.icon}
                     </div>
-                    <p className="text-white text-opacity-90 text-sm mb-1 font-medium">{stat.title}</p>
-                    <p className="text-3xl font-bold mb-1">{stat.value}</p>
-                    <p className="text-xs text-white text-opacity-75">{stat.description}</p>
+                    <span className="text-xs font-semibold bg-white bg-opacity-20 backdrop-blur-sm px-2 py-1 rounded">
+                      {stat.change}
+                    </span>
                   </div>
-                </Card>
-              );
-            })}
+                  <p className="text-white text-opacity-90 text-sm mb-1 font-medium">{stat.title}</p>
+                  <p className="text-3xl font-bold mb-1">{stat.value}</p>
+                  <p className="text-xs text-white text-opacity-75">{stat.description}</p>
+                </div>
+              </Card>
+            ))}
           </div>
 
           {/* Actions rapides avec design jaune/bleu */}

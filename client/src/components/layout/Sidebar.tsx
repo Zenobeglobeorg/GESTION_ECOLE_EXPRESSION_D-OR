@@ -1,27 +1,38 @@
-//import { useState } from 'react';
+// Importation des hooks et composants nécessaires depuis React Router DOM et notre hook d'authentification personnalisé.
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 
+// Définition du type pour un élément du menu de la sidebar
 interface MenuItem {
-  label: string;
-  icon: React.ReactNode;
-  path: string;
-  badge?: number;
+  label: string;           // Texte du menu
+  icon: React.ReactNode;   // Icône SVG de l'élément
+  path: string;            // Chemin de navigation
+  badge?: number;          // (optionnel) Nombre pour afficher une pastille/badge
 }
 
+// Props attendues pour la Sidebar
 interface SidebarProps {
-  isCollapsed: boolean;
-  onToggle: () => void;
+  isCollapsed: boolean;    // Définit si la sidebar est repliée (true = affichée en petit)
+  onToggle: () => void;    // Fonction appelée pour étendre/réduire la sidebar
 }
 
+// Composant principal Sidebar
 export const Sidebar = ({ isCollapsed, onToggle }: SidebarProps) => {
+  // Récupère la fonction de logout depuis le hook d'authentification
   const { logout } = useAuth();
+
+  // Permet la navigation programmatique dans l'app
   const navigate = useNavigate();
+
+  // Permet d'obtenir le chemin actuel de la page
   const location = useLocation();
 
+  // Définition du tableau des éléments du menu principal de la sidebar.
+  // Chacun correspond à une page principale de l'application.
   const menuItems: MenuItem[] = [
     {
       label: 'Tableau de Bord',
+      // Icône pour le menu Tableau de Bord
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -31,6 +42,7 @@ export const Sidebar = ({ isCollapsed, onToggle }: SidebarProps) => {
     },
     {
       label: 'Inscription Élèves',
+      // Icône pour Inscription Élèves
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
@@ -40,6 +52,7 @@ export const Sidebar = ({ isCollapsed, onToggle }: SidebarProps) => {
     },
     {
       label: 'Gestion Utilisateurs',
+      // Icône pour Gestion Utilisateurs
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -49,6 +62,7 @@ export const Sidebar = ({ isCollapsed, onToggle }: SidebarProps) => {
     },
     {
       label: 'Rôles & Permissions',
+      // Icône pour gestion des rôles et permissions
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -58,6 +72,7 @@ export const Sidebar = ({ isCollapsed, onToggle }: SidebarProps) => {
     },
     {
       label: 'Vue Globale',
+      // Icône pour la Vue Globale
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -65,13 +80,37 @@ export const Sidebar = ({ isCollapsed, onToggle }: SidebarProps) => {
       ),
       path: '/superadmin/overview',
     },
+    {
+      label: 'Vue Administration',
+      // Icône pour la Vue Administration
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+        </svg>
+      ),
+      path: '/admin',
+    },
+    {
+      label: 'Vue Enseignant',
+      // Icône pour la Vue Enseignant
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+        </svg>
+      ),
+      path: '/teacher',
+    },
   ];
 
+  // Fonction appelée lors du clic sur le bouton déconnexion (en bas de la sidebar)
+  // Utilise le hook logout puis redirige vers la page de login
   const handleLogout = async () => {
     await logout();
     navigate('/login');
   };
 
+  // Permet de savoir si le menu (par son chemin) doit être affiché comme actif (surbrillance)
+  // /superadmin doit matcher exactement, les autres on vérifie si ça "débute par"
   const isActive = (path: string) => {
     if (path === '/superadmin') {
       return location.pathname === '/superadmin';
@@ -79,15 +118,18 @@ export const Sidebar = ({ isCollapsed, onToggle }: SidebarProps) => {
     return location.pathname.startsWith(path);
   };
 
+  // Rendu JSX de la Sidebar
   return (
     <div
+      // Styles principaux de la sidebar : fond, border, fixe à gauche, transition animée, largeur dépendante du collapse, masquée sur petits écrans
       className={`bg-white border-r border-gray-200 h-screen fixed left-0 top-0 z-40 transition-all duration-300 ${
         isCollapsed ? 'w-28' : 'w-64'
       } hidden lg:block`}
-      style={{ boxShadow: '2px 0 10px rgba(0,0,0,0.05)' }}
+      style={{ boxShadow: '2px 0 10px rgba(0,0,0,0.05)' }} // Légère ombre portée
     >
-      {/* Header avec logo et bouton hamburger */}
+      {/* Header de la sidebar : logo et bouton pour étendre/réduire la sidebar */}
       <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200">
+        {/* Bouton hamburger toggle (affiche/masque la sidebar ou la réduit/étend) */}
         <button
             onClick={onToggle}
             className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
@@ -99,23 +141,30 @@ export const Sidebar = ({ isCollapsed, onToggle }: SidebarProps) => {
               stroke="currentColor"
               viewBox="0 0 24 24"
             >
+              {/* Icône du hamburger (apparence différente en mode réduit ou non) */}
               {isCollapsed ? (
+                // 3 lignes horizontales pour le mode réduit (ouvrir)
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               ) : (
+                // Croix (fermer) pour le mode étendu
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               )}
             </svg>
           </button>
+        {/* Affichage du logo et du nom de l'application si la sidebar est étendue */}
         {!isCollapsed && (
           <div className="flex items-center gap-2">
+            {/* Logo circulaire avec la lettre "E" */}
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-white font-bold">
               E
             </div>
+            {/* Nom de l'application */}
             <span className="text-lg font-bold" style={{ color: '#1e40af' }}>
               Expression d'Or
             </span>
           </div>
         )}
+        {/* Si la sidebar est réduite, affiche le logo centré sans texte */}
         {isCollapsed && (
           <div className="w-full flex justify-center">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-white font-bold">
@@ -123,31 +172,35 @@ export const Sidebar = ({ isCollapsed, onToggle }: SidebarProps) => {
             </div>
           </div>
         )}
-        
       </div>
 
-      {/* Menu Items */}
+      {/* Navigation principale : affichage de tous les éléments du menu */}
       <nav className="mt-4 px-2">
         {menuItems.map((item, index) => {
-          const active = isActive(item.path);
+          const active = isActive(item.path); // Vérifie si l'item doit être surligné (actif)
           return (
             <Link
               key={index}
               to={item.path}
+              // Style actif ou inactif selon la route, avec effet hover
               className={`
                 flex items-center gap-3 px-4 py-3 mb-2 rounded-lg transition-all duration-200
                 ${
                   active
-                    ? 'bg-yellow-100 text-yellow-800 font-semibold'
-                    : 'text-gray-700 hover:bg-gray-50'
+                    ? 'bg-yellow-100 text-yellow-800 font-semibold' // Style si actif
+                    : 'text-gray-700 hover:bg-gray-50'              // Sinon classique/hover
                 }
               `}
-              title={isCollapsed ? item.label : ''}
+              title={isCollapsed ? item.label : ''} // Tooltip si sidebar réduite
             >
+              {/* Icône du menu (colorée si actif) */}
               <span className={active ? 'text-yellow-600' : 'text-gray-500'}>{item.icon}</span>
+              {/* Affichage du label uniquement si la sidebar n'est pas réduite */}
               {!isCollapsed && (
                 <>
+                  {/* Nom de la section */}
                   <span className="flex-1">{item.label}</span>
+                  {/* Affiche un badge s'il existe (optionnel) */}
                   {item.badge && (
                     <span className="px-2 py-0.5 text-xs rounded-full bg-yellow-500 text-white">
                       {item.badge}
@@ -160,7 +213,7 @@ export const Sidebar = ({ isCollapsed, onToggle }: SidebarProps) => {
         })}
       </nav>
 
-      {/* Bouton Déconnexion en bas */}
+      {/* Bouton de déconnexion, fixé en bas de la sidebar */}
       <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
         <button
           onClick={handleLogout}
@@ -169,11 +222,13 @@ export const Sidebar = ({ isCollapsed, onToggle }: SidebarProps) => {
             text-red-600 hover:bg-red-50 font-medium
             ${isCollapsed ? 'justify-center' : ''}
           `}
-          title={isCollapsed ? 'Déconnexion' : ''}
+          title={isCollapsed ? 'Déconnexion' : ''} // Tooltip si sidebar réduite
         >
+          {/* Icône de déconnexion */}
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
           </svg>
+          {/* Texte "Déconnexion" visible seulement si sidebar étendue */}
           {!isCollapsed && <span>Déconnexion</span>}
         </button>
       </div>

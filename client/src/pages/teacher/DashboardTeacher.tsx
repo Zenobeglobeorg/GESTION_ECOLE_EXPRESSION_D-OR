@@ -4,6 +4,7 @@ import { SidebarTeacher } from '../../components/teacher/SidebarTeacher';
 import { MobileSidebarTeacher } from '../../components/teacher/MobileSidebarTeacher';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
+import { Link } from 'react-router-dom';
 
 export const DashboardTeacher = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -21,7 +22,7 @@ export const DashboardTeacher = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-linear-to-br from-blue-50 via-white to-yellow-50">
       <SidebarTeacher isCollapsed={isSidebarCollapsed} onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
       <MobileSidebarTeacher isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
       <Navbar onMenuClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
@@ -31,12 +32,12 @@ export const DashboardTeacher = () => {
           {/* En-tête */}
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-3xl font-bold text-gray-900">Tableau de Bord</h1>
-              <span className="px-3 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+              <h1 className="text-3xl font-bold text-blue-900">Tableau de Bord</h1>
+              <span className="px-3 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-900 border border-yellow-300">
                 Enseignant
               </span>
             </div>
-            <p className="text-gray-600">Bienvenue dans votre espace enseignant</p>
+            <p className="text-blue-700">Bienvenue dans votre espace enseignant</p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -52,7 +53,7 @@ export const DashboardTeacher = () => {
                     {myClasses.map((classItem) => (
                       <div
                         key={classItem.id}
-                        className="p-6 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white hover:shadow-lg transition-shadow cursor-pointer"
+                        className="p-6 rounded-xl bg-gradient-to-br from-blue-600 via-blue-500 to-blue-600 text-white hover:shadow-lg transition-shadow cursor-pointer"
                       >
                         <h3 className="text-xl font-bold mb-2">{classItem.name}</h3>
                         <p className="text-blue-100">{classItem.studentsCount} élèves</p>
@@ -71,24 +72,24 @@ export const DashboardTeacher = () => {
 
               <Card title="Actions Rapides" className="border-0 shadow-lg">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <button className="p-6 rounded-xl bg-yellow-50 hover:bg-yellow-100 transition-colors border-2 border-transparent hover:border-yellow-300 text-left">
+                  <Link to="/teacher/RemplitNote" className="p-6 rounded-xl bg-gradient-to-br from-yellow-100 to-yellow-50 hover:from-yellow-200 hover:to-yellow-100 transition-all border-2 border-transparent hover:border-yellow-300 text-left">
                     <div className="flex items-center gap-4">
                       <span className="text-3xl">📝</span>
                       <div>
-                        <p className="font-semibold text-gray-900">Saisir les notes</p>
-                        <p className="text-sm text-gray-600">Enregistrer les évaluations</p>
+                        <p className="font-semibold text-blue-900">Saisir les notes</p>
+                        <p className="text-sm text-blue-700">Enregistrer les évaluations</p>
                       </div>
                     </div>
-                  </button>
-                  <button className="p-6 rounded-xl bg-blue-50 hover:bg-blue-100 transition-colors border-2 border-transparent hover:border-blue-300 text-left">
+                  </Link>
+                  <Link to="/teacher/Presence" className="p-6 rounded-xl bg-gradient-to-br from-blue-100 to-blue-50 hover:from-blue-200 hover:to-blue-100 transition-all border-2 border-transparent hover:border-blue-300 text-left">
                     <div className="flex items-center gap-4">
                       <span className="text-3xl">✓</span>
                       <div>
-                        <p className="font-semibold text-gray-900">Présences</p>
-                        <p className="text-sm text-gray-600">Marquer les présences</p>
+                        <p className="font-semibold text-blue-900">Présences</p>
+                        <p className="text-sm text-blue-700">Marquer les présences</p>
                       </div>
                     </div>
-                  </button>
+                  </Link>
                 </div>
               </Card>
             </div>
@@ -98,10 +99,10 @@ export const DashboardTeacher = () => {
               <Card title="Aujourd'hui" className="border-0 shadow-lg">
                 <div className="space-y-3">
                   {todaySchedule.map((item, index) => (
-                    <div key={index} className="p-4 bg-gray-50 rounded-lg">
-                      <p className="text-xs text-gray-500 mb-1">{item.time}</p>
-                      <p className="font-semibold text-gray-900">{item.subject}</p>
-                      <p className="text-sm text-gray-600">{item.class}</p>
+                    <div key={index} className="p-4 bg-gradient-to-br from-yellow-50 to-white rounded-lg border border-yellow-100">
+                      <p className="text-xs text-blue-600 mb-1 font-medium">{item.time}</p>
+                      <p className="font-semibold text-blue-900">{item.subject}</p>
+                      <p className="text-sm text-blue-700">{item.class}</p>
                     </div>
                   ))}
                 </div>

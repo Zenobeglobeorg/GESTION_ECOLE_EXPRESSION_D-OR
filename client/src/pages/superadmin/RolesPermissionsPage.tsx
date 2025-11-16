@@ -41,22 +41,14 @@ export const RolesPermissionsPage = () => {
       ]);
       setRoles(rolesData);
       setPermissions(permissionsData);
-    } catch (err: any) {
-      setError(err.message || 'Erreur lors du chargement des données');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erreur lors du chargement des données';
+      setError(errorMessage);
       console.error('Erreur:', err);
     } finally {
       setIsLoading(false);
     }
   };
-
-  // Groupement des permissions par catégorie
-  const permissionsByCategory = permissions.reduce((acc, perm) => {
-    if (!acc[perm.category]) {
-      acc[perm.category] = [];
-    }
-    acc[perm.category].push(perm);
-    return acc;
-  }, {} as Record<string, Permission[]>);
 
   const handleCreateRole = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,8 +69,9 @@ export const RolesPermissionsPage = () => {
         selectedPermissions: [],
       });
       await loadData(); // Recharger les données
-    } catch (err: any) {
-      setError(err.message || 'Erreur lors de la création du rôle');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la création du rôle';
+      setError(errorMessage);
       console.error('Erreur:', err);
     }
   };
@@ -101,8 +94,9 @@ export const RolesPermissionsPage = () => {
           setSelectedRole(null);
         }
         await loadData(); // Recharger les données
-      } catch (err: any) {
-        setError(err.message || 'Erreur lors de la suppression du rôle');
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la suppression du rôle';
+        setError(errorMessage);
         console.error('Erreur:', err);
       }
     }
@@ -126,11 +120,18 @@ export const RolesPermissionsPage = () => {
       <main className={`pt-16 transition-all duration-300 ${isSidebarCollapsed ? 'lg:ml-28' : 'lg:ml-64'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* En-tête */}
-          <div className="mb-6 flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Rôles et Permissions</h1>
-              <p className="text-gray-600">Définissez les rôles personnalisés et leurs permissions pour l'administration</p>
+          <div className="mb-8">
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-3xl font-bold text-gray-900">Rôles et Permissions</h1>
+              <span className="px-3 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
+                {roles.length} rôle(s)
+              </span>
             </div>
+            <p className="text-gray-600">Définissez les rôles personnalisés et leurs permissions pour l'administration</p>
+          </div>
+
+          {/* Barre d'actions */}
+          <div className="mb-6 flex items-center justify-end">
             <Button
               onClick={() => setIsCreateRoleModalOpen(true)}
               style={{ backgroundColor: '#fbbf24' }}
@@ -187,6 +188,7 @@ export const RolesPermissionsPage = () => {
                             </p>
                           </div>
                           <button
+                            title="Supprimer le rôle"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleDeleteRole(role.id);

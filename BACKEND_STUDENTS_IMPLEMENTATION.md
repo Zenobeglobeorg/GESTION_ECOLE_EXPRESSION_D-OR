@@ -55,43 +55,36 @@
 - ✅ Les parents ne peuvent accéder qu'à leurs propres données
 - ✅ Mots de passe hashés avec bcrypt
 
-## 📧 Envoi d'Emails (À Implémenter)
+## ✅ Envoi d'Emails - Implémenté avec Nodemailer
 
-Actuellement, les mots de passe temporaires sont générés et affichés dans la console (mode développement).
+L'envoi d'emails est maintenant implémenté avec nodemailer. Les parents reçoivent automatiquement leurs identifiants de connexion.
 
-**Pour implémenter l'envoi d'emails en production :**
+### Configuration
 
-1. Installer nodemailer ou utiliser un service comme SendGrid
-2. Configurer les variables d'environnement pour le service email
-3. Décommenter et adapter le code dans `studentController.js` (ligne ~70)
+1. **Variables d'environnement** (`server/.env`) :
+   ```env
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=587
+   SMTP_USER=your-email@gmail.com
+   SMTP_PASS=your-app-password
+   FRONTEND_URL=http://localhost:5173
+   ```
 
-**Exemple avec nodemailer :**
-```javascript
-import nodemailer from 'nodemailer';
+2. **Pour Gmail** :
+   - Activez l'authentification à 2 facteurs
+   - Générez un "Mot de passe d'application" : https://support.google.com/accounts/answer/185833
+   - Utilisez ce mot de passe dans `SMTP_PASS`
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: process.env.SMTP_PORT,
-  secure: true,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+3. **Pour d'autres services** (Outlook, SendGrid, etc.) :
+   - Modifiez `SMTP_HOST` et `SMTP_PORT` selon le service
+   - Utilisez les identifiants appropriés
 
-await transporter.sendMail({
-  from: process.env.SMTP_FROM,
-  to: email,
-  subject: 'Bienvenue - Expression d\'Or',
-  html: `
-    <h2>Bienvenue sur Expression d'Or</h2>
-    <p>Votre compte parent a été créé avec succès.</p>
-    <p><strong>Email :</strong> ${email}</p>
-    <p><strong>Mot de passe temporaire :</strong> ${temporaryPassword}</p>
-    <p>Veuillez changer votre mot de passe lors de votre première connexion.</p>
-  `,
-});
-```
+### Fonctionnement
+
+- Si SMTP est configuré → Email envoyé automatiquement
+- Si SMTP n'est pas configuré → Identifiants affichés dans la console (mode dev)
+- Les emails sont en HTML avec un design professionnel
+- Inclut les identifiants et un lien de connexion
 
 ## 🚀 Utilisation
 

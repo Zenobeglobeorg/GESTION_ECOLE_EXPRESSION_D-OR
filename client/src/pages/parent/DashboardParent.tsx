@@ -3,7 +3,6 @@ import { Navbar } from '../../components/layout/Navbar';
 import { SidebarParent } from '../../components/parent/SidebarParent';
 import { MobileSidebarParent } from '../../components/parent/MobileSidebarParent';
 import { Card } from '../../components/ui/Card';
-import { Button } from '../../components/ui/Button';
 
 export const DashboardParent = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);

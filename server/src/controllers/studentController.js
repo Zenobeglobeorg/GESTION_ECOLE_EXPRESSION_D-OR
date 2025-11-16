@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
+import { sendWelcomeEmail } from '../services/emailService.js';
 
 const prisma = new PrismaClient();
 
@@ -52,11 +53,25 @@ async function findOrCreateParent(email, studentData) {
       },
     });
 
-    // TODO: Envoyer un email avec les identifiants de connexion
-    // await sendWelcomeEmail(email, temporaryPassword);
-    console.log(`📧 [DEV] Nouveau parent créé: ${email}, Mot de passe temporaire: ${temporaryPassword}`);
+    // Envoyer un email avec les identifiants de connexion
+    const emailResult = await sendWelcomeEmail(
+      email,
+      temporaryPassword,
+      `${firstName} ${lastName}`
+    );
+
+    if (emailResult.success) {
+      console.log(`✅ Email de bienvenue envoyé à ${email}`);
+    } else {
+      console.log(`⚠️ Email non envoyé (${emailResult.error || emailResult.message}).`);
+      console.log(`📧 [IMPORTANT] Nouveau parent créé: ${email}`);
+      console.log(`   Mot de passe temporaire: ${temporaryPassword}`);
+      console.log(`   ⚠️ Veuillez envoyer ces identifiants manuellement au parent !`);
+    }
   }
 
+  // Ajouter un flag pour savoir si le parent était nouveau
+  parent._wasCreated = !parentExistedBefore;
   return parent;
 }
 
@@ -136,7 +151,7 @@ export const createStudent = async (req, res) => {
       fatherContact,
       motherContact,
     });
-    const wasCreated = parent._wasCreated || false;
+    const wasCreated = parent._wasCreated ?? false;
 
     // Créer l'élève
     const student = await prisma.student.create({
