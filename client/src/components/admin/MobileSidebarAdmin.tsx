@@ -58,16 +58,16 @@ export const MobileSidebarAdmin = ({ isOpen, onClose }: MobileSidebarAdminProps)
           </button>
         </div>
 
-        <nav className="flex-1 overflow-y-auto py-4">
+        <nav className="flex-1 overflow-y-auto py-4 bg-white">
           {menuItems.map((item) => (
             <Link
               key={item.path}
               to={item.path}
               onClick={onClose}
-              className={`flex items-center gap-3 px-4 py-3 mx-2 rounded-lg transition-all mb-1 ${
+              className={`flex items-center gap-3 px-4 py-3 mx-3 rounded-xl transition-all mb-2 border ${
                 isActive(item.path)
-                  ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg'
-                  : 'text-gray-700 hover:bg-gray-100'
+                  ? 'bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 text-blue-900 shadow-lg border-yellow-300'
+                  : 'text-blue-900 border-transparent hover:border-blue-100 hover:bg-blue-50'
               }`}
             >
               <span className="text-xl">{item.icon}</span>

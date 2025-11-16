@@ -1,6 +1,8 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import * as crypto from 'crypto';
 import { PrismaClient } from '@prisma/client';
+import { sendPasswordResetEmail } from '../services/passwordResetEmail.js';
 
 const prisma = new PrismaClient();
 
@@ -94,6 +96,198 @@ export const getCurrentUser = async (req, res) => {
   } catch (error) {
     console.error('Get current user error:', error);
     res.status(500).json({ error: 'Erreur lors de la récupération de l\'utilisateur' });
+  }
+};
+
+/**
+ * Demander la réinitialisation du mot de passe
+ */
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email requis' });
+    }
+
+    // Rechercher l'utilisateur
+    const user = await prisma.user.findFirst({
+      where: {
+        email: {
+          equals: email,
+          mode: 'insensitive'
+        }
+      }
+    });
+
+    // Ne pas révéler si l'email existe ou non (sécurité)
+    // On retourne toujours un succès même si l'utilisateur n'existe pas
+    if (!user) {
+      // Pour des raisons de sécurité, on retourne toujours un succès
+      return res.json({ 
+        success: true, 
+        message: 'Si cet email existe, un lien de réinitialisation a été envoyé.' 
+      });
+    }
+
+    // Générer un token unique
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 1); // Valide pendant 1 heure
+
+    // Supprimer les anciens tokens non utilisés pour cet utilisateur
+    await prisma.passwordResetToken.deleteMany({
+      where: {
+        userId: user.id,
+        used: false,
+        expiresAt: { lt: new Date() }
+      }
+    });
+
+    // Créer un nouveau token
+    await prisma.passwordResetToken.create({
+      data: {
+        token: resetToken,
+        userId: user.id,
+        expiresAt
+      }
+    });
+
+    // Envoyer l'email de réinitialisation
+    const emailResult = await sendPasswordResetEmail(
+      user.email,
+      resetToken,
+      `${user.firstName} ${user.lastName}`
+    );
+
+    if (emailResult.success) {
+      console.log(`✅ Email de réinitialisation envoyé à ${user.email}`);
+    } else {
+      console.log(`⚠️ Email non envoyé, mais le token a été créé.`);
+      console.log(`📧 [DEV] Lien de réinitialisation: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`);
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Si cet email existe, un lien de réinitialisation a été envoyé.' 
+    });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ error: 'Erreur lors de la demande de réinitialisation' });
+  }
+};
+
+/**
+ * Réinitialiser le mot de passe avec un token
+ */
+export const resetPassword = async (req, res) => {
+  try {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+      return res.status(400).json({ error: 'Token et mot de passe requis' });
+    }
+
+    // Vérifier la force du mot de passe
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'Le mot de passe doit contenir au moins 8 caractères' });
+    }
+
+    // Trouver le token
+    const resetToken = await prisma.passwordResetToken.findUnique({
+      where: { token },
+      include: { user: true }
+    });
+
+    if (!resetToken) {
+      return res.status(400).json({ error: 'Token invalide ou expiré' });
+    }
+
+    if (resetToken.used) {
+      return res.status(400).json({ error: 'Ce token a déjà été utilisé' });
+    }
+
+    if (new Date() > resetToken.expiresAt) {
+      return res.status(400).json({ error: 'Token expiré. Veuillez demander un nouveau lien.' });
+    }
+
+    // Hasher le nouveau mot de passe
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    // Mettre à jour le mot de passe de l'utilisateur
+    await prisma.user.update({
+      where: { id: resetToken.userId },
+      data: { passwordHash }
+    });
+
+    // Marquer le token comme utilisé
+    await prisma.passwordResetToken.update({
+      where: { id: resetToken.id },
+      data: { used: true }
+    });
+
+    console.log(`✅ Mot de passe réinitialisé pour l'utilisateur ${resetToken.user.email}`);
+
+    res.json({ 
+      success: true, 
+      message: 'Mot de passe réinitialisé avec succès. Vous pouvez maintenant vous connecter.' 
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ error: 'Erreur lors de la réinitialisation du mot de passe' });
+  }
+};
+
+/**
+ * Changer le mot de passe (utilisateur connecté)
+ */
+export const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user.id;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Mot de passe actuel et nouveau mot de passe requis' });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: 'Le nouveau mot de passe doit contenir au moins 8 caractères' });
+    }
+
+    // Récupérer l'utilisateur
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'Utilisateur non trouvé' });
+    }
+
+    // Vérifier le mot de passe actuel
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.passwordHash);
+
+    if (!isCurrentPasswordValid) {
+      return res.status(401).json({ error: 'Mot de passe actuel incorrect' });
+    }
+
+    // Hasher le nouveau mot de passe
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    // Mettre à jour le mot de passe
+    await prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash }
+    });
+
+    console.log(`✅ Mot de passe changé pour l'utilisateur ${user.email}`);
+
+    res.json({ 
+      success: true, 
+      message: 'Mot de passe changé avec succès' 
+    });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({ error: 'Erreur lors du changement de mot de passe' });
   }
 };
 

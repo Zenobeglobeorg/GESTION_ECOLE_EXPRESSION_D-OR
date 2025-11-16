@@ -1,5 +1,10 @@
 import type { User, UserRole } from '../contexts/AuthContext';
 
+// Type étendu pour inclure createdAt (retourné par l'API)
+export interface UserWithDate extends User {
+  createdAt: string;
+}
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 export interface CreateUserData {
@@ -30,7 +35,7 @@ const getToken = (): string | null => {
 /**
  * Récupère tous les utilisateurs
  */
-export const getUsers = async (): Promise<User[]> => {
+export const getUsers = async (): Promise<UserWithDate[]> => {
   const token = getToken();
   if (!token) throw new Error('Non authentifié');
 

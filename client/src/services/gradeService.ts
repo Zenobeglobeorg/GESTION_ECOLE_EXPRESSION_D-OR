@@ -55,7 +55,8 @@ export interface CompetencyMastery {
 /**
  * Récupère les notes d'un élève pour un palier donné
  */
-export const getStudentGrades = async (studentId: string, palierId: string): Promise<Grade[]> => {
+export const getStudentGrades = async (studentId: string, _palierId: string): Promise<Grade[]> => {
+  void _palierId;
   // TODO: Appel API réel
   // const response = await fetch(`/api/students/${studentId}/grades?palierId=${palierId}`);
   // return response.json();
@@ -123,8 +124,10 @@ export const calculateMasteryLevel = (averageScore: number): MasteryLevel => {
  */
 export const getStudentMasteryLevels = async (
   studentId: string,
-  palierId: string
+  _palierId: string
 ): Promise<CompetencyMastery[]> => {
+  void studentId;
+  void _palierId;
   // TODO: Appel API réel - Ce calcul devrait être fait côté backend
   // const response = await fetch(`/api/students/${studentId}/mastery-levels?palierId=${palierId}`);
   // return response.json();

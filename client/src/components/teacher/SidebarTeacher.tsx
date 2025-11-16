@@ -38,13 +38,22 @@ export const SidebarTeacher = ({ isCollapsed, onToggle }: SidebarTeacherProps) =
       path: '/teacher/classes',
     },
     {
-      label: 'Saisir les Notes',
+      label: 'Remplir Notes',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
       ),
-      path: '/teacher/grades',
+      path: '/teacher/RemplitNote',
+    },
+    {
+      label: 'Carnet de Notes',
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      ),
+      path: '/teacher/CarnetNote',
     },
     {
       label: 'Présences',
@@ -53,7 +62,25 @@ export const SidebarTeacher = ({ isCollapsed, onToggle }: SidebarTeacherProps) =
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       ),
-      path: '/teacher/attendance',
+      path: '/teacher/Presence',
+    },
+    {
+      label: 'Fiche Présence',
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+        </svg>
+      ),
+      path: '/teacher/FichePresence',
+    },
+    {
+      label: 'Cahier Exercices',
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+        </svg>
+      ),
+      path: '/teacher/CahierExo',
     },
     {
       label: 'Emploi du Temps',
@@ -80,24 +107,35 @@ export const SidebarTeacher = ({ isCollapsed, onToggle }: SidebarTeacherProps) =
 
   return (
     <div
-      className={`bg-white border-r border-gray-200 h-screen fixed left-0 top-0 z-40 transition-all duration-300 ${
-        isCollapsed ? 'w-28' : 'w-64'
-      } hidden lg:block`}
-      style={{ boxShadow: '2px 0 10px rgba(0,0,0,0.05)' }}
+      className={`bg-white border-r border-blue-100 h-screen fixed left-0 top-0 z-40 transition-all duration-300 ${
+        isCollapsed ? 'w-20' : 'w-64'
+      } hidden lg:flex lg:flex-col shadow-[2px_0_12px_rgba(30,64,175,0.08)]`}
     >
       {/* Header avec logo et bouton hamburger */}
-      <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200 bg-gradient-to-r from-green-600 to-green-700">
+      <div className="relative h-16 flex items-center justify-between px-4 border-b border-blue-100 bg-gradient-to-r from-blue-700 via-blue-800 to-blue-900 flex-shrink-0">
         {!isCollapsed && (
-          <h2 className="text-white font-bold text-lg">Expression d'Or</h2>
+          <div className="flex items-center gap-2">
+            <div className="w-10 h-10 rounded-full bg-yellow-400 flex items-center justify-center text-blue-900 font-bold shadow-inner">
+              EO
+            </div>
+            <div className="flex flex-col leading-tight">
+              <span className="text-white font-semibold text-sm uppercase tracking-widest">Enseignant</span>
+              <span className="text-white/80 text-sm font-medium">Expression d'Or</span>
+            </div>
+          </div>
         )}
         <button
+          title="Ouvrir/Fermer le menu"
           onClick={onToggle}
-          className="p-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition-colors text-white"
+          className="p-2 rounded-lg hover:bg-white/20 transition-colors text-white"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
+        {!isCollapsed && (
+          <div className="absolute inset-x-0 -bottom-[1px] h-1 bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500" />
+        )}
       </div>
 
       {/* Menu items */}
@@ -106,10 +144,10 @@ export const SidebarTeacher = ({ isCollapsed, onToggle }: SidebarTeacherProps) =
           <Link
             key={item.path}
             to={item.path}
-            className={`flex items-center gap-3 px-4 py-3 mx-2 rounded-lg transition-all mb-1 ${
+            className={`flex items-center gap-3 px-4 py-3 mx-2 rounded-xl transition-all mb-2 border ${
               isActive(item.path)
-                ? 'bg-gradient-to-r from-green-600 to-green-700 text-white shadow-lg'
-                : 'text-gray-700 hover:bg-gray-100'
+                ? 'bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 text-blue-900 shadow-lg border-yellow-300'
+                : 'text-blue-900 border-transparent hover:border-blue-100 hover:bg-blue-50'
             }`}
             title={isCollapsed ? item.label : undefined}
           >

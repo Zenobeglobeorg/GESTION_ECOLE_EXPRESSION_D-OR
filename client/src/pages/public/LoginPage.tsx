@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -79,8 +79,9 @@ export const LoginPage = () => {
       await login(email, password);
       // La redirection sera gérée par le ProtectedRoute selon le rôle
       navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.message || 'Erreur lors de la connexion. Veuillez réessayer.');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la connexion. Veuillez réessayer.';
+      setError(errorMessage);
     }
   };
 
@@ -206,9 +207,9 @@ export const LoginPage = () => {
 
           {/* Lien mot de passe oublié */}
           <div className="text-center">
-            <a href="#" className="text-sm hover:underline" style={{ color: '#1e40af' }}>
+            <Link to="/forgot-password" className="text-sm hover:underline" style={{ color: '#1e40af' }}>
               Mot de passe oublié ?
-            </a>
+            </Link>
           </div>
         </form>
       </div>

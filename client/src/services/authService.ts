@@ -1,4 +1,4 @@
-import type { User, UserRole } from '../contexts/AuthContext';
+import type { User } from '../contexts/AuthContext';
 
 /**
  * Service d'authentification
@@ -84,10 +84,64 @@ export const getCurrentUser = async (): Promise<User | null> => {
 };
 
 /**
- * Authentification SSO (Single Sign-On)
+ * Demande la réinitialisation du mot de passe
  */
-/*export const loginWithSSO = async (provider: 'google' | 'microsoft'): Promise<LoginResponse> => {
-  // TODO: Implémenter l'authentification SSO
-  throw new Error('SSO not implemented yet');
-};*/
+export const forgotPassword = async (email: string): Promise<{ success: boolean; message: string }> => {
+  const response = await fetch(`${API_BASE_URL}/api/auth/forgot-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors de la demande de réinitialisation');
+  }
+
+  return await response.json();
+};
+
+/**
+ * Réinitialise le mot de passe avec un token
+ */
+export const resetPassword = async (token: string, password: string): Promise<{ success: boolean; message: string }> => {
+  const response = await fetch(`${API_BASE_URL}/api/auth/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, password }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors de la réinitialisation');
+  }
+
+  return await response.json();
+};
+
+/**
+ * Change le mot de passe (utilisateur connecté)
+ */
+export const changePassword = async (currentPassword: string, newPassword: string): Promise<{ success: boolean; message: string }> => {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    throw new Error('Non authentifié');
+  }
+
+  const response = await fetch(`${API_BASE_URL}/api/auth/change-password`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors du changement de mot de passe');
+  }
+
+  return await response.json();
+};
 

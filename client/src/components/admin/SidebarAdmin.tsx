@@ -1,24 +1,36 @@
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 
-interface MenuItem {
+interface SubMenuItem {
+  label: string;
+  path: string;
+}
+
+interface MenuGroup {
+  label: string;
+  icon: React.ReactNode;
+  submenu: SubMenuItem[];
+}
+
+interface SingleMenuItem {
   label: string;
   icon: React.ReactNode;
   path: string;
-  badge?: number;
 }
+
+type MenuItem = MenuGroup | SingleMenuItem;
 
 interface SidebarAdminProps {
   isCollapsed: boolean;
   onToggle: () => void;
 }
 
-export const SidebarAdmin = ({ isCollapsed, onToggle }: SidebarAdminProps) => {
-  const { logout } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
+const isMenuGroup = (item: MenuItem): item is MenuGroup => {
+  return 'submenu' in item;
+};
 
-  const menuItems: MenuItem[] = [
+const MENU_ITEMS: MenuItem[] = [
     {
       label: 'Tableau de Bord',
       icon: (
@@ -29,60 +41,117 @@ export const SidebarAdmin = ({ isCollapsed, onToggle }: SidebarAdminProps) => {
       path: '/admin',
     },
     {
-      label: 'Inscription Élèves',
+      label: 'Utilisateurs',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.856-1.487M15 8H9m6 0a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
       ),
-      path: '/admin/students/new',
+      submenu: [
+        { label: 'Gestion Utilisateurs', path: '/admin/users' },
+        { label: 'Parents', path: '/admin/users/parents' },
+        { label: 'Enseignants', path: '/admin/users/teachers' },
+        { label: 'Permissions', path: '/admin/users/permissions' },
+      ],
     },
     {
-      label: 'Liste des Élèves',
+      label: 'Élèves',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
         </svg>
       ),
-      path: '/admin/students',
+      submenu: [
+        { label: 'Dossiers Élèves', path: '/admin/students' },
+        { label: 'Inscription', path: '/admin/students/new' },
+        { label: 'Association Parents', path: '/admin/students/associate' },
+        { label: 'Import Excel', path: '/admin/students/import' },
+      ],
     },
     {
-      label: 'Classes',
+      label: 'Pédagogie',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
         </svg>
       ),
-      path: '/admin/classes',
+      submenu: [
+        { label: 'Classes & Matières', path: '/admin/classes' },
+        { label: 'Emploi du Temps', path: '/admin/timetable' },
+        { label: 'Évaluations', path: '/admin/evaluations' },
+        { label: 'Notes & Bulletins', path: '/admin/grades' },
+        { label: 'Remplacements', path: '/admin/replacements' },
+      ],
     },
     {
-      label: 'Notes & Évaluations',
+      label: 'Vie Scolaire',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m7 5a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       ),
-      path: '/admin/grades',
+      submenu: [
+        { label: 'Présence', path: '/admin/attendance' },
+        { label: 'Frais de Scolarité', path: '/admin/fees' },
+        { label: 'Rapports', path: '/admin/reports' },
+      ],
     },
     {
-      label: 'Présences',
+      label: 'Communication',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.961 1.961 0 01-2.437-1.865V5.882m0 0A6.97 6.97 0 006 3a6 6 0 00-6 6v7a6 6 0 006 6 6.975 6.975 0 003.563-.938m13.437-13.868A6.97 6.97 0 0018 3a6 6 0 00-6 6v7a6 6 0 006 6 6.975 6.975 0 003.563-.938" />
         </svg>
       ),
-      path: '/admin/attendance',
+      submenu: [
+        { label: 'Annonces', path: '/admin/announcements' },
+        { label: 'Notifications', path: '/admin/notifications' },
+        { label: 'Messages', path: '/admin/messages' },
+        { label: 'Calendrier', path: '/admin/calendar' },
+      ],
     },
     {
-      label: 'Bulletins',
+      label: 'Profil',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       ),
-      path: '/admin/reports',
+      path: '/admin/profile',
     },
-  ];
+    {
+      label: 'Paramètres',
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      ),
+      path: '/admin/settings',
+    },
+];
+
+const defaultExpandedGroups = MENU_ITEMS.reduce<Record<string, boolean>>((accumulator, item) => {
+  if (!isMenuGroup(item)) return accumulator;
+  accumulator[item.label] = item.label === 'Utilisateurs' || item.label === 'Élèves';
+  return accumulator;
+}, {});
+
+export const SidebarAdmin = ({ isCollapsed, onToggle }: SidebarAdminProps) => {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(defaultExpandedGroups);
+
+  const toggleGroup = (groupLabel: string) => {
+    setExpandedGroups((prev) => ({
+      ...Object.keys(prev).reduce<Record<string, boolean>>((accumulator, key) => {
+        accumulator[key] = false;
+        return accumulator;
+      }, {}),
+      [groupLabel]: !prev[groupLabel],
+    }));
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -96,61 +165,137 @@ export const SidebarAdmin = ({ isCollapsed, onToggle }: SidebarAdminProps) => {
     return location.pathname.startsWith(path);
   };
 
+  const isGroupActive = (submenu: SubMenuItem[]): boolean => submenu.some((item) => isActive(item.path));
+
+  const activeGroupLabel = useMemo(() => {
+    const activeMenuGroup = MENU_ITEMS.find(
+      (item) => isMenuGroup(item) && item.submenu.some((subItem) => isActive(subItem.path)),
+    ) as MenuGroup | undefined;
+    return activeMenuGroup?.label;
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!activeGroupLabel) return;
+    setExpandedGroups((prev) => ({
+      ...Object.keys(prev).reduce<Record<string, boolean>>((accumulator, key) => {
+        accumulator[key] = false;
+        return accumulator;
+      }, {}),
+      [activeGroupLabel]: true,
+    }));
+  }, [activeGroupLabel]);
+
   return (
     <div
-      className={`bg-white border-r border-gray-200 h-screen fixed left-0 top-0 z-40 transition-all duration-300 ${
-        isCollapsed ? 'w-28' : 'w-64'
-      } hidden lg:block`}
-      style={{ boxShadow: '2px 0 10px rgba(0,0,0,0.05)' }}
+      className={`bg-white border-r border-blue-100 h-screen fixed left-0 top-0 z-40 transition-all duration-300 ${
+        isCollapsed ? 'w-20' : 'w-64'
+      } hidden lg:flex lg:flex-col shadow-[2px_0_12px_rgba(30,64,175,0.08)]`}
     >
       {/* Header avec logo et bouton hamburger */}
-      <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700">
+      <div className="relative h-16 flex items-center justify-between px-4 border-b border-blue-100 bg-gradient-to-r from-blue-700 via-blue-800 to-blue-900 flex-shrink-0">
         {!isCollapsed && (
-          <h2 className="text-white font-bold text-lg">Expression d'Or</h2>
+          <div className="flex items-center gap-2">
+            <div className="w-10 h-10 rounded-full bg-yellow-400 flex items-center justify-center text-blue-900 font-bold shadow-inner">
+              EO
+            </div>
+            <div className="flex flex-col leading-tight">
+              <span className="text-white font-semibold text-sm uppercase tracking-widest">Administration</span>
+              <span className="text-white/80 text-sm font-medium">Expression d'Or</span>
+            </div>
+          </div>
         )}
         <button
           onClick={onToggle}
-          className="p-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition-colors text-white"
+          className="p-2 rounded-lg hover:bg-white/20 transition-colors text-white"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
+        {!isCollapsed && (
+          <div className="absolute inset-x-0 -bottom-[1px] h-1 bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500" />
+        )}
       </div>
 
       {/* Menu items */}
-      <nav className="flex-1 overflow-y-auto py-4">
-        {menuItems.map((item) => (
-          <Link
-            key={item.path}
-            to={item.path}
-            className={`flex items-center gap-3 px-4 py-3 mx-2 rounded-lg transition-all mb-1 ${
-              isActive(item.path)
-                ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg'
-                : 'text-gray-700 hover:bg-gray-100'
-            }`}
-            title={isCollapsed ? item.label : undefined}
-          >
-            <span className="flex-shrink-0">{item.icon}</span>
-            {!isCollapsed && (
-              <>
-                <span className="flex-1 font-medium">{item.label}</span>
-                {item.badge && (
-                  <span className="bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-1 rounded-full">
-                    {item.badge}
-                  </span>
+      <nav className="flex-1 overflow-y-auto py-4 px-2 bg-white">
+        {MENU_ITEMS.map((item) => {
+          if (isMenuGroup(item)) {
+            const isExpanded = expandedGroups[item.label];
+            const groupIsActive = isGroupActive(item.submenu);
+            return (
+              <div key={item.label} className="mb-2">
+                <button
+                  onClick={() => toggleGroup(item.label)}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all border ${
+                    groupIsActive
+                      ? 'bg-gradient-to-r from-yellow-300 via-yellow-200 to-yellow-300 text-blue-900 border-yellow-300 shadow-sm'
+                      : 'text-blue-900 border-transparent hover:border-blue-100 hover:bg-blue-50'
+                  }`}
+                  title={isCollapsed ? item.label : undefined}
+                >
+                  <span className="shrink-0">{item.icon}</span>
+                  {!isCollapsed && (
+                    <>
+                      <span className="flex-1 font-medium text-left">{item.label}</span>
+                      <svg
+                        className={`w-4 h-4 transition-transform ${
+                          isExpanded ? 'rotate-180' : ''
+                        }`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7-7m0 0l-7 7m7-7v12" />
+                      </svg>
+                    </>
+                  )}
+                </button>
+
+                {isExpanded && !isCollapsed && (
+                  <div className="bg-blue-50/70 rounded-lg mt-2 ml-3 border-l-4 border-blue-200">
+                    {item.submenu.map((subitem) => (
+                      <Link
+                        key={subitem.path}
+                        to={subitem.path}
+                        className={`block px-4 py-2 text-sm rounded-lg transition-all ml-3 mr-3 my-1 ${
+                          isActive(subitem.path)
+                            ? 'bg-yellow-100 text-blue-900 font-semibold border border-yellow-300 shadow-sm'
+                            : 'text-blue-800 hover:text-blue-900 hover:bg-blue-100'
+                        }`}
+                      >
+                        {subitem.label}
+                      </Link>
+                    ))}
+                  </div>
                 )}
-              </>
-            )}
-          </Link>
-        ))}
+              </div>
+            );
+          }
+
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all mb-2 border ${
+                isActive(item.path)
+                  ? 'bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 text-blue-900 shadow-lg border-yellow-300'
+                  : 'text-blue-900 border-transparent hover:border-blue-100 hover:bg-blue-50'
+              }`}
+              title={isCollapsed ? item.label : undefined}
+            >
+              <span className="shrink-0">{item.icon}</span>
+              {!isCollapsed && <span className="flex-1 font-medium">{item.label}</span>}
+            </Link>
+          );
+        })}
       </nav>
 
       {/* Logout button */}
-      <div className="border-t border-gray-200 p-4">
+      <div className="border-t border-gray-200 p-4 flex-shrink-0">
         <button
           onClick={handleLogout}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all text-red-600 hover:bg-red-50 ${
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 ${
             isCollapsed ? 'justify-center' : ''
           }`}
           title={isCollapsed ? 'Déconnexion' : undefined}

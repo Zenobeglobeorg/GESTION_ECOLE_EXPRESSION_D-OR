@@ -14,8 +14,11 @@ export const MobileSidebarTeacher = ({ isOpen, onClose }: MobileSidebarTeacherPr
   const menuItems = [
     { label: 'Tableau de Bord', path: '/teacher', icon: '🏠' },
     { label: 'Mes Classes', path: '/teacher/classes', icon: '📚' },
-    { label: 'Saisir les Notes', path: '/teacher/grades', icon: '📝' },
-    { label: 'Présences', path: '/teacher/attendance', icon: '✓' },
+    { label: 'Remplir Notes', path: '/teacher/RemplitNote', icon: '📝' },
+    { label: 'Carnet de Notes', path: '/teacher/CarnetNote', icon: '📖' },
+    { label: 'Présences', path: '/teacher/Presence', icon: '✓' },
+    { label: 'Fiche Présence', path: '/teacher/FichePresence', icon: '📋' },
+    { label: 'Cahier Exercices', path: '/teacher/CahierExo', icon: '📘' },
     { label: 'Emploi du Temps', path: '/teacher/schedule', icon: '📅' },
   ];
 
@@ -44,16 +47,25 @@ export const MobileSidebarTeacher = ({ isOpen, onClose }: MobileSidebarTeacherPr
 
       {/* Sidebar */}
       <div className="fixed left-0 top-0 h-full w-64 bg-white z-50 lg:hidden shadow-xl">
-        <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200 bg-gradient-to-r from-green-600 to-green-700">
-          <h2 className="text-white font-bold text-lg">Expression d'Or</h2>
+        <div className="relative h-16 flex items-center justify-between px-4 border-b border-blue-100 bg-gradient-to-r from-blue-700 via-blue-800 to-blue-900">
+          <div className="flex items-center gap-2">
+            <div className="w-10 h-10 rounded-full bg-yellow-400 flex items-center justify-center text-blue-900 font-bold shadow-inner">
+              EO
+            </div>
+            <div className="flex flex-col leading-tight">
+              <span className="text-white font-semibold text-sm uppercase tracking-widest">Enseignant</span>
+              <span className="text-white/80 text-sm font-medium">Expression d'Or</span>
+            </div>
+          </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition-colors text-white"
+            className="p-2 rounded-lg hover:bg-white/20 transition-colors text-white"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
+          <div className="absolute inset-x-0 -bottom-[1px] h-1 bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500" />
         </div>
 
         <nav className="flex-1 overflow-y-auto py-4">
@@ -62,10 +74,10 @@ export const MobileSidebarTeacher = ({ isOpen, onClose }: MobileSidebarTeacherPr
               key={item.path}
               to={item.path}
               onClick={onClose}
-              className={`flex items-center gap-3 px-4 py-3 mx-2 rounded-lg transition-all mb-1 ${
+              className={`flex items-center gap-3 px-4 py-3 mx-2 rounded-xl transition-all mb-2 border ${
                 isActive(item.path)
-                  ? 'bg-gradient-to-r from-green-600 to-green-700 text-white shadow-lg'
-                  : 'text-gray-700 hover:bg-gray-100'
+                  ? 'bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 text-blue-900 shadow-lg border-yellow-300'
+                  : 'text-blue-900 border-transparent hover:border-blue-100 hover:bg-blue-50'
               }`}
             >
               <span className="text-xl">{item.icon}</span>

@@ -27,6 +27,7 @@ model User {
   // Relations
   students     Student[] // Un parent peut avoir plusieurs enfants
   classes      Class[]   // Classes assignées (pour enseignants)
+  passwordResetTokens PasswordResetToken[] // Tokens de réinitialisation
 
   @@map("users")
 }
@@ -297,4 +298,17 @@ model Schedule {
   updatedAt   DateTime @updatedAt
 
   @@map("schedules")
+}
+
+// Modèle Token de Réinitialisation de Mot de Passe
+model PasswordResetToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("password_reset_tokens")
 }

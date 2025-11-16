@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sidebar } from '../../components/layout/Sidebar';
 import { MobileSidebar } from '../../components/layout/MobileSidebar';
 import { Navbar } from '../../components/layout/Navbar';
@@ -7,22 +7,16 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
 import type { UserRole } from '../../contexts/AuthContext';
-
-interface User {
-  id: number;
-  email: string;
-  firstName: string;
-  lastName: string;
-  phone?: string;
-  role: UserRole;
-  createdAt: string;
-}
+import * as userService from '../../services/userService';
+import type { UserWithDate } from '../../services/userService';
 
 export const AdminAccountsPage = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<UserWithDate[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -32,26 +26,60 @@ export const AdminAccountsPage = () => {
     role: 'ADMINISTRATION' as UserRole,
   });
 
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const loadUsers = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const data = await userService.getUsers();
+      // Filtrer uniquement les comptes ADMINISTRATION
+      const adminUsers = data.filter(user => user.role === 'ADMINISTRATION') as UserWithDate[];
+      setUsers(adminUsers);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erreur lors du chargement des utilisateurs';
+      setError(errorMessage);
+      console.error('Erreur:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Appel API pour créer l'utilisateur
-    console.log('Créer utilisateur:', formData);
-    setIsCreateModalOpen(false);
-    // Réinitialiser le formulaire
-    setFormData({
-      email: '',
-      password: '',
-      firstName: '',
-      lastName: '',
-      phone: '',
-      role: 'ADMINISTRATION',
-    });
+    try {
+      setError(null);
+      await userService.createUser(formData);
+      setIsCreateModalOpen(false);
+      setFormData({
+        email: '',
+        password: '',
+        firstName: '',
+        lastName: '',
+        phone: '',
+        role: 'ADMINISTRATION',
+      });
+      await loadUsers(); // Recharger la liste
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la création de l\'utilisateur';
+      setError(errorMessage);
+      console.error('Erreur:', err);
+    }
   };
 
   const handleDelete = async (userId: number) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
-      // TODO: Appel API pour supprimer
-      console.log('Supprimer utilisateur:', userId);
+      try {
+        setError(null);
+        await userService.deleteUser(userId);
+        await loadUsers(); // Recharger la liste
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la suppression';
+        setError(errorMessage);
+        console.error('Erreur:', err);
+      }
     }
   };
 
@@ -65,29 +93,66 @@ export const AdminAccountsPage = () => {
       <MobileSidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
       <Navbar onMenuClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
 
-      <main className={`pt-16 transition-all duration-300 ${isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
+      <main className={`pt-16 transition-all duration-300 ${isSidebarCollapsed ? 'lg:ml-28' : 'lg:ml-64'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* En-tête */}
-          <div className="mb-6 flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestion des Comptes Administration</h1>
-              <p className="text-gray-600">Créez et gérez les comptes des membres de l'administration</p>
+          <div className="mb-8">
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-3xl font-bold text-gray-900">Gestion des Comptes Administration</h1>
+              <span className="px-3 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                {users.length} compte(s)
+              </span>
             </div>
-            <Button
-              onClick={() => setIsCreateModalOpen(true)}
-              style={{ backgroundColor: '#fbbf24' }}
-              className="flex items-center gap-2"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Nouveau Compte
-            </Button>
+            <p className="text-gray-600">Créez et gérez les comptes des membres de l'administration</p>
           </div>
+
+          {/* Statistique */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <Card className="border-0 shadow-md bg-gradient-to-br from-blue-500 to-blue-600">
+              <div className="p-6 text-white">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="w-12 h-12 rounded-lg bg-white bg-opacity-20 backdrop-blur-sm flex items-center justify-center text-2xl">
+                    👥
+                  </div>
+                </div>
+                <p className="text-white text-opacity-90 text-sm mb-1 font-medium">Total Comptes</p>
+                <p className="text-3xl font-bold">{users.length}</p>
+              </div>
+            </Card>
+          </div>
+
+          {/* Message d'erreur */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+              {error}
+            </div>
+          )}
+
+          {/* Barre d'actions */}
+          <Card className="mb-6 border-0 shadow-lg">
+            <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+              <p className="text-gray-600">Liste de tous les comptes administration créés</p>
+              <Button
+                onClick={() => setIsCreateModalOpen(true)}
+                style={{ backgroundColor: '#fbbf24' }}
+                className="flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Nouveau Compte
+              </Button>
+            </div>
+          </Card>
 
           {/* Tableau des utilisateurs */}
           <Card className="border-0 shadow-lg">
-            {users.length === 0 ? (
+            {isLoading ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-gray-600">Chargement des comptes...</p>
+              </div>
+            ) : users.length === 0 ? (
               <div className="text-center py-12">
                 <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
                   <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -145,7 +210,7 @@ export const AdminAccountsPage = () => {
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(user.createdAt).toLocaleDateString('fr-FR')}
+                          {new Date(user.createdAt).toLocaleString('fr-FR')}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex items-center justify-end gap-2">
