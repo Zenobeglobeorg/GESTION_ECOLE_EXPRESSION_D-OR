@@ -163,7 +163,7 @@ function App() {
           {/* Routes Administration - Accessible aussi par SUPER_ADMIN pour consultation */}
           <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMINISTRATION', 'SUPER_ADMIN']}><DashboardAdmin /></ProtectedRoute>} />
           <Route path="/admin/students" element={<ProtectedRoute allowedRoles={['ADMINISTRATION', 'SUPER_ADMIN']}><Students /></ProtectedRoute>} />
-          <Route path="/admin/students/new" element={<ProtectedRoute allowedRoles={['ADMINISTRATION']}><StudentRegistrationPage /></ProtectedRoute>} />
+          <Route path="/admin/students/new" element={<ProtectedRoute allowedRoles={['ADMINISTRATION', 'SUPER_ADMIN']}><StudentRegistrationPage /></ProtectedRoute>} />
           <Route path="/admin/students/associate" element={<ProtectedRoute allowedRoles={['ADMINISTRATION', 'SUPER_ADMIN']}><StudentsAssociate /></ProtectedRoute>} />
           <Route path="/admin/students/import" element={<ProtectedRoute allowedRoles={['ADMINISTRATION', 'SUPER_ADMIN']}><StudentsImport /></ProtectedRoute>} />
           <Route path="/admin/classes" element={<ProtectedRoute allowedRoles={['ADMINISTRATION', 'SUPER_ADMIN']}><Classes /></ProtectedRoute>} />

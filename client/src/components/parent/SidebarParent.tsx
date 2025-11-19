@@ -79,42 +79,52 @@ export const SidebarParent = ({ isCollapsed, onToggle }: SidebarParentProps) => 
   };
 
   return (
-    // AJOUT: dark:bg-gray-800 dark:border-gray-700
     <div
-      className={`flex flex-col bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 h-screen fixed left-0 top-0 z-40 transition-all duration-300 overflow-y-auto hide-scrollbar ${
-        isCollapsed ? 'w-28' : 'w-64'
-      } hidden lg:block overflow-hidden `}
-      style={{ boxShadow: '2px 0 10px rgba(0,0,0,0.05)' }}
+      className={`bg-white border-r border-blue-100 h-screen fixed left-0 top-0 z-40 transition-all duration-300 ${
+        isCollapsed ? 'w-20' : 'w-64'
+      } hidden lg:flex lg:flex-col shadow-[2px_0_12px_rgba(30,64,175,0.08)]`}
     >
-      {/* Header - Le gradient bleu/blanc reste joli même en mode sombre, pas de changement nécessaire ici */}
-      <div className="flex-shrink-0 h-16 flex items-center justify-between px-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-600 to-blue-700">
+      {/* Header avec logo et bouton hamburger */}
+      <div className="relative h-16 flex items-center justify-between px-4 border-b border-blue-100 bg-gradient-to-r from-blue-700 via-blue-800 to-blue-900 shrink-0">
         {!isCollapsed && (
-          <h2 className="text-white font-bold text-lg">Expression d'Or</h2>
+          <div className="flex items-center gap-2">
+            <div className="w-10 h-10 rounded-full bg-yellow-400 flex items-center justify-center text-blue-900 font-bold shadow-inner">
+              EO
+            </div>
+            <div className="flex flex-col leading-tight">
+              <span className="text-white font-semibold text-sm uppercase tracking-widest">Parent</span>
+              <span className="text-white/80 text-sm font-medium">Expression d'Or</span>
+            </div>
+          </div>
         )}
         <button
           onClick={onToggle}
-          className="p-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition-colors text-white"
+          className="p-2 rounded-lg hover:bg-white/20 transition-colors text-white"
+          title="Ouvrir/Fermer le menu"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
+        {!isCollapsed && (
+          <div className="absolute inset-x-0 -bottom-px h-1 bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500" />
+        )}
       </div>
 
-      <nav className="flex-1 overflow-y-auto py-4 hide-scrollbar">
+      {/* Menu items */}
+      <nav className="flex-1 overflow-y-auto py-4 px-2 bg-white">
         {menuItems.map((item) => (
           <Link
             key={item.path}
             to={item.path}
-            // AJOUT: dark:text-gray-300 dark:hover:bg-gray-700
-            className={`flex items-center gap-3 px-4 py-3 mx-2 rounded-lg transition-all mb-1 ${
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all mb-2 border ${
               isActive(item.path)
-                ? 'bg-blue-600 text-white shadow-lg'
-                : 'text-gray-700 dark:text-gray-300 hover:bg-yellow-100 hover:text-yellow-900 dark:hover:bg-gray-700 dark:hover:text-white'
+                ? 'bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 text-blue-900 shadow-lg border-yellow-300'
+                : 'text-blue-900 border-transparent hover:border-blue-100 hover:bg-blue-50'
             }`}
             title={isCollapsed ? item.label : undefined}
           >
-            <span className="flex-shrink-0">{item.icon}</span>
+            <span className="shrink-0">{item.icon}</span>
             {!isCollapsed && (
               <>
                 <span className="flex-1 font-medium">{item.label}</span>
@@ -129,11 +139,11 @@ export const SidebarParent = ({ isCollapsed, onToggle }: SidebarParentProps) => 
         ))}
       </nav>
 
-      <div className="border-t border-gray-200 dark:border-gray-700 p-4">
+      {/* Logout button */}
+      <div className="border-t border-gray-200 p-4 shrink-0">
         <button
           onClick={handleLogout}
-          // AJOUT: dark:hover:bg-red-900/30
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 ${
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 ${
             isCollapsed ? 'justify-center' : ''
           }`}
           title={isCollapsed ? 'Déconnexion' : undefined}

@@ -138,7 +138,7 @@ export const DashboardSuperAdmin = () => {
                     <div className="w-12 h-12 rounded-lg bg-white bg-opacity-20 backdrop-blur-sm flex items-center justify-center text-2xl">
                       {stat.icon}
                     </div>
-                    <span className="text-xs font-semibold bg-white bg-opacity-20 backdrop-blur-sm px-2 py-1 rounded">
+                    <span className="text-xs font-semibold bg-opacity-20 backdrop-blur-sm px-2 py-1 rounded">
                       {stat.change}
                     </span>
                   </div>

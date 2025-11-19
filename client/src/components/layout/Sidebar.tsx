@@ -121,88 +121,58 @@ export const Sidebar = ({ isCollapsed, onToggle }: SidebarProps) => {
   // Rendu JSX de la Sidebar
   return (
     <div
-      // Styles principaux de la sidebar : fond, border, fixe à gauche, transition animée, largeur dépendante du collapse, masquée sur petits écrans
-      className={`bg-white border-r border-gray-200 h-screen fixed left-0 top-0 z-40 transition-all duration-300 ${
-        isCollapsed ? 'w-28' : 'w-64'
-      } hidden lg:block`}
-      style={{ boxShadow: '2px 0 10px rgba(0,0,0,0.05)' }} // Légère ombre portée
+      className={`bg-white border-r border-blue-100 h-screen fixed left-0 top-0 z-40 transition-all duration-300 ${
+        isCollapsed ? 'w-20' : 'w-64'
+      } hidden lg:flex lg:flex-col shadow-[2px_0_12px_rgba(30,64,175,0.08)]`}
     >
-      {/* Header de la sidebar : logo et bouton pour étendre/réduire la sidebar */}
-      <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200">
-        {/* Bouton hamburger toggle (affiche/masque la sidebar ou la réduit/étend) */}
-        <button
-            onClick={onToggle}
-            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-            aria-label="Toggle sidebar"
-          >
-            <svg
-              className="w-5 h-5 text-gray-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              {/* Icône du hamburger (apparence différente en mode réduit ou non) */}
-              {isCollapsed ? (
-                // 3 lignes horizontales pour le mode réduit (ouvrir)
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              ) : (
-                // Croix (fermer) pour le mode étendu
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              )}
-            </svg>
-          </button>
-        {/* Affichage du logo et du nom de l'application si la sidebar est étendue */}
+      {/* Header avec logo et bouton hamburger */}
+      <div className="relative h-16 flex items-center justify-between px-4 border-b border-blue-100 bg-gradient-to-r from-blue-700 via-blue-800 to-blue-900 shrink-0">
         {!isCollapsed && (
           <div className="flex items-center gap-2">
-            {/* Logo circulaire avec la lettre "E" */}
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-white font-bold">
-              E
+            <div className="w-10 h-10 rounded-full bg-yellow-400 flex items-center justify-center text-blue-900 font-bold shadow-inner">
+              EO
             </div>
-            {/* Nom de l'application */}
-            <span className="text-lg font-bold" style={{ color: '#1e40af' }}>
-              Expression d'Or
-            </span>
+            <div className="flex flex-col leading-tight">
+              <span className="text-white font-semibold text-sm uppercase tracking-widest">Super Admin</span>
+              <span className="text-white/80 text-sm font-medium">Expression d'Or</span>
+            </div>
           </div>
         )}
-        {/* Si la sidebar est réduite, affiche le logo centré sans texte */}
-        {isCollapsed && (
-          <div className="w-full flex justify-center">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-white font-bold">
-              E
-            </div>
-          </div>
+        <button
+          onClick={onToggle}
+          className="p-2 rounded-lg hover:bg-white/20 transition-colors text-white"
+          title="Ouvrir/Fermer le menu"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        {!isCollapsed && (
+          <div className="absolute inset-x-0 -bottom-px h-1 bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500" />
         )}
       </div>
 
-      {/* Navigation principale : affichage de tous les éléments du menu */}
-      <nav className="mt-4 px-2">
+      {/* Menu items */}
+      <nav className="flex-1 overflow-y-auto py-4 px-2 bg-white">
         {menuItems.map((item, index) => {
-          const active = isActive(item.path); // Vérifie si l'item doit être surligné (actif)
+          const active = isActive(item.path);
           return (
             <Link
               key={index}
               to={item.path}
-              // Style actif ou inactif selon la route, avec effet hover
-              className={`
-                flex items-center gap-3 px-4 py-3 mb-2 rounded-lg transition-all duration-200
-                ${
-                  active
-                    ? 'bg-yellow-100 text-yellow-800 font-semibold' // Style si actif
-                    : 'text-gray-700 hover:bg-gray-50'              // Sinon classique/hover
-                }
-              `}
-              title={isCollapsed ? item.label : ''} // Tooltip si sidebar réduite
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all mb-2 border ${
+                active
+                  ? 'bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 text-blue-900 shadow-lg border-yellow-300'
+                  : 'text-blue-900 border-transparent hover:border-blue-100 hover:bg-blue-50'
+              }`}
+              title={isCollapsed ? item.label : undefined}
             >
-              {/* Icône du menu (colorée si actif) */}
-              <span className={active ? 'text-yellow-600' : 'text-gray-500'}>{item.icon}</span>
-              {/* Affichage du label uniquement si la sidebar n'est pas réduite */}
+              <span className="shrink-0">{item.icon}</span>
               {!isCollapsed && (
                 <>
-                  {/* Nom de la section */}
-                  <span className="flex-1">{item.label}</span>
-                  {/* Affiche un badge s'il existe (optionnel) */}
+                  <span className="flex-1 font-medium">{item.label}</span>
                   {item.badge && (
-                    <span className="px-2 py-0.5 text-xs rounded-full bg-yellow-500 text-white">
+                    <span className="bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-1 rounded-full">
                       {item.badge}
                     </span>
                   )}
@@ -213,23 +183,19 @@ export const Sidebar = ({ isCollapsed, onToggle }: SidebarProps) => {
         })}
       </nav>
 
-      {/* Bouton de déconnexion, fixé en bas de la sidebar */}
-      <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
+      {/* Logout button */}
+      <div className="border-t border-gray-200 p-4 shrink-0">
         <button
           onClick={handleLogout}
-          className={`
-            w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200
-            text-red-600 hover:bg-red-50 font-medium
-            ${isCollapsed ? 'justify-center' : ''}
-          `}
-          title={isCollapsed ? 'Déconnexion' : ''} // Tooltip si sidebar réduite
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 ${
+            isCollapsed ? 'justify-center' : ''
+          }`}
+          title={isCollapsed ? 'Déconnexion' : undefined}
         >
-          {/* Icône de déconnexion */}
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
           </svg>
-          {/* Texte "Déconnexion" visible seulement si sidebar étendue */}
-          {!isCollapsed && <span>Déconnexion</span>}
+          {!isCollapsed && <span className="font-medium">Déconnexion</span>}
         </button>
       </div>
     </div>

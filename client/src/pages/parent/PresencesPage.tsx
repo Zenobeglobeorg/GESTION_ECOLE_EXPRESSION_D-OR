@@ -1,6 +1,6 @@
 // Enregistrez ce fichier sous: src/pages/parent/PresencesPage.tsx
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 // --- DONNÉES FACTICES (MOCK DATA) ---
 const mockStats = {
@@ -19,9 +19,9 @@ const attendanceData = {
 };
 // ---
 
-const PresencesPage: React.FC = () => {
+const PresencesPage = () => {
   // État pour simuler la navigation entre les mois
-  const [currentMonth, setCurrentMonth] = useState('Novembre 2025');
+  const [currentMonth] = useState('Novembre 2025');
 
   const getDayStatus = (day: number): string => {
     const status = attendanceData[day.toString() as keyof typeof attendanceData];

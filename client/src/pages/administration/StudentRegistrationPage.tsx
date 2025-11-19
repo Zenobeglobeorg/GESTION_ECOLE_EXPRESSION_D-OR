@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Navbar } from '../../components/layout/Navbar';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -10,6 +10,17 @@ import * as parentService from '../../services/parentService';
 
 export const StudentRegistrationPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Détecter d'où on vient pour rediriger vers le bon dashboard
+  const getReturnPath = () => {
+    // Si on vient de la route superadmin, retourner vers superadmin
+    if (location.pathname.startsWith('/superadmin')) {
+      return '/superadmin';
+    }
+    // Sinon, retourner vers admin
+    return '/admin';
+  };
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -120,9 +131,9 @@ export const StudentRegistrationPage = () => {
         parentEmail: '',
       });
 
-      // Rediriger après 2 secondes
+      // Rediriger après 2 secondes vers le bon dashboard
       setTimeout(() => {
-        navigate('/admin');
+        navigate(getReturnPath());
       }, 2000);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la création de l\'élève';
@@ -509,7 +520,7 @@ export const StudentRegistrationPage = () => {
             </Card>
 
             <div className="flex justify-end gap-3">
-              <Button type="button" variant="outline" onClick={() => navigate('/admin')}>
+              <Button type="button" variant="outline" onClick={() => navigate(getReturnPath())}>
                 Annuler
               </Button>
               <Button type="submit" style={{ backgroundColor: '#fbbf24' }} disabled={isLoading}>
