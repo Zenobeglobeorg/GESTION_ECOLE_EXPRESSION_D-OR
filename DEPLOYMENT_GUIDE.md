@@ -142,13 +142,22 @@ Dans **"Environment Variables"**, ajoutez :
 VITE_API_URL=https://votre-app.up.railway.app
 ```
 
-**⚠️ Important :** Remplacez `https://votre-app.up.railway.app` par l'URL réelle de votre backend Railway.
+**⚠️ Important :** 
+- Remplacez `https://votre-app.up.railway.app` par l'URL réelle de votre backend Railway
+- **Cochez tous les environnements** : Production, Preview, et Development
+- **Pas de slash final** dans l'URL
 
 ### Étape 2.4 : Déployer
 
 1. Cliquez sur **"Deploy"**
 2. Vercel va construire et déployer votre application
 3. Une fois terminé, vous obtiendrez une URL comme : `https://votre-app.vercel.app`
+
+**⚠️ CRUCIAL :** Si vous ajoutez/modifiez une variable d'environnement après le premier déploiement, vous **DEVEZ** redéployer :
+- Allez dans **Deployments**
+- Cliquez sur **⋯** (3 points) du dernier déploiement
+- Sélectionnez **"Redeploy"**
+- Attendez la fin du build
 
 ### Étape 2.5 : Mettre à jour CORS dans Railway
 
