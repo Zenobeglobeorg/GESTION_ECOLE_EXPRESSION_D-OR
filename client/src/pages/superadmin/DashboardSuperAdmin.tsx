@@ -5,49 +5,51 @@ import { Navbar } from '../../components/layout/Navbar';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Link } from 'react-router-dom';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 export const DashboardSuperAdmin = () => {
+  const { t } = useLanguage();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const stats = [
     {
-      title: 'Comptes Administration',
+      title: t('dashboard.adminAccounts'),
       value: '0',
       icon: '👥',
       gradient: 'from-yellow-400 via-yellow-500 to-yellow-600',
-      description: 'Comptes créés',
+      description: t('overview.allAccounts'),
       change: '+0%',
     },
     {
-      title: 'Enseignants',
+      title: t('dashboard.teachers'),
       value: '0',
       icon: '👨‍🏫',
-      gradient: 'from-blue-500 via-blue-600 to-blue-700',
-      description: 'Enseignants actifs',
+      gradient: 'from-yellow-400 via-yellow-500 to-yellow-600',
+      description: t('overview.activeTeachers'),
       change: '+0%',
     },
     {
-      title: 'Parents',
+      title: t('dashboard.parents'),
       value: '0',
       icon: '👨‍👩‍👧',
-      gradient: 'from-yellow-500 via-yellow-600 to-yellow-700',
-      description: 'Familles inscrites',
+      gradient: 'from-yellow-400 via-yellow-500 to-yellow-600',
+      description: t('overview.registeredFamilies'),
       change: '+0%',
     },
     {
-      title: 'Élèves',
+      title: t('dashboard.students'),
       value: '0',
       icon: '🎓',
-      gradient: 'from-blue-400 via-blue-500 to-blue-600',
-      description: 'Élèves inscrits',
+      gradient: 'from-yellow-400 via-yellow-500 to-yellow-600',
+      description: t('overview.registeredStudents'),
       change: '+0%',
     },
   ];
 
   const quickActions = [
     {
-      label: 'Inscrire un élève',
+      label: t('dashboard.registerStudent'),
       path: '/superadmin/students/new',
       icon: (
         <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -57,48 +59,48 @@ export const DashboardSuperAdmin = () => {
       color: 'bg-yellow-50 text-yellow-600 hover:bg-yellow-100',
     },
     {
-      label: 'Gérer les utilisateurs',
+      label: t('dashboard.manageUsers'),
       path: '/superadmin/users',
       icon: (
         <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
         </svg>
       ),
-      color: 'bg-blue-50 text-blue-600 hover:bg-blue-100',
+      color: 'bg-yellow-50 text-yellow-600 hover:bg-yellow-100',
     },
     {
-      label: 'Gérer les rôles',
+      label: t('dashboard.manageRoles'),
       path: '/superadmin/roles',
       icon: (
         <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
         </svg>
       ),
-      color: 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100',
+      color: 'bg-yellow-50 text-yellow-600 hover:bg-yellow-100',
     },
     {
-      label: 'Vue globale',
+      label: t('dashboard.globalView'),
       path: '/superadmin/overview',
       icon: (
         <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
         </svg>
       ),
-      color: 'bg-blue-50 text-blue-700 hover:bg-blue-100',
+      color: 'bg-yellow-50 text-yellow-600 hover:bg-yellow-100',
     },
   ];
 
   const recentActivities = [
     {
       type: 'user',
-      message: 'Aucune activité récente',
-      time: 'Le système est prêt',
+      message: t('dashboard.noRecentActivity'),
+      time: t('dashboard.systemReady'),
       icon: '👤',
     },
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Sidebar Desktop */}
       <Sidebar isCollapsed={isSidebarCollapsed} onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
 
@@ -118,12 +120,12 @@ export const DashboardSuperAdmin = () => {
           {/* En-tête avec badge */}
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-3xl font-bold text-gray-900">Tableau de Bord</h1>
-              <span className="px-3 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                Super-Administrateur
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('dashboard.title')}</h1>
+              <span className="px-3 py-1 text-xs font-semibold rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400">
+                {t('dashboard.superAdmin')}
               </span>
             </div>
-            <p className="text-gray-600">Bienvenue dans votre espace de gestion complète du système</p>
+            <p className="text-gray-600 dark:text-gray-400">{t('dashboard.subtitle')}</p>
           </div>
 
           {/* Statistiques avec design amélioré */}
@@ -151,13 +153,13 @@ export const DashboardSuperAdmin = () => {
           </div>
 
           {/* Actions rapides avec design jaune/bleu */}
-          <Card
-            title="Actions Rapides"
-            className="mb-8 border-0 shadow-lg"
-            headerActions={
-              <div className="w-1 h-8 rounded-full" style={{ backgroundColor: '#fbbf24' }} />
-            }
-          >
+            <Card
+              title={t('dashboard.quickActions')}
+              className="mb-8 border-0 shadow-lg dark:bg-gray-800"
+              headerActions={
+                <div className="w-1 h-8 rounded-full" style={{ backgroundColor: '#fbbf24' }} />
+              }
+            >
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {quickActions.map((action, index) => (
                 <Link key={index} to={action.path} className="block">
@@ -178,44 +180,44 @@ export const DashboardSuperAdmin = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Gestion des comptes */}
             <Card
-              title="Gestion des Utilisateurs"
-              className="border-0 shadow-lg"
+              title={t('dashboard.userManagement')}
+              className="border-0 shadow-lg dark:bg-gray-800"
               headerActions={
-                <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
-                  <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                   </svg>
                 </div>
               }
             >
-              <p className="text-gray-600 mb-4">
-                Créez et gérez tous les utilisateurs du système (Admin, Enseignants, Parents)
+              <p className="text-gray-600 dark:text-gray-400 mb-4">
+                {t('dashboard.userManagementDesc')}
               </p>
               <Link to="/superadmin/users" className="block">
                 <Button
                   variant="primary"
                   className="w-full"
-                  style={{ backgroundColor: '#1e40af' }}
+                  style={{ backgroundColor: '#fbbf24' }}
                 >
-                  Gérer les Utilisateurs
+                  {t('dashboard.manageUsersBtn')}
                 </Button>
               </Link>
             </Card>
 
             {/* Rôles et Permissions */}
             <Card
-              title="Rôles et Permissions"
-              className="border-0 shadow-lg"
+              title={t('dashboard.rolesPermissions')}
+              className="border-0 shadow-lg dark:bg-gray-800"
               headerActions={
-                <div className="w-12 h-12 rounded-lg bg-yellow-100 flex items-center justify-center">
-                  <svg className="w-6 h-6" style={{ color: '#fbbf24' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
                 </div>
               }
             >
-              <p className="text-gray-600 mb-4">
-                Définissez avec précision les droits d'accès de chaque membre de l'administration
+              <p className="text-gray-600 dark:text-gray-400 mb-4">
+                {t('dashboard.rolesPermissionsDesc')}
               </p>
               <Link to="/superadmin/roles">
                 <Button
@@ -223,44 +225,44 @@ export const DashboardSuperAdmin = () => {
                   className="w-full"
                   style={{ backgroundColor: '#fbbf24' }}
                 >
-                  Gérer les Rôles
+                  {t('dashboard.manageRolesBtn')}
                 </Button>
               </Link>
             </Card>
 
             {/* Vue Globale */}
             <Card
-              title="Vue Globale du Système"
-              className="border-0 shadow-lg"
+              title={t('dashboard.systemView')}
+              className="border-0 shadow-lg dark:bg-gray-800"
               headerActions={
-                <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
-                  <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
                 </div>
               }
             >
-              <p className="text-gray-600 mb-4">
-                Accédez à toutes les données et modules du système avec un contrôle total
+              <p className="text-gray-600 dark:text-gray-400 mb-4">
+                {t('dashboard.systemViewDesc')}
               </p>
               <Link to="/superadmin/overview">
                 <Button
                   variant="primary"
                   className="w-full"
-                  style={{ backgroundColor: '#1e40af' }}
+                  style={{ backgroundColor: '#fbbf24' }}
                 >
-                  Accéder à la Vue Globale
+                  {t('dashboard.accessSystemView')}
                 </Button>
               </Link>
             </Card>
 
             {/* Activités Récentes */}
             <Card
-              title="Activités Récentes"
-              className="border-0 shadow-lg"
+              title={t('dashboard.recentActivities')}
+              className="border-0 shadow-lg dark:bg-gray-800"
               headerActions={
-                <div className="w-12 h-12 rounded-lg bg-yellow-100 flex items-center justify-center">
-                  <svg className="w-6 h-6" style={{ color: '#fbbf24' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
@@ -270,14 +272,14 @@ export const DashboardSuperAdmin = () => {
                 {recentActivities.map((activity, index) => (
                   <div
                     key={index}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 hover:bg-yellow-50 transition-colors"
+                    className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-colors"
                   >
-                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-xl">
+                    <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-xl">
                       {activity.icon}
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">{activity.message}</p>
-                      <p className="text-xs text-gray-500">{activity.time}</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-200">{activity.message}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{activity.time}</p>
                     </div>
                   </div>
                 ))}

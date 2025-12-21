@@ -76,7 +76,7 @@ async function findOrCreateParent(email, studentData) {
 }
 
 /**
- * Liste tous les élèves
+ * Liste tous les élèves (réservé aux admins)
  */
 export const listStudents = async (req, res) => {
   try {
@@ -108,6 +108,49 @@ export const listStudents = async (req, res) => {
 };
 
 /**
+ * Récupère les enfants du parent connecté (pour les parents)
+ */
+export const getMyChildren = async (req, res) => {
+  try {
+    const user = req.user;
+    
+    // Vérifier que l'utilisateur est un parent
+    if (user.role !== 'PARENT') {
+      return res.status(403).json({ error: 'Accès refusé. Cette route est réservée aux parents.' });
+    }
+
+    const students = await prisma.student.findMany({
+      where: {
+        parentId: user.id,
+      },
+      include: {
+        parent: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        class: {
+          select: {
+            id: true,
+            name: true,
+            level: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    
+    res.json(students);
+  } catch (err) {
+    console.error('getMyChildren error:', err);
+    res.status(500).json({ error: 'Erreur lors de la récupération des enfants' });
+  }
+};
+
+/**
  * Crée un nouvel élève
  */
 export const createStudent = async (req, res) => {
@@ -119,6 +162,7 @@ export const createStudent = async (req, res) => {
       classId,
       schoolOfOrigin,
       hasDisability,
+      disabilityDescription,
       isOrphan,
       orphanType,
       fatherName,
@@ -153,6 +197,16 @@ export const createStudent = async (req, res) => {
     });
     const wasCreated = parent._wasCreated ?? false;
 
+    // Récupérer la classe pour obtenir le niveau (pour calculer les montants)
+    let classLevel = null;
+    if (classId) {
+      const studentClass = await prisma.class.findUnique({
+        where: { id: parseInt(classId) },
+        select: { level: true },
+      }).catch(() => null);
+      classLevel = studentClass?.level;
+    }
+
     // Créer l'élève
     const student = await prisma.student.create({
       data: {
@@ -162,6 +216,7 @@ export const createStudent = async (req, res) => {
         classId: classId ? parseInt(classId) : null,
         schoolOfOrigin: schoolOfOrigin || null,
         hasDisability: hasDisability || false,
+        disabilityDescription: disabilityDescription || null,
         isOrphan: isOrphan || false,
         orphanType: orphanType || null,
         fatherName: fatherName || null,
@@ -193,10 +248,25 @@ export const createStudent = async (req, res) => {
           select: {
             id: true,
             name: true,
+            level: true,
           },
         },
       },
     });
+
+    // Créer les paiements pour l'élève (première tranche payée automatiquement)
+    const { createPaymentsForStudent } = await import('./paymentController.js');
+    try {
+      await createPaymentsForStudent(
+        student.id,
+        paymentOption || 'MONTHLY',
+        student.enrollmentDate,
+        classLevel || student.class?.level
+      );
+    } catch (paymentErr) {
+      console.error('Erreur lors de la création des paiements:', paymentErr);
+      // On continue quand même, l'élève est créé
+    }
 
     res.status(201).json({
       student,
@@ -305,6 +375,228 @@ export const deleteStudent = async (req, res) => {
   } catch (err) {
     console.error('deleteStudent error:', err);
     res.status(500).json({ error: 'Erreur lors de la suppression de l\'élève' });
+  }
+};
+
+/**
+ * Associe un élève à un parent
+ */
+export const associateStudentToParent = async (req, res) => {
+  try {
+    const { studentId, parentId } = req.body;
+
+    if (!studentId || !parentId) {
+      return res.status(400).json({ error: 'studentId et parentId sont requis' });
+    }
+
+    // Vérifier que l'élève existe
+    const student = await prisma.student.findUnique({
+      where: { id: Number(studentId) },
+    });
+
+    if (!student) {
+      return res.status(404).json({ error: 'Élève non trouvé' });
+    }
+
+    // Vérifier que le parent existe et a le rôle PARENT
+    const parent = await prisma.user.findFirst({
+      where: {
+        id: Number(parentId),
+        role: 'PARENT',
+      },
+    });
+
+    if (!parent) {
+      return res.status(404).json({ error: 'Parent non trouvé ou n\'a pas le rôle PARENT' });
+    }
+
+    // Mettre à jour l'élève avec le nouveau parentId
+    const updatedStudent = await prisma.student.update({
+      where: { id: Number(studentId) },
+      data: { parentId: Number(parentId) },
+      include: {
+        parent: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        class: {
+          select: {
+            id: true,
+            name: true,
+            level: true,
+          },
+        },
+      },
+    });
+
+    res.json({
+      success: true,
+      message: 'Élève associé au parent avec succès',
+      student: updatedStudent,
+    });
+  } catch (err) {
+    console.error('associateStudentToParent error:', err);
+    res.status(500).json({ error: 'Erreur lors de l\'association de l\'élève au parent' });
+  }
+};
+
+/**
+ * Importe plusieurs élèves depuis un fichier CSV
+ */
+export const importStudents = async (req, res) => {
+  try {
+    const { rows } = req.body;
+
+    if (!rows || !Array.isArray(rows) || rows.length === 0) {
+      return res.status(400).json({ error: 'Aucune donnée à importer' });
+    }
+
+    const results = {
+      success: [],
+      errors: [],
+      total: rows.length,
+    };
+
+    // Traiter chaque ligne
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const rowNumber = i + 2; // +2 car ligne 1 = headers, ligne 2 = première donnée
+
+      try {
+        // Mapping des colonnes CSV aux champs de la base de données
+        // On accepte plusieurs variantes de noms de colonnes
+        const firstName = row.firstName || row.prenom || row['Prénom'] || row['First Name'] || '';
+        const lastName = row.lastName || row.nom || row['Nom'] || row['Last Name'] || '';
+        const dateOfBirth = row.dateOfBirth || row.dateNaissance || row['Date de naissance'] || row['Date of Birth'] || row['Date Naissance'] || '';
+        const parentEmail = row.parentEmail || row.emailParent || row['Email Parent'] || row['Email du parent'] || row['Parent Email'] || '';
+        const className = row.class || row.classe || row['Classe'] || row['Class'] || '';
+        const schoolOfOrigin = row.schoolOfOrigin || row.ecoleProvenance || row['École de provenance'] || row['School of Origin'] || '';
+        const hasDisability = row.hasDisability === 'true' || row.hasDisability === '1' || row.handicap === 'Oui' || row.handicap === 'oui' || row['Handicap'] === 'Oui' || false;
+        const disabilityDescription = row.disabilityDescription || row.descriptionHandicap || row['Description handicap'] || row['Disability Description'] || '';
+        const isOrphan = row.isOrphan === 'true' || row.isOrphan === '1' || row.orphelin === 'Oui' || row.orphelin === 'oui' || row['Orphelin'] === 'Oui' || false;
+        const orphanType = row.orphanType || row.typeOrphelin || row['Type orphelin'] || row['Orphan Type'] || '';
+        const fatherName = row.fatherName || row.nomPere || row['Nom père'] || row['Father Name'] || '';
+        const fatherContact = row.fatherContact || row.contactPere || row['Contact père'] || row['Father Contact'] || '';
+        const motherName = row.motherName || row.nomMere || row['Nom mère'] || row['Mother Name'] || '';
+        const motherContact = row.motherContact || row.contactMere || row['Contact mère'] || row['Mother Contact'] || '';
+        const guardianName = row.guardianName || row.nomTuteur || row['Nom tuteur'] || row['Guardian Name'] || '';
+        const guardianContact = row.guardianContact || row.contactTuteur || row['Contact tuteur'] || row['Guardian Contact'] || '';
+        const paymentOption = row.paymentOption || row.optionPaiement || row['Option paiement'] || row['Payment Option'] || 'MONTHLY';
+
+        // Validation des champs requis
+        if (!firstName || !lastName || !dateOfBirth || !parentEmail) {
+          results.errors.push({
+            row: rowNumber,
+            student: `${firstName} ${lastName}`.trim() || 'Inconnu',
+            error: 'Champs requis manquants: firstName, lastName, dateOfBirth, ou parentEmail',
+          });
+          continue;
+        }
+
+        // Vérifier et trouver ou créer la classe si nécessaire
+        let classId = null;
+        if (className) {
+          try {
+            const existingClass = await prisma.class.findFirst({
+              where: {
+                name: { equals: className, mode: 'insensitive' },
+              },
+            });
+
+            if (existingClass) {
+              classId = existingClass.id;
+            } else {
+              // Créer la classe si elle n'existe pas
+              const newClass = await prisma.class.create({
+                data: {
+                  name: className,
+                  level: 'Primaire', // Par défaut, peut être ajusté
+                  academicYear: new Date().getFullYear().toString(),
+                },
+              });
+              classId = newClass.id;
+            }
+          } catch (classError) {
+            console.error(`Erreur lors de la création/recherche de la classe pour la ligne ${rowNumber}:`, classError);
+          }
+        }
+
+        // Créer ou trouver le parent
+        const parent = await findOrCreateParent(parentEmail, {
+          fatherName,
+          motherName,
+          lastName,
+          fatherContact,
+          motherContact,
+        });
+
+        // Créer l'élève
+        const student = await prisma.student.create({
+          data: {
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
+            dateOfBirth: new Date(dateOfBirth),
+            classId: classId,
+            schoolOfOrigin: schoolOfOrigin || null,
+            hasDisability: hasDisability || false,
+            disabilityDescription: disabilityDescription || null,
+            isOrphan: isOrphan || false,
+            orphanType: orphanType || null,
+            fatherName: fatherName || null,
+            fatherContact: fatherContact || null,
+            motherName: motherName || null,
+            motherContact: motherContact || null,
+            guardianName: guardianName || null,
+            guardianContact: guardianContact || null,
+            paymentOption: paymentOption.toUpperCase() === 'QUARTERLY' ? 'QUARTERLY' : paymentOption.toUpperCase() === 'ANNUAL' ? 'ANNUAL' : 'MONTHLY',
+            parentId: parent.id,
+          },
+          include: {
+            parent: {
+              select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
+            class: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        });
+
+        results.success.push({
+          row: rowNumber,
+          student: `${student.firstName} ${student.lastName}`,
+          parent: `${parent.firstName} ${parent.lastName}`,
+          parentWasCreated: parent._wasCreated || false,
+        });
+      } catch (err) {
+        console.error(`Erreur lors de l'import de la ligne ${rowNumber}:`, err);
+        results.errors.push({
+          row: rowNumber,
+          student: `${row.firstName || row.prenom || ''} ${row.lastName || row.nom || ''}`.trim() || 'Inconnu',
+          error: err.message || 'Erreur lors de la création de l\'élève',
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Import terminé: ${results.success.length} élève(s) importé(s) avec succès, ${results.errors.length} erreur(s)`,
+      results,
+    });
+  } catch (err) {
+    console.error('importStudents error:', err);
+    res.status(500).json({ error: 'Erreur lors de l\'import des élèves' });
   }
 };
 

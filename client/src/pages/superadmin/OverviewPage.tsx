@@ -7,9 +7,11 @@ import { Card } from '../../components/ui/Card';
 import { Link } from 'react-router-dom';
 import * as userService from '../../services/userService';
 import * as studentService from '../../services/studentService';
+import { useLanguage } from '../../contexts/LanguageContext';
 //import type { UserWithDate } from '../../services/userService';
 
 export const OverviewPage = () => {
+  const { t } = useLanguage();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -53,48 +55,48 @@ export const OverviewPage = () => {
 
   const statCards = [
     {
-      title: 'Total Utilisateurs',
+      title: t('overview.totalUsers'),
       value: stats.totalUsers,
       icon: '👥',
       color: 'bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700',
       path: '/superadmin/users',
-      description: 'Tous les comptes créés',
+      description: t('overview.allAccounts'),
     },
     {
-      title: 'Comptes Administration',
+      title: t('overview.adminAccounts'),
       value: stats.totalAdmins,
       icon: '👔',
       color: 'bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600',
       path: '/superadmin/admins',
-      description: 'Membres de l\'administration',
+      description: t('overview.adminMembers'),
     },
     {
-      title: 'Enseignants',
+      title: t('overview.teachers'),
       value: stats.totalTeachers,
       icon: '👨‍🏫',
       color: 'bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600',
-      description: 'Enseignants actifs',
+      description: t('overview.activeTeachers'),
     },
     {
-      title: 'Parents',
+      title: t('overview.parents'),
       value: stats.totalParents,
       icon: '👨‍👩‍👧',
       color: 'bg-gradient-to-br from-yellow-500 via-yellow-600 to-yellow-700',
-      description: 'Familles inscrites',
+      description: t('overview.registeredFamilies'),
     },
     {
-      title: 'Élèves',
+      title: t('overview.students'),
       value: stats.totalStudents,
       icon: '🎓',
       color: 'bg-gradient-to-br from-blue-500 via-blue-500 to-blue-600',
       path: '/superadmin/users',
-      description: 'Élèves inscrits',
+      description: t('overview.registeredStudents'),
     },
   ];
 
   const quickLinks = [
     {
-      label: 'Gérer les Utilisateurs',
+      label: t('overview.manageUsers'),
       path: '/superadmin/users',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -104,7 +106,7 @@ export const OverviewPage = () => {
       color: 'bg-blue-50 text-blue-700 hover:bg-blue-100',
     },
     {
-      label: 'Comptes Administration',
+      label: t('overview.adminAccountsLink'),
       path: '/superadmin/admins',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -114,7 +116,7 @@ export const OverviewPage = () => {
       color: 'bg-blue-50 text-blue-700 hover:bg-blue-100',
     },
     {
-      label: 'Inscription Élèves',
+      label: t('overview.studentRegistration'),
       path: '/superadmin/students/new',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -124,7 +126,7 @@ export const OverviewPage = () => {
       color: 'bg-yellow-50 text-yellow-600 hover:bg-yellow-100',
     },
     {
-      label: 'Rôles & Permissions',
+      label: t('overview.rolesPermissions'),
       path: '/superadmin/roles',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -136,7 +138,7 @@ export const OverviewPage = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Sidebar isCollapsed={isSidebarCollapsed} onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
       <MobileSidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
       <Navbar onMenuClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
@@ -146,19 +148,19 @@ export const OverviewPage = () => {
           {/* En-tête */}
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-3xl font-bold text-gray-900">Vue Globale du Système</h1>
-              <span className="px-3 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                Super-Administrateur
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('overview.title')}</h1>
+              <span className="px-3 py-1 text-xs font-semibold rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400">
+                {t('dashboard.superAdmin')}
               </span>
             </div>
-            <p className="text-gray-600">Vue d'ensemble complète de tous les éléments du système</p>
+            <p className="text-gray-600 dark:text-gray-400">{t('overview.subtitle')}</p>
           </div>
 
           {/* Statistiques principales */}
           {isLoading ? (
             <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Chargement des statistiques...</p>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-4"></div>
+              <p className="text-gray-600 dark:text-gray-400">{t('overview.loadingStats')}</p>
             </div>
           ) : (
             <>
@@ -185,8 +187,8 @@ export const OverviewPage = () => {
 
               {/* Accès rapides */}
               <Card
-                title="Accès Rapides"
-                className="mb-8 border-0 shadow-lg"
+                title={t('overview.quickAccess')}
+                className="mb-8 border-0 shadow-lg dark:bg-gray-800"
                 headerActions={
                   <div className="w-1 h-8 rounded-full" style={{ backgroundColor: '#fbbf24' }} />
                 }
@@ -210,61 +212,61 @@ export const OverviewPage = () => {
               {/* Informations système */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Card
-                  title="État du Système"
-                  className="border-0 shadow-lg"
+                  title={t('overview.systemStatus')}
+                  className="border-0 shadow-lg dark:bg-gray-800"
                   headerActions={
-                    <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
-                      <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                      <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     </div>
                   }
                 >
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                      <span className="text-sm font-medium text-gray-900">Système</span>
-                      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                        Opérationnel
+                    <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                      <span className="text-sm font-medium text-gray-900 dark:text-gray-200">{t('overview.system')}</span>
+                      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300">
+                        {t('overview.operational')}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                      <span className="text-sm font-medium text-gray-900">Base de données</span>
-                      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                        Connectée
+                    <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                      <span className="text-sm font-medium text-gray-900 dark:text-gray-200">{t('overview.database')}</span>
+                      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300">
+                        {t('overview.connected')}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
-                      <span className="text-sm font-medium text-gray-900">Services email</span>
-                      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                        Configuré
+                    <div className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                      <span className="text-sm font-medium text-gray-900 dark:text-gray-200">{t('overview.emailServices')}</span>
+                      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-300">
+                        {t('overview.configured')}
                       </span>
                     </div>
                   </div>
                 </Card>
 
                 <Card
-                  title="Résumé des Activités"
-                  className="border-0 shadow-lg"
+                  title={t('overview.activitySummary')}
+                  className="border-0 shadow-lg dark:bg-gray-800"
                   headerActions={
-                    <div className="w-12 h-12 rounded-lg bg-yellow-100 flex items-center justify-center">
-                      <svg className="w-6 h-6" style={{ color: '#fbbf24' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="w-12 h-12 rounded-lg bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
+                      <svg className="w-6 h-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                       </svg>
                     </div>
                   }
                 >
                   <div className="space-y-3">
-                    <div className="p-4 bg-gray-50 rounded-lg">
-                      <p className="text-sm text-gray-600 mb-1">Utilisateurs actifs</p>
-                      <p className="text-2xl font-bold text-gray-900">{stats.totalUsers}</p>
+                    <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('overview.activeUsers')}</p>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalUsers}</p>
                     </div>
-                    <div className="p-4 bg-gray-50 rounded-lg">
-                      <p className="text-sm text-gray-600 mb-1">Élèves inscrits</p>
-                      <p className="text-2xl font-bold text-gray-900">{stats.totalStudents}</p>
+                    <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('overview.registeredStudents')}</p>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalStudents}</p>
                     </div>
-                    <div className="p-4 bg-gray-50 rounded-lg">
-                      <p className="text-sm text-gray-600 mb-1">Taux d'inscription</p>
-                      <p className="text-2xl font-bold text-gray-900">
+                    <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('overview.enrollmentRate')}</p>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white">
                         {stats.totalUsers > 0 
                           ? Math.round((stats.totalStudents / stats.totalUsers) * 100) 
                           : 0}%

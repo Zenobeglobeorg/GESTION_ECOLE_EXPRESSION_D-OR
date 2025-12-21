@@ -46,6 +46,7 @@ export interface CreateStudentData {
   classId?: number;
   schoolOfOrigin?: string;
   hasDisability?: boolean;
+  disabilityDescription?: string;
   isOrphan?: boolean;
   orphanType?: string;
   fatherName?: string;
@@ -100,6 +101,30 @@ export const getStudents = async (): Promise<Student[]> => {
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Erreur lors de la récupération des élèves');
+  }
+
+  return response.json();
+};
+
+/**
+ * Récupère les élèves d'un parent (pour les parents connectés)
+ * Utilise l'endpoint spécifique /my-children pour les parents
+ */
+export const getStudentsByParent = async (parentId?: number): Promise<Student[]> => {
+  const token = getToken();
+  if (!token) throw new Error('Non authentifié');
+
+  // Utiliser l'endpoint spécifique pour les parents
+  const response = await fetch(`${API_BASE_URL}/api/students/my-children`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors de la récupération des enfants');
   }
 
   return response.json();

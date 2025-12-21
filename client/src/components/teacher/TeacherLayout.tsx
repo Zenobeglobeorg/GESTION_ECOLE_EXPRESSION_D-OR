@@ -15,7 +15,7 @@ export const TeacherLayout = ({ title, subtitle, actions, children }: TeacherLay
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-blue-50 via-white to-yellow-50">
+    <div className="min-h-screen bg-linear-to-br from-blue-50 via-white to-yellow-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       <SidebarTeacher
         isCollapsed={isSidebarCollapsed}
         onToggle={() => setIsSidebarCollapsed((prev) => !prev)}
@@ -34,12 +34,12 @@ export const TeacherLayout = ({ title, subtitle, actions, children }: TeacherLay
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
               <div>
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-yellow-400 to-yellow-500 text-blue-900 font-semibold flex items-center justify-center shadow-md">
+                  <div className="w-12 h-12 rounded-xl bg-linear-to-br from-yellow-400 to-yellow-500 dark:from-yellow-600 dark:to-yellow-700 text-blue-900 dark:text-blue-100 font-semibold flex items-center justify-center shadow-md">
                     EO
                   </div>
                   <div>
-                    <h1 className="text-3xl font-bold text-blue-900 leading-tight">{title}</h1>
-                    {subtitle && <p className="text-blue-700/80 text-sm mt-1">{subtitle}</p>}
+                    <h1 className="text-3xl font-bold text-blue-900 dark:text-blue-100 leading-tight">{title}</h1>
+                    {subtitle && <p className="text-blue-700/80 dark:text-blue-300/80 text-sm mt-1">{subtitle}</p>}
                   </div>
                 </div>
               </div>

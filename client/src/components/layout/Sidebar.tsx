@@ -1,6 +1,7 @@
 // Importation des hooks et composants nécessaires depuis React Router DOM et notre hook d'authentification personnalisé.
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 // Définition du type pour un élément du menu de la sidebar
 interface MenuItem {
@@ -20,6 +21,7 @@ interface SidebarProps {
 export const Sidebar = ({ isCollapsed, onToggle }: SidebarProps) => {
   // Récupère la fonction de logout depuis le hook d'authentification
   const { logout } = useAuth();
+  const { t } = useLanguage();
 
   // Permet la navigation programmatique dans l'app
   const navigate = useNavigate();
@@ -31,7 +33,7 @@ export const Sidebar = ({ isCollapsed, onToggle }: SidebarProps) => {
   // Chacun correspond à une page principale de l'application.
   const menuItems: MenuItem[] = [
     {
-      label: 'Tableau de Bord',
+      label: t('sidebar.dashboard'),
       // Icône pour le menu Tableau de Bord
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -41,7 +43,7 @@ export const Sidebar = ({ isCollapsed, onToggle }: SidebarProps) => {
       path: '/superadmin',
     },
     {
-      label: 'Inscription Élèves',
+      label: t('sidebar.studentRegistration'),
       // Icône pour Inscription Élèves
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -51,7 +53,7 @@ export const Sidebar = ({ isCollapsed, onToggle }: SidebarProps) => {
       path: '/superadmin/students/new',
     },
     {
-      label: 'Gestion Utilisateurs',
+      label: t('sidebar.userManagement'),
       // Icône pour Gestion Utilisateurs
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -61,7 +63,7 @@ export const Sidebar = ({ isCollapsed, onToggle }: SidebarProps) => {
       path: '/superadmin/users',
     },
     {
-      label: 'Rôles & Permissions',
+      label: t('sidebar.rolesPermissions'),
       // Icône pour gestion des rôles et permissions
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -71,7 +73,7 @@ export const Sidebar = ({ isCollapsed, onToggle }: SidebarProps) => {
       path: '/superadmin/roles',
     },
     {
-      label: 'Vue Globale',
+      label: t('sidebar.globalView'),
       // Icône pour la Vue Globale
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -81,7 +83,7 @@ export const Sidebar = ({ isCollapsed, onToggle }: SidebarProps) => {
       path: '/superadmin/overview',
     },
     {
-      label: 'Vue Administration',
+      label: t('sidebar.adminView'),
       // Icône pour la Vue Administration
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -91,7 +93,7 @@ export const Sidebar = ({ isCollapsed, onToggle }: SidebarProps) => {
       path: '/admin',
     },
     {
-      label: 'Vue Enseignant',
+      label: t('sidebar.teacherView'),
       // Icône pour la Vue Enseignant
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -99,6 +101,27 @@ export const Sidebar = ({ isCollapsed, onToggle }: SidebarProps) => {
         </svg>
       ),
       path: '/teacher',
+    },
+    {
+      label: t('sidebar.profile'),
+      // Icône pour le Profil
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+        </svg>
+      ),
+      path: '/superadmin/profile',
+    },
+    {
+      label: t('sidebar.settings'),
+      // Icône pour les Paramètres
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      ),
+      path: '/superadmin/settings',
     },
   ];
 
@@ -121,12 +144,12 @@ export const Sidebar = ({ isCollapsed, onToggle }: SidebarProps) => {
   // Rendu JSX de la Sidebar
   return (
     <div
-      className={`bg-white border-r border-blue-100 h-screen fixed left-0 top-0 z-40 transition-all duration-300 ${
+      className={`bg-white dark:bg-gray-800 border-r border-blue-100 dark:border-gray-700 h-screen fixed left-0 top-0 z-40 transition-all duration-300 ${
         isCollapsed ? 'w-20' : 'w-64'
       } hidden lg:flex lg:flex-col shadow-[2px_0_12px_rgba(30,64,175,0.08)]`}
     >
       {/* Header avec logo et bouton hamburger */}
-      <div className="relative h-16 flex items-center justify-between px-4 border-b border-blue-100 bg-gradient-to-r from-blue-700 via-blue-800 to-blue-900 shrink-0">
+      <div className="relative h-16 flex items-center justify-between px-4 border-b border-blue-100 dark:border-gray-700 bg-linear-to-r from-blue-700 via-blue-800 to-blue-900 shrink-0">
         {!isCollapsed && (
           <div className="flex items-center gap-2">
             <div className="w-10 h-10 rounded-full bg-yellow-400 flex items-center justify-center text-blue-900 font-bold shadow-inner">
@@ -141,19 +164,19 @@ export const Sidebar = ({ isCollapsed, onToggle }: SidebarProps) => {
         <button
           onClick={onToggle}
           className="p-2 rounded-lg hover:bg-white/20 transition-colors text-white"
-          title="Ouvrir/Fermer le menu"
+          title={t('sidebar.toggleMenu')}
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
         {!isCollapsed && (
-          <div className="absolute inset-x-0 -bottom-px h-1 bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500" />
+          <div className="absolute inset-x-0 -bottom-px h-1 bg-linear-to-r from-yellow-300 via-yellow-400 to-yellow-500" />
         )}
       </div>
 
       {/* Menu items */}
-      <nav className="flex-1 overflow-y-auto py-4 px-2 bg-white">
+      <nav className="flex-1 overflow-y-auto py-4 px-2 bg-white dark:bg-gray-800">
         {menuItems.map((item, index) => {
           const active = isActive(item.path);
           return (
@@ -162,8 +185,8 @@ export const Sidebar = ({ isCollapsed, onToggle }: SidebarProps) => {
               to={item.path}
               className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all mb-2 border ${
                 active
-                  ? 'bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 text-blue-900 shadow-lg border-yellow-300'
-                  : 'text-blue-900 border-transparent hover:border-blue-100 hover:bg-blue-50'
+                  ? 'bg-linear-to-r from-yellow-400 via-yellow-300 to-yellow-400 text-blue-900 dark:text-blue-900 shadow-lg border-yellow-300 dark:border-yellow-400'
+                  : 'text-blue-900 dark:text-gray-200 border-transparent hover:border-blue-100 dark:hover:border-gray-600 hover:bg-blue-50 dark:hover:bg-gray-700'
               }`}
               title={isCollapsed ? item.label : undefined}
             >
@@ -184,18 +207,18 @@ export const Sidebar = ({ isCollapsed, onToggle }: SidebarProps) => {
       </nav>
 
       {/* Logout button */}
-      <div className="border-t border-gray-200 p-4 shrink-0">
+      <div className="border-t border-gray-200 dark:border-gray-700 p-4 shrink-0">
         <button
           onClick={handleLogout}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 ${
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 border border-transparent hover:border-red-200 dark:hover:border-red-800 ${
             isCollapsed ? 'justify-center' : ''
           }`}
-          title={isCollapsed ? 'Déconnexion' : undefined}
+          title={isCollapsed ? t('sidebar.logout') : undefined}
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
           </svg>
-          {!isCollapsed && <span className="font-medium">Déconnexion</span>}
+          {!isCollapsed && <span className="font-medium">{t('sidebar.logout')}</span>}
         </button>
       </div>
     </div>

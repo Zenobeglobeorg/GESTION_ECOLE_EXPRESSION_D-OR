@@ -24,10 +24,35 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  // Champs spécifiques aux enseignants
+  teacherLevel        TeacherLevel? // Niveau d'enseignement (Maternelle, Pré-primaire, Primaire)
+  teacherStatus       TeacherStatus? // Statut (Permanent, Consultant, Vacataire)
+  employmentStartDate DateTime? // Date de début d'emploi
+  employmentEndDate   DateTime? // Date de fin (pour vacataires et consultants)
+
+  // Préférences utilisateur
+  theme              String? @default("light") // "light" ou "dark"
+  language           String? @default("fr") // "fr" ou "en"
+  emailNotifications Boolean @default(true) // Recevoir les notifications par email
+  adminThemeColor    String? @default("blue-yellow") // Palette de couleurs pour l'admin (blue-yellow, green-teal, purple-pink, etc.)
+
+  // Double authentification (2FA) par email
+  twoFactorEnabled Boolean @default(false) // 2FA activée ou non
+
   // Relations
-  students     Student[] // Un parent peut avoir plusieurs enfants
-  classes      Class[]   // Classes assignées (pour enseignants)
-  passwordResetTokens PasswordResetToken[] // Tokens de réinitialisation
+  students                 Student[] // Un parent peut avoir plusieurs enfants
+  classes                  Class[] // Classes assignées (pour enseignants)
+  classSubjects            ClassSubject[] // Matières enseignées (pour enseignants)
+  passwordResetTokens      PasswordResetToken[] // Tokens de réinitialisation
+  absencesAsTeacher        Replacement[]        @relation("AbsentTeacher") // Remplacements où cet enseignant est absent
+  replacementsAsSubstitute Replacement[]        @relation("ReplacementTeacher") // Remplacements où cet enseignant remplace
+  twoFactorCodes           TwoFactorCode[] // Codes 2FA temporaires
+  announcements            Announcement[] // Annonces créées par cet utilisateur
+  createdBulletins         Bulletin[]           @relation("BulletinCreator") // Bulletins créés par cet utilisateur
+  sentMessages             Message[]            @relation("MessageSender") // Messages envoyés
+  receivedMessages         Message[]            @relation("MessageReceiver") // Messages reçus
+  notifications            Notification[]       @relation("UserNotifications") // Notifications reçues
+  createdAssignments       Assignment[]         @relation("AssignmentTeacher") // Devoirs créés
 
   @@map("users")
 }
@@ -39,6 +64,18 @@ enum UserRole {
   PARENT
 }
 
+enum TeacherLevel {
+  MATERNELLE
+  PRE_PRIMAIRE
+  PRIMAIRE
+}
+
+enum TeacherStatus {
+  PERMANENT
+  CONSULTANT
+  VACATAIRE
+}
+
 // Modèle Rôles Personnalisés
 model Role {
   id          Int      @id @default(autoincrement())
@@ -46,24 +83,24 @@ model Role {
   description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
-  permissions Permission[]
+
+  permissions       Permission[]
   // Opposite side of RoleToPermission relation
   roleToPermissions RoleToPermission[] @relation("RoleToPermission_role")
-  users        User[]
+  users             User[]
 
   @@map("roles")
 }
 
 // Modèle Permissions
 model Permission {
-  id          Int      @id @default(autoincrement())
-  key         String   @unique
+  id          Int     @id @default(autoincrement())
+  key         String  @unique
   name        String
   description String?
   category    String
-  
-  roles       Role[]
+
+  roles             Role[]
   // Opposite side of RoleToPermission relation
   roleToPermissions RoleToPermission[] @relation("RoleToPermission_permission")
 
@@ -75,8 +112,8 @@ model RoleToPermission {
   roleId       Int
   permissionId Int
 
-  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade, name: "RoleToPermission_role")
-  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade, name: "RoleToPermission_permission")
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade, name: "RoleToPermission_role")
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade, name: "RoleToPermission_permission")
 
   @@unique([roleId, permissionId])
   @@map("_role_to_permission")
@@ -96,29 +133,30 @@ model RoleToPermission {
 
 // Modèle Élève
 model Student {
-  id                Int      @id @default(autoincrement())
-  firstName         String
-  lastName          String
-  dateOfBirth       DateTime
-  classId           Int?
-  class             Class?   @relation(fields: [classId], references: [id])
-  schoolOfOrigin     String?  // École de provenance
-  hasDisability     Boolean  @default(false)
-  isOrphan          Boolean  @default(false)
-  orphanType        String?  // "Père", "Mère", ou les deux
-  enrollmentDate    DateTime @default(now())
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id                    Int      @id @default(autoincrement())
+  firstName             String
+  lastName              String
+  dateOfBirth           DateTime
+  classId               Int?
+  class                 Class?   @relation(fields: [classId], references: [id])
+  schoolOfOrigin        String? // École de provenance
+  hasDisability         Boolean  @default(false)
+  disabilityDescription String? // Description du handicap
+  isOrphan              Boolean  @default(false)
+  orphanType            String? // "Père", "Mère", ou les deux
+  enrollmentDate        DateTime @default(now())
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   // Informations sur les parents/tuteurs
-  fatherName        String?
-  fatherAddress     String?
-  fatherContact     String?
-  motherName        String?
-  motherAddress     String?
-  motherContact     String?
-  guardianName      String?
-  guardianContact   String?
+  fatherName      String?
+  fatherAddress   String?
+  fatherContact   String?
+  motherName      String?
+  motherAddress   String?
+  motherContact   String?
+  guardianName    String?
+  guardianContact String?
 
   // Personnes autorisées à faire sortir l'élève
   authorizedPerson1Name String?
@@ -127,123 +165,129 @@ model Student {
   authorizedPerson2Tel  String?
 
   // Option de paiement
-  paymentOption     PaymentOption @default(MONTHLY)
-  lastPaymentDate   DateTime?     // Date limite de paiement (05 MARS 2026)
+  paymentOption   PaymentOption @default(MONTHLY)
+  lastPaymentDate DateTime? // Date limite de paiement (05 MARS 2026)
 
   // Relation avec le(s) parent(s)
-  parentId          Int
-  parent            User     @relation(fields: [parentId], references: [id])
+  parentId Int
+  parent   User @relation(fields: [parentId], references: [id])
 
   // Autres relations
-  grades            Grade[]
-  attendances       Attendance[]
+  grades      Grade[]
+  attendances Attendance[]
+  payments    Payment[]
+  bulletins   Bulletin[]
 
   @@map("students")
 }
 
 enum PaymentOption {
-  MONTHLY      // Option 1 : Tous les mois (le 5 du mois)
-  QUARTERLY    // Option 2 : Tous les trimestres
-  ANNUAL       // Option 3 : Une ou deux tranches (scolarité annuelle)
+  MONTHLY // Option 1 : Tous les mois (le 5 du mois)
+  QUARTERLY // Option 2 : Tous les trimestres
+  ANNUAL // Option 3 : Une ou deux tranches (scolarité annuelle)
 }
 
 // Modèle Classe
 model Class {
-  id            Int       @id @default(autoincrement())
-  name          String    @unique // Ex: "CM1 A", "Pré-primaire"
-  level         String    // "Pré-primaire", "Primaire"
-  academicYear  String    // "2024-2025"
-  teacherId     Int?
-  teacher       User?     @relation(fields: [teacherId], references: [id])
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id           Int      @id @default(autoincrement())
+  name         String   @unique // Ex: "CM1 A", "Pré-primaire"
+  level        String // "Pré-primaire", "Primaire"
+  academicYear String // "2024-2025"
+  teacherId    Int?
+  teacher      User?    @relation(fields: [teacherId], references: [id])
+  timeSlots    Json?    // Créneaux horaires personnalisés pour l'emploi du temps [{id, startTime, endTime}]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  students      Student[]
-  schedules     Schedule[]
-  attendances   Attendance[] // Présences pour cette classe
+  students           Student[]
+  schedules          Schedule[]
+  attendances        Attendance[] // Présences pour cette classe
+  classSubjects      ClassSubject[] // Matières assignées à cette classe
+  assignments        Assignment[] // Devoirs pour cette classe
+  announcementClasses AnnouncementClass[] // Annonces ciblées pour cette classe
 
   @@map("classes")
 }
 
 // Modèle Note
 model Grade {
-  id            Int      @id @default(autoincrement())
-  studentId     Int
-  student       Student  @relation(fields: [studentId], references: [id])
-  evaluationId  Int
-  evaluation    Evaluation @relation(fields: [evaluationId], references: [id])
-  score         Float?   // Note sur 10 (pour primaire)
-  evaluationText String? // "Acquis", "Non acquis", smileys (pour pré-primaire)
+  id              Int        @id @default(autoincrement())
+  studentId       Int
+  student         Student    @relation(fields: [studentId], references: [id])
+  evaluationId    Int
+  evaluation      Evaluation @relation(fields: [evaluationId], references: [id])
+  score           Float? // Note sur 10 (pour primaire)
+  evaluationText  String? // "Acquis", "Non acquis", smileys (pour pré-primaire)
   teacherComments String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
 
   @@map("grades")
 }
 
 // Modèle Évaluation
 model Evaluation {
-  id            Int      @id @default(autoincrement())
-  name          String
-  palierId      Int
-  palier        Palier   @relation(fields: [palierId], references: [id])
-  competencyId  Int
-  competency    Competency @relation(fields: [competencyId], references: [id])
-  date          DateTime
-  type          EvaluationType
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           Int            @id @default(autoincrement())
+  name         String
+  palierId     Int
+  palier       Palier         @relation(fields: [palierId], references: [id])
+  competencyId Int
+  competency   Competency     @relation(fields: [competencyId], references: [id])
+  date         DateTime
+  type         EvaluationType
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 
-  grades        Grade[]
+  grades Grade[]
 
   @@map("evaluations")
 }
 
 enum EvaluationType {
-  NUMERIC  // Note sur 10
-  SMILEY   // Smileys pour pré-primaire
+  NUMERIC // Note sur 10
+  SMILEY // Smileys pour pré-primaire
   ACQUIRED // Acquis / Non acquis
 }
 
 // Modèle Palier (Période mensuelle)
 model Palier {
-  id              Int      @id @default(autoincrement())
-  name            String   // Ex: "Paliers 1 - Octobre"
-  startDate       DateTime
-  endDate         DateTime
-  academicYearId  Int
-  academicYear    AcademicYear @relation(fields: [academicYearId], references: [id])
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id             Int          @id @default(autoincrement())
+  name           String // Ex: "Paliers 1 - Octobre"
+  startDate      DateTime
+  endDate        DateTime
+  academicYearId Int
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
-  evaluations     Evaluation[]
+  evaluations Evaluation[]
 
   @@map("paliers")
 }
 
 // Modèle Année Académique
 model AcademicYear {
-  id          Int      @id @default(autoincrement())
-  name        String   @unique // "2024-2025"
-  startDate   DateTime
-  endDate     DateTime
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        Int      @id @default(autoincrement())
+  name      String   @unique // "2024-2025"
+  startDate DateTime
+  endDate   DateTime
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  paliers     Palier[]
+  paliers Palier[]
 
   @@map("academic_years")
 }
 
 // Modèle Compétence
 model Competency {
-  id          Int      @id @default(autoincrement())
-  name        String
-  subjectId   Int
-  subject     Subject  @relation(fields: [subjectId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        Int      @id @default(autoincrement())
+  name      String
+  subjectId Int
+  subject   Subject  @relation(fields: [subjectId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   evaluations Evaluation[]
 
@@ -252,29 +296,34 @@ model Competency {
 
 // Modèle Matière
 model Subject {
-  id          Int      @id @default(autoincrement())
-  name        String   @unique // "MATHÉMATIQUES", "FRANÇAIS", "EDM&EAS"
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        Int      @id @default(autoincrement())
+  name      String   @unique // "MATHÉMATIQUES", "FRANÇAIS", "EDM&EAS"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  competencies Competency[]
-  schedules    Schedule[]
+  competencies  Competency[]
+  schedules     Schedule[]
+  classSubjects ClassSubject[] // Assignations de cette matière à des classes
+  assignments   Assignment[] // Devoirs pour cette matière
 
   @@map("subjects")
 }
 
 // Modèle Présence
 model Attendance {
-  id          Int      @id @default(autoincrement())
-  studentId  Int
-  student    Student  @relation(fields: [studentId], references: [id])
-  classId    Int
-  class      Class    @relation(fields: [classId], references: [id])
-  date       DateTime
-  status     AttendanceStatus
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id          Int              @id @default(autoincrement())
+  studentId   Int
+  student     Student          @relation(fields: [studentId], references: [id])
+  classId     Int
+  class       Class            @relation(fields: [classId], references: [id])
+  date        DateTime
+  status      AttendanceStatus
+  arrivalTime String? // Heure d'arrivée pour les retards (format "HH:mm")
+  comment     String? // Commentaire sur la présence/absence
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 
+  @@unique([studentId, classId, date]) // Un élève ne peut avoir qu'une présence par jour dans une classe
   @@map("attendances")
 }
 
@@ -285,19 +334,43 @@ enum AttendanceStatus {
 }
 
 // Modèle Emploi du Temps
+enum ScheduleType {
+  SUBJECT
+  EVENT
+}
+
 model Schedule {
-  id          Int      @id @default(autoincrement())
-  classId     Int
-  class       Class    @relation(fields: [classId], references: [id])
-  dayOfWeek   Int      // 1 = Lundi, 2 = Mardi, etc.
-  startTime   String   // "07:30"
-  endTime     String   // "14:30"
-  subjectId   Int?
-  subject     Subject? @relation(fields: [subjectId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        Int          @id @default(autoincrement())
+  classId   Int
+  class     Class        @relation(fields: [classId], references: [id])
+  dayOfWeek Int // 1 = Lundi, 2 = Mardi, etc.
+  startTime String // "07:30"
+  endTime   String // "14:30"
+  type      ScheduleType @default(SUBJECT) // SUBJECT ou EVENT
+  subjectId Int?
+  subject   Subject?     @relation(fields: [subjectId], references: [id])
+  eventName String?      // Nom de l'événement/activité (ex: "Prière", "Récréation", etc.)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
 
   @@map("schedules")
+}
+
+// Modèle de liaison Classe-Matière (matière assignée à une classe avec enseignant et heures)
+model ClassSubject {
+  id           Int      @id @default(autoincrement())
+  classId      Int
+  class        Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subjectId    Int
+  subject      Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  teacherId    Int?
+  teacher      User?    @relation(fields: [teacherId], references: [id])
+  hoursPerWeek Int      @default(4) // Nombre d'heures par semaine
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([classId, subjectId]) // Une matière ne peut être assignée qu'une fois à une classe
+  @@map("class_subjects")
 }
 
 // Modèle Token de Réinitialisation de Mot de Passe
@@ -311,4 +384,254 @@ model PasswordResetToken {
   createdAt DateTime @default(now())
 
   @@map("password_reset_tokens")
+}
+
+// Modèle Remplacement d'Enseignant
+model Replacement {
+  id                   Int               @id @default(autoincrement())
+  absentTeacherId      Int
+  absentTeacher        User              @relation("AbsentTeacher", fields: [absentTeacherId], references: [id], onDelete: Cascade)
+  replacementTeacherId Int
+  replacementTeacher   User              @relation("ReplacementTeacher", fields: [replacementTeacherId], references: [id], onDelete: Cascade)
+  startDate            DateTime
+  endDate              DateTime
+  reason               ReplacementReason
+  status               ReplacementStatus @default(ACTIVE)
+  notes                String? // Notes supplémentaires
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  @@map("replacements")
+}
+
+enum ReplacementReason {
+  MALADIE
+  FORMATION
+  CONGES
+  PERSONNEL
+  AUTRE
+}
+
+enum ReplacementStatus {
+  ACTIVE // En cours
+  COMPLETED // Terminé
+  CANCELLED // Annulé
+}
+
+// Modèle Événement du Calendrier
+model CalendarEvent {
+  id          Int       @id @default(autoincrement())
+  title       String
+  description String?
+  date        DateTime
+  time        String? // Heure de l'événement (format "HH:mm")
+  type        EventType
+  location    String? // Lieu de l'événement
+  createdById Int? // ID de l'utilisateur qui a créé l'événement
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("calendar_events")
+}
+
+enum EventType {
+  REUNION // Réunion
+  EXAMEN // Examen
+  ACTIVITE // Activité
+  FERIE // Jour férié
+  AUTRE // Autre
+}
+
+// Modèle Paramètres de l'École
+model SchoolSettings {
+  id         Int      @id @default(autoincrement())
+  name       String // Nom de l'école
+  code       String? // Code d'établissement
+  address    String? // Adresse
+  phone      String? // Téléphone
+  email      String? // Email de contact
+  director   String? // Nom du directeur
+  timezone   String   @default("Europe/Paris") // Fuseau horaire
+  language   String   @default("fr") // Langue par défaut
+  dateFormat String   @default("DD/MM/YYYY") // Format de date
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("school_settings")
+}
+
+// Modèle Code 2FA temporaire
+model TwoFactorCode {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code      String // Code à 6 chiffres
+  expiresAt DateTime // Date d'expiration (généralement 10 minutes)
+  used      Boolean  @default(false) // Si le code a été utilisé
+  createdAt DateTime @default(now())
+
+  @@map("two_factor_codes")
+}
+
+// Modèle Annonce
+model Announcement {
+  id          Int                  @id @default(autoincrement())
+  title       String
+  content     String
+  target      AnnouncementTarget
+  priority    AnnouncementPriority @default(NORMAL)
+  status      AnnouncementStatus   @default(SENT)
+  createdById Int?
+  createdBy   User?                @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  sentAt      DateTime? // Date d'envoi effectif
+  classes     AnnouncementClass[] // Classes ciblées (si target = SPECIFIC_CLASS)
+
+  @@map("announcements")
+}
+
+enum AnnouncementTarget {
+  ALL_PARENTS // Tous les parents
+  ALL_TEACHERS // Tous les enseignants
+  ALL_USERS // Tous les utilisateurs
+  SPECIFIC_CLASS // Classe spécifique (à implémenter plus tard)
+}
+
+enum AnnouncementPriority {
+  NORMAL // Normale
+  HIGH // Haute
+  URGENT // Urgente
+}
+
+enum AnnouncementStatus {
+  DRAFT // Brouillon
+  SENT // Envoyé
+  ARCHIVED // Archivé
+}
+
+// Modèle Paiement
+model Payment {
+  id                Int           @id @default(autoincrement())
+  studentId         Int
+  student           Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  amount            Float // Montant payé
+  dueDate           DateTime // Date limite de paiement
+  paidDate          DateTime? // Date de paiement effectif
+  installmentNumber Int // Numéro de la tranche (1, 2, 3, etc.)
+  status            PaymentStatus @default(PENDING)
+  paymentMethod     String? // Méthode de paiement (Banque, Espèces, etc.)
+  receiptNumber     String? // Numéro de reçu
+  notes             String? // Notes supplémentaires
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@map("payments")
+}
+
+enum PaymentStatus {
+  PENDING // En attente
+  PAID // Payé
+  OVERDUE // En retard
+}
+
+// Modèle Bulletin
+model Bulletin {
+  id           Int      @id @default(autoincrement())
+  studentId    Int
+  student      Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  academicYear String   // "2024-2025"
+  type         BulletinType // MATERNELLE ou PRIMAIRE
+  data         Json     // Données JSON complètes du bulletin (structure flexible)
+  isPublished  Boolean  @default(false) // Si le bulletin est publié (visible par les parents)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  createdById  Int? // ID de l'utilisateur qui a créé le bulletin
+  createdBy    User?   @relation("BulletinCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@unique([studentId, academicYear, type])
+  @@map("bulletins")
+}
+
+enum BulletinType {
+  MATERNELLE // Bulletin pour Maternelle/Pré-maternelle
+  PRIMAIRE // Bulletin pour Primaire (SIL à CM2)
+}
+
+// Modèle Message
+model Message {
+  id          Int      @id @default(autoincrement())
+  senderId    Int
+  receiverId  Int
+  content     String
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  sender      User     @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver    User     @relation("MessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@index([senderId, receiverId])
+  @@index([receiverId, senderId])
+  @@map("messages")
+}
+
+// Modèle Notification
+model Notification {
+  id        Int              @id @default(autoincrement())
+  userId    Int
+  user      User             @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  title     String
+  content   String
+  isRead    Boolean          @default(false)
+  relatedId Int? // ID de l'entité liée (eventId, assignmentId, announcementId)
+  metadata  Json? // Données supplémentaires (classe, matière, etc.)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  CALENDAR_EVENT // Événement du calendrier
+  ASSIGNMENT // Devoir/Exercice
+  ANNOUNCEMENT // Annonce
+  GRADE // Nouvelle note
+  ATTENDANCE // Absence/Présence
+  PAYMENT // Paiement
+  BULLETIN // Bulletin publié
+}
+
+// Modèle Devoir/Exercice
+model Assignment {
+  id          Int      @id @default(autoincrement())
+  classId     Int
+  class       Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subjectId   Int?
+  subject     Subject? @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  teacherId   Int
+  teacher     User     @relation("AssignmentTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  documentUrl String? // URL du document joint
+  dueDate     DateTime? // Date limite de rendu
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("assignments")
+}
+
+// Modèle de liaison Annonce-Classe (pour les annonces ciblées)
+model AnnouncementClass {
+  id            Int         @id @default(autoincrement())
+  announcementId Int
+  announcement  Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  classId       Int
+  class         Class       @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@unique([announcementId, classId])
+  @@map("announcement_classes")
 }

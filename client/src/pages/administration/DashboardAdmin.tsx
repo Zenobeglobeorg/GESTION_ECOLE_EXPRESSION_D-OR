@@ -16,21 +16,21 @@ export const DashboardAdmin = () => {
       title: 'Classes',
       value: '0',
       icon: '📚',
-      gradient: 'from-blue-500 via-blue-600 to-blue-700',
+      gradient: 'from-yellow-400 via-yellow-500 to-yellow-600',
       description: 'Classes actives'
     },
     {
       title: 'Enseignants',
       value: '0',
       icon: '👨‍🏫',
-      gradient: 'from-yellow-500 via-yellow-600 to-yellow-700',
+      gradient: 'from-yellow-400 via-yellow-500 to-yellow-600',
       description: 'Enseignants actifs'
     },
     {
       title: 'Frais en attente',
       value: '0',
       icon: '💰',
-      gradient: 'from-blue-400 via-blue-500 to-blue-600',
+      gradient: 'from-yellow-400 via-yellow-500 to-yellow-600',
       description: 'Paiements en attente'
     }
   ];

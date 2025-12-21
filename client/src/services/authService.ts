@@ -24,9 +24,9 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
  * Authentifie un utilisateur
  * 
  * @param credentials - Email et mot de passe
- * @returns L'utilisateur authentifié et un token JWT
+ * @returns L'utilisateur authentifié et un token JWT, ou un objet avec requiresTwoFactor si 2FA est activée
  */
-export const login = async (credentials: LoginCredentials): Promise<LoginResponse> => {
+export const login = async (credentials: LoginCredentials): Promise<LoginResponse | { requiresTwoFactor: true; emailSent: boolean; devCode?: string }> => {
   const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -36,6 +36,38 @@ export const login = async (credentials: LoginCredentials): Promise<LoginRespons
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Erreur lors de la connexion');
+  }
+
+  const data = await response.json();
+
+  // Si la 2FA est requise, retourner un objet spécial
+  if (data.requiresTwoFactor) {
+    return {
+      requiresTwoFactor: true,
+      emailSent: data.emailSent || false,
+      ...(data.devCode && { devCode: data.devCode }),
+    };
+  }
+
+  return {
+    user: data.user,
+    token: data.token,
+  };
+};
+
+/**
+ * Vérifie le code 2FA et finalise la connexion
+ */
+export const verifyTwoFactor = async (email: string, code: string): Promise<LoginResponse> => {
+  const response = await fetch(`${API_BASE_URL}/api/auth/verify-2fa`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, code }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Code invalide ou expiré');
   }
 
   const data = await response.json();

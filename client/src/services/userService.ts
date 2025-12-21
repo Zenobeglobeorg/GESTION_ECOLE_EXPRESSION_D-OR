@@ -1,8 +1,12 @@
 import type { User, UserRole } from '../contexts/AuthContext';
 
-// Type étendu pour inclure createdAt (retourné par l'API)
+// Type étendu pour inclure createdAt et les champs enseignants (retournés par l'API)
 export interface UserWithDate extends User {
   createdAt: string;
+  teacherLevel?: 'MATERNELLE' | 'PRE_PRIMAIRE' | 'PRIMAIRE' | null;
+  teacherStatus?: 'PERMANENT' | 'CONSULTANT' | 'VACATAIRE' | null;
+  employmentStartDate?: string | null;
+  employmentEndDate?: string | null;
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -15,6 +19,10 @@ export interface CreateUserData {
   phone?: string;
   role: UserRole;
   customRoleId?: number;
+  teacherLevel?: 'MATERNELLE' | 'PRE_PRIMAIRE' | 'PRIMAIRE';
+  teacherStatus?: 'PERMANENT' | 'CONSULTANT' | 'VACATAIRE';
+  employmentStartDate?: string;
+  employmentEndDate?: string;
 }
 
 export interface UpdateUserData {
@@ -23,6 +31,10 @@ export interface UpdateUserData {
   phone?: string;
   role?: UserRole;
   customRoleId?: number | null;
+  teacherLevel?: 'MATERNELLE' | 'PRE_PRIMAIRE' | 'PRIMAIRE' | null;
+  teacherStatus?: 'PERMANENT' | 'CONSULTANT' | 'VACATAIRE' | null;
+  employmentStartDate?: string | null;
+  employmentEndDate?: string | null;
 }
 
 /**

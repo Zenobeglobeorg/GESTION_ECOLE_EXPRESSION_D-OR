@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import * as crypto from 'crypto';
 import { PrismaClient } from '@prisma/client';
 import { sendPasswordResetEmail } from '../services/passwordResetEmail.js';
+import { generateLoginCode, verifyLoginCode } from './twoFactorController.js';
 
 const prisma = new PrismaClient();
 
@@ -44,7 +45,28 @@ export const login = async (req, res) => {
       });
     }
 
-    // Générer le token JWT
+    // Si la 2FA est activée, générer et envoyer un code
+    if (user.twoFactorEnabled) {
+      try {
+        const codeResult = await generateLoginCode(user.id);
+        
+        return res.json({
+          success: true,
+          requiresTwoFactor: true,
+          message: 'Code de vérification envoyé par email',
+          emailSent: codeResult.emailSent,
+          // En développement, retourner le code pour faciliter les tests
+          ...(process.env.NODE_ENV === 'development' && { devCode: codeResult.code }),
+        });
+      } catch (error) {
+        console.error('Error generating 2FA code:', error);
+        return res.status(500).json({ 
+          error: 'Erreur lors de l\'envoi du code de vérification' 
+        });
+      }
+    }
+
+    // Si la 2FA n'est pas activée, générer directement le token
     const token = jwt.sign(
       { 
         id: user.id, 
@@ -66,6 +88,75 @@ export const login = async (req, res) => {
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Erreur lors de la connexion' });
+  }
+};
+
+/**
+ * Vérifie le code 2FA et finalise la connexion
+ */
+export const verifyTwoFactor = async (req, res) => {
+  try {
+    const { email, code } = req.body;
+
+    if (!email || !code) {
+      return res.status(400).json({ 
+        error: 'Email et code de vérification requis' 
+      });
+    }
+
+    // Rechercher l'utilisateur
+    const user = await prisma.user.findFirst({
+      where: {
+        email: {
+          equals: email,
+          mode: 'insensitive'
+        }
+      }
+    });
+
+    if (!user) {
+      return res.status(401).json({ 
+        error: 'Utilisateur non trouvé' 
+      });
+    }
+
+    if (!user.twoFactorEnabled) {
+      return res.status(400).json({ 
+        error: 'La 2FA n\'est pas activée pour ce compte' 
+      });
+    }
+
+    // Vérifier le code
+    const verificationResult = await verifyLoginCode(user.id, code);
+
+    if (!verificationResult.valid) {
+      return res.status(401).json({ 
+        error: verificationResult.error || 'Code invalide ou expiré' 
+      });
+    }
+
+    // Générer le token JWT
+    const token = jwt.sign(
+      { 
+        id: user.id, 
+        email: user.email, 
+        role: user.role 
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    // Retourner les informations utilisateur (sans le passwordHash)
+    const { passwordHash, ...userWithoutPassword } = user;
+
+    res.json({
+      success: true,
+      token,
+      user: userWithoutPassword
+    });
+  } catch (error) {
+    console.error('Verify 2FA error:', error);
+    res.status(500).json({ error: 'Erreur lors de la vérification du code' });
   }
 };
 
@@ -290,5 +381,3 @@ export const changePassword = async (req, res) => {
     res.status(500).json({ error: 'Erreur lors du changement de mot de passe' });
   }
 };
-
-

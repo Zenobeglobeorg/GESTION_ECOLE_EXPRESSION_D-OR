@@ -34,11 +34,11 @@
   }
 
   .table {
-    @apply min-w-full divide-y divide-blue-100 text-left;
+    @apply min-w-full divide-y divide-blue-100 dark:divide-gray-700 text-left;
   }
 
   .table thead {
-    @apply bg-blue-50 text-blue-900 uppercase text-xs tracking-wider;
+    @apply bg-blue-50 dark:bg-gray-800 text-blue-900 dark:text-white uppercase text-xs tracking-wider;
   }
 
   .table th {
@@ -46,11 +46,11 @@
   }
 
   .table td {
-    @apply px-6 py-4 text-sm text-blue-900 whitespace-nowrap;
+    @apply px-6 py-4 text-sm text-blue-900 dark:text-gray-300 whitespace-nowrap;
   }
 
   .table tbody tr {
-    @apply hover:bg-yellow-50 transition-colors;
+    @apply hover:bg-yellow-50 dark:hover:bg-gray-700 transition-colors;
   }
 
   .status {
@@ -82,10 +82,52 @@
   }
 
   .form-control {
-    @apply w-full border border-blue-200 rounded-lg px-3 py-2 text-sm text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white;
+    @apply w-full border border-blue-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-blue-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 bg-white dark:bg-gray-700 transition-colors duration-200;
   }
 
   .form-actions {
     @apply flex justify-end;
+  }
+
+  /* Scrollbar personnalisée pour les conversations et messages */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(147 197 253) rgb(219 234 254);
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: rgb(219 234 254);
+    border-radius: 10px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: rgb(147 197 253);
+    border-radius: 10px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: rgb(96 165 250);
+  }
+
+  /* Mode sombre pour scrollbar */
+  .dark .scrollbar-thin {
+    scrollbar-color: rgb(75 85 99) rgb(31 41 55);
+  }
+
+  .dark .scrollbar-thin::-webkit-scrollbar-track {
+    background: rgb(31 41 55);
+  }
+
+  .dark .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: rgb(75 85 99);
+  }
+
+  .dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: rgb(107 114 128);
   }
 }

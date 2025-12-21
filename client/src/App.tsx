@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { LanguageProvider } from './contexts/LanguageContext';
+import { AdminThemeProvider } from './contexts/AdminThemeContext';
 import './index.css'
 import { ProtectedRoute } from './components/routing/ProtectedRoute';
 import { HomePage } from './pages/public/HomePage';
@@ -12,13 +14,17 @@ import { AdminAccountsPage } from './pages/superadmin/AdminAccountsPage';
 import { UsersManagementPage } from './pages/superadmin/UsersManagementPage';
 import { RolesPermissionsPage } from './pages/superadmin/RolesPermissionsPage';
 import { OverviewPage } from './pages/superadmin/OverviewPage';
+import { Profile as SuperAdminProfile } from './pages/superadmin/Profile';
+import { Settings as SuperAdminSettings } from './pages/superadmin/Settings';
 import { DashboardAdmin } from './pages/administration/DashboardAdmin';
 import { StudentRegistrationPage } from './pages/administration/StudentRegistrationPage';
 import { Students } from './pages/administration/Students';
+import { EditStudentPage } from './pages/administration/EditStudentPage';
 import { Classes } from './pages/administration/Classes';
 import { Timetable } from './pages/administration/Timetable';
 import { Evaluations } from './pages/administration/Evaluations';
 import { Grades } from './pages/administration/Grades';
+import { Bulletins } from './pages/administration/Bulletins';
 import { Attendance } from './pages/administration/Attendance';
 import { Announcements } from './pages/administration/Announcements';
 import { Calendar } from './pages/administration/Calendar';
@@ -33,6 +39,7 @@ import { StudentsAssociate } from './pages/administration/StudentsAssociate';
 import { Users } from './pages/administration/Users';
 import { UsersParents } from './pages/administration/UsersParents';
 import { UsersTeachers } from './pages/administration/UsersTeachers';
+import { UsersAdmins } from './pages/administration/UsersAdmins';
 import { UsersPermissions } from './pages/administration/UsersPermissions';
 import { StudentsImport } from './pages/administration/StudentsImport';
 import { DashboardTeacher } from './pages/teacher/DashboardTeacher';
@@ -51,9 +58,13 @@ import { CahierExo } from './pages/teacher/CahierExo';
 import RemplitNote from './pages/teacher/RemplitNote';
 import { MyClasses } from './pages/teacher/MyClasses';
 import { Schedule } from './pages/teacher/Schedule';
+import { Profile as TeacherProfile } from './pages/teacher/Profile';
+import { Settings as TeacherSettings } from './pages/teacher/Settings';
+import NotificationsPageTeacher from './pages/teacher/NotificationsPage';
 //import { DashboardParent } from './pages/parent/DashboardParent';
 import { useAuth } from './hooks/useAuth';
 import NotesBulletinsPage from './pages/parent/NotesBulletinsPage';
+import MessageParent from './pages/parent/MessageParent';
 
 // Composant pour rediriger selon le rôle (doit être à l'intérieur du contexte)
 const DashboardRoute = () => {
@@ -88,7 +99,9 @@ function App() {
   return (
     <AuthProvider>
       <ThemeProvider>
-      <BrowserRouter>
+        <LanguageProvider>
+          <AdminThemeProvider>
+            <BrowserRouter>
         <Routes>
           {/* Routes publiques */}
             <Route path="/" element={<HomePage />} />
@@ -160,16 +173,36 @@ function App() {
             }
           />
 
+          <Route
+            path="/superadmin/profile"
+            element={
+              <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                <SuperAdminProfile />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/superadmin/settings"
+            element={
+              <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                <SuperAdminSettings />
+              </ProtectedRoute>
+            }
+          />
+
           {/* Routes Administration - Accessible aussi par SUPER_ADMIN pour consultation */}
           <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMINISTRATION', 'SUPER_ADMIN']}><DashboardAdmin /></ProtectedRoute>} />
           <Route path="/admin/students" element={<ProtectedRoute allowedRoles={['ADMINISTRATION', 'SUPER_ADMIN']}><Students /></ProtectedRoute>} />
           <Route path="/admin/students/new" element={<ProtectedRoute allowedRoles={['ADMINISTRATION', 'SUPER_ADMIN']}><StudentRegistrationPage /></ProtectedRoute>} />
+          <Route path="/admin/students/:id/edit" element={<ProtectedRoute allowedRoles={['ADMINISTRATION', 'SUPER_ADMIN']}><EditStudentPage /></ProtectedRoute>} />
           <Route path="/admin/students/associate" element={<ProtectedRoute allowedRoles={['ADMINISTRATION', 'SUPER_ADMIN']}><StudentsAssociate /></ProtectedRoute>} />
           <Route path="/admin/students/import" element={<ProtectedRoute allowedRoles={['ADMINISTRATION', 'SUPER_ADMIN']}><StudentsImport /></ProtectedRoute>} />
           <Route path="/admin/classes" element={<ProtectedRoute allowedRoles={['ADMINISTRATION', 'SUPER_ADMIN']}><Classes /></ProtectedRoute>} />
           <Route path="/admin/timetable" element={<ProtectedRoute allowedRoles={['ADMINISTRATION', 'SUPER_ADMIN']}><Timetable /></ProtectedRoute>} />
           <Route path="/admin/evaluations" element={<ProtectedRoute allowedRoles={['ADMINISTRATION', 'SUPER_ADMIN']}><Evaluations /></ProtectedRoute>} />
           <Route path="/admin/grades" element={<ProtectedRoute allowedRoles={['ADMINISTRATION', 'SUPER_ADMIN']}><Grades /></ProtectedRoute>} />
+          <Route path="/admin/bulletins" element={<ProtectedRoute allowedRoles={['ADMINISTRATION', 'SUPER_ADMIN']}><Bulletins /></ProtectedRoute>} />
           <Route path="/admin/attendance" element={<ProtectedRoute allowedRoles={['ADMINISTRATION', 'SUPER_ADMIN']}><Attendance /></ProtectedRoute>} />
           <Route path="/admin/announcements" element={<ProtectedRoute allowedRoles={['ADMINISTRATION', 'SUPER_ADMIN']}><Announcements /></ProtectedRoute>} />
           <Route path="/admin/calendar" element={<ProtectedRoute allowedRoles={['ADMINISTRATION', 'SUPER_ADMIN']}><Calendar /></ProtectedRoute>} />
@@ -183,6 +216,7 @@ function App() {
           <Route path="/admin/users" element={<ProtectedRoute allowedRoles={['ADMINISTRATION', 'SUPER_ADMIN']}><Users /></ProtectedRoute>} />
           <Route path="/admin/users/parents" element={<ProtectedRoute allowedRoles={['ADMINISTRATION', 'SUPER_ADMIN']}><UsersParents /></ProtectedRoute>} />
           <Route path="/admin/users/teachers" element={<ProtectedRoute allowedRoles={['ADMINISTRATION', 'SUPER_ADMIN']}><UsersTeachers /></ProtectedRoute>} />
+          <Route path="/admin/users/admins" element={<ProtectedRoute allowedRoles={['ADMINISTRATION', 'SUPER_ADMIN']}><UsersAdmins /></ProtectedRoute>} />
           <Route path="/admin/users/permissions" element={<ProtectedRoute allowedRoles={['ADMINISTRATION', 'SUPER_ADMIN']}><UsersPermissions /></ProtectedRoute>} />
 
           {/* Routes Enseignant - Accessible aussi par SUPER_ADMIN pour consultation */}
@@ -250,6 +284,30 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/teacher/profile"
+            element={
+              <ProtectedRoute allowedRoles={['TEACHER', 'SUPER_ADMIN']}>
+                <TeacherProfile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teacher/settings"
+            element={
+              <ProtectedRoute allowedRoles={['TEACHER', 'SUPER_ADMIN']}>
+                <TeacherSettings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teacher/notifications"
+            element={
+              <ProtectedRoute allowedRoles={['TEACHER', 'SUPER_ADMIN']}>
+                <NotificationsPageTeacher />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Routes Parent */}
           <Route
@@ -267,12 +325,15 @@ function App() {
             <Route path="attendance" element={<PresencesPage />} />
             <Route path="fees" element={<FraisScolaritePage />} />
             <Route path="notification" element={<NotificationsPage />} />
+            <Route path="messages" element={<MessageParent />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
           {/* Route par défaut */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
+          </AdminThemeProvider>
+        </LanguageProvider>
       </ThemeProvider>
     </AuthProvider>
   );

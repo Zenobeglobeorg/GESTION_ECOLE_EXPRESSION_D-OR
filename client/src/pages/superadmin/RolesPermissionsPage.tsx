@@ -9,8 +9,10 @@ import { Modal } from '../../components/ui/Modal';
 import * as roleService from '../../services/roleService';
 import * as permissionService from '../../services/permissionService';
 import type { Permission, Role } from '../../services/roleService';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 export const RolesPermissionsPage = () => {
+  const { t } = useLanguage();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCreateRoleModalOpen, setIsCreateRoleModalOpen] = useState(false);
@@ -55,7 +57,7 @@ export const RolesPermissionsPage = () => {
     try {
       setError(null);
       if (roleFormData.selectedPermissions.length === 0) {
-        throw new Error('Veuillez sélectionner au moins une permission');
+        throw new Error(t('roles.createError'));
       }
       await roleService.createRole({
         name: roleFormData.name,
@@ -86,7 +88,7 @@ export const RolesPermissionsPage = () => {
   };
 
   const handleDeleteRole = async (roleId: number) => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer ce rôle ? Les utilisateurs avec ce rôle devront être réassignés.')) {
+    if (window.confirm(t('roles.deleteConfirm'))) {
       try {
         setError(null);
         await roleService.deleteRole(roleId);
@@ -103,16 +105,16 @@ export const RolesPermissionsPage = () => {
   };
 
   const categories = [
-    { key: 'users', label: 'Gestion des Utilisateurs', icon: '👥' },
-    { key: 'students', label: 'Gestion des Élèves', icon: '🎓' },
-    { key: 'academic', label: 'Gestion Académique', icon: '📚' },
-    { key: 'administration', label: 'Administration', icon: '⚙️' },
-    { key: 'system', label: 'Système', icon: '🔧' },
+    { key: 'users', label: t('roles.userManagement'), icon: '👥' },
+    { key: 'students', label: t('roles.studentManagement'), icon: '🎓' },
+    { key: 'academic', label: t('roles.academicManagement'), icon: '📚' },
+    { key: 'administration', label: t('roles.administration'), icon: '⚙️' },
+    { key: 'system', label: t('roles.system'), icon: '🔧' },
   ];
 
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Sidebar isCollapsed={isSidebarCollapsed} onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
       <MobileSidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
       <Navbar onMenuClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
@@ -122,12 +124,12 @@ export const RolesPermissionsPage = () => {
           {/* En-tête */}
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-3xl font-bold text-gray-900">Rôles et Permissions</h1>
-              <span className="px-3 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
-                {roles.length} rôle(s)
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('roles.title')}</h1>
+              <span className="px-3 py-1 text-xs font-semibold rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-400">
+                {roles.length} {t('roles.count')}
               </span>
             </div>
-            <p className="text-gray-600">Définissez les rôles personnalisés et leurs permissions pour l'administration</p>
+            <p className="text-gray-600 dark:text-gray-400">{t('roles.subtitle')}</p>
           </div>
 
           {/* Barre d'actions */}
@@ -140,13 +142,13 @@ export const RolesPermissionsPage = () => {
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
-              Nouveau Rôle
+              {t('roles.newRole')}
             </Button>
           </div>
 
           {/* Message d'erreur */}
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-lg">
               {error}
             </div>
           )}
@@ -154,16 +156,16 @@ export const RolesPermissionsPage = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Liste des Rôles */}
             <div className="lg:col-span-1">
-              <Card title="Rôles Créés" className="border-0 shadow-lg">
+              <Card title={t('roles.createdRoles')} className="border-0 shadow-lg dark:bg-gray-800">
                 {isLoading ? (
                   <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                    <p className="text-gray-500 text-sm">Chargement...</p>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-2"></div>
+                    <p className="text-gray-500 dark:text-gray-400 text-sm">{t('roles.loading')}</p>
                   </div>
                 ) : roles.length === 0 ? (
                   <div className="text-center py-8">
-                    <p className="text-gray-500 text-sm">Aucun rôle personnalisé créé</p>
-                    <p className="text-gray-400 text-xs mt-1">Créez votre premier rôle</p>
+                    <p className="text-gray-500 dark:text-gray-400 text-sm">{t('roles.noRoles')}</p>
+                    <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">{t('roles.createFirst')}</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -173,27 +175,27 @@ export const RolesPermissionsPage = () => {
                         onClick={() => setSelectedRole(role)}
                         className={`p-4 rounded-lg cursor-pointer transition-all ${
                           selectedRole?.id === role.id
-                            ? 'bg-yellow-50 border-2 border-yellow-400'
-                            : 'bg-gray-50 hover:bg-gray-100 border-2 border-transparent'
+                            ? 'bg-yellow-50 dark:bg-yellow-900/30 border-2 border-yellow-400 dark:border-yellow-500'
+                            : 'bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 border-2 border-transparent'
                         }`}
                       >
                         <div className="flex items-center justify-between">
                           <div>
-                            <h3 className="font-semibold text-gray-900">{role.name}</h3>
+                            <h3 className="font-semibold text-gray-900 dark:text-white">{role.name}</h3>
                             {role.description && (
-                              <p className="text-xs text-gray-500 mt-1">{role.description}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{role.description}</p>
                             )}
-                            <p className="text-xs text-gray-400 mt-1">
-                              {role.permissions.length} permission(s)
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                              {role.permissions.length} {t('roles.permissions')}
                             </p>
                           </div>
                           <button
-                            title="Supprimer le rôle"
+                            title={t('roles.deleteRole')}
                             onClick={(e) => {
                               e.stopPropagation();
                               handleDeleteRole(role.id);
                             }}
-                            className="text-red-600 hover:text-red-800"
+                            className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
                           >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -211,16 +213,16 @@ export const RolesPermissionsPage = () => {
             <div className="lg:col-span-2">
               {selectedRole ? (
                 <Card
-                  title={`Rôle : ${selectedRole.name}`}
-                  className="border-0 shadow-lg"
+                  title={`${t('roles.roleDetails')} ${selectedRole.name}`}
+                  className="border-0 shadow-lg dark:bg-gray-800"
                   headerActions={
-                    <span className="px-3 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                      {selectedRole.permissions.length} permission(s)
+                    <span className="px-3 py-1 text-xs font-semibold rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300">
+                      {selectedRole.permissions.length} {t('roles.permissions')}
                     </span>
                   }
                 >
                   {selectedRole.description && (
-                    <p className="text-gray-600 mb-6">{selectedRole.description}</p>
+                    <p className="text-gray-600 dark:text-gray-400 mb-6">{selectedRole.description}</p>
                   )}
 
                   <div className="space-y-6">
@@ -232,7 +234,7 @@ export const RolesPermissionsPage = () => {
 
                       return (
                         <div key={category.key}>
-                          <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                          <h4 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
                             <span>{category.icon}</span>
                             {category.label}
                           </h4>
@@ -240,16 +242,16 @@ export const RolesPermissionsPage = () => {
                             {categoryPerms.map((perm) => (
                               <div
                                 key={perm.id}
-                                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
                               >
                                 <div>
-                                  <p className="text-sm font-medium text-gray-900">{perm.name}</p>
+                                  <p className="text-sm font-medium text-gray-900 dark:text-white">{perm.name}</p>
                                   {perm.description && (
-                                    <p className="text-xs text-gray-500">{perm.description}</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">{perm.description}</p>
                                   )}
                                 </div>
-                                <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
-                                  ✓ Activée
+                                <span className="px-2 py-1 text-xs rounded-full bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300">
+                                  {t('roles.enabled')}
                                 </span>
                               </div>
                             ))}
@@ -260,15 +262,15 @@ export const RolesPermissionsPage = () => {
                   </div>
                 </Card>
               ) : (
-                <Card className="border-0 shadow-lg">
+                <Card className="border-0 shadow-lg dark:bg-gray-800">
                   <div className="text-center py-12">
-                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
-                      <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                      <svg className="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                       </svg>
                     </div>
-                    <p className="text-gray-500 mb-2">Aucun rôle sélectionné</p>
-                    <p className="text-sm text-gray-400">Sélectionnez un rôle pour voir ses permissions</p>
+                    <p className="text-gray-500 dark:text-gray-400 mb-2">{t('roles.noRoleSelected')}</p>
+                    <p className="text-sm text-gray-400 dark:text-gray-500">{t('roles.selectRole')}</p>
                   </div>
                 </Card>
               )}
@@ -281,41 +283,41 @@ export const RolesPermissionsPage = () => {
       <Modal
         isOpen={isCreateRoleModalOpen}
         onClose={() => setIsCreateRoleModalOpen(false)}
-        title="Créer un Nouveau Rôle"
+        title={t('roles.createRole')}
         size="xl"
       >
         <form onSubmit={handleCreateRole} className="space-y-6">
           <Input
-            label="Nom du Rôle"
+            label={t('roles.roleName')}
             value={roleFormData.name}
             onChange={(e) => setRoleFormData({ ...roleFormData, name: e.target.value })}
-            placeholder="Ex: Directeur, Secrétaire, Comptable..."
+            placeholder={t('roles.roleNamePlaceholder')}
             required
           />
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('roles.description')}</label>
             <textarea
               value={roleFormData.description}
               onChange={(e) => setRoleFormData({ ...roleFormData, description: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               rows={3}
-              placeholder="Description du rôle et de ses responsabilités..."
+              placeholder={t('roles.descriptionPlaceholder')}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-4">
-              Permissions ({roleFormData.selectedPermissions.length} sélectionnée(s))
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
+              {t('roles.permissionsLabel')} ({roleFormData.selectedPermissions.length} {t('roles.selectedPermissions')})
             </label>
             
-            <div className="max-h-96 overflow-y-auto space-y-6 border border-gray-200 rounded-lg p-4">
+            <div className="max-h-96 overflow-y-auto space-y-6 border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-white dark:bg-gray-800">
               {categories.map((category) => {
                 const categoryPerms = permissions.filter(p => p.category === category.key);
                 
                 return (
                   <div key={category.key}>
-                    <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <h4 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
                       <span>{category.icon}</span>
                       {category.label}
                     </h4>
@@ -323,18 +325,18 @@ export const RolesPermissionsPage = () => {
                       {categoryPerms.map((perm) => (
                         <label
                           key={perm.id}
-                          className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
+                          className="flex items-start gap-3 p-3 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
                         >
                           <input
                             type="checkbox"
                             checked={roleFormData.selectedPermissions.includes(perm.id)}
                             onChange={() => handleTogglePermission(perm.id)}
-                            className="mt-1 w-4 h-4 text-yellow-600 border-gray-300 rounded focus:ring-yellow-500"
+                            className="mt-1 w-4 h-4 text-yellow-600 dark:text-yellow-500 border-gray-300 dark:border-gray-600 rounded focus:ring-yellow-500 dark:focus:ring-yellow-400 bg-white dark:bg-gray-700"
                           />
                           <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-900">{perm.name}</p>
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">{perm.name}</p>
                             {perm.description && (
-                              <p className="text-xs text-gray-500 mt-1">{perm.description}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{perm.description}</p>
                             )}
                           </div>
                         </label>
@@ -352,14 +354,14 @@ export const RolesPermissionsPage = () => {
               variant="outline"
               onClick={() => setIsCreateRoleModalOpen(false)}
             >
-              Annuler
+              {t('roles.cancel')}
             </Button>
             <Button
               type="submit"
               style={{ backgroundColor: '#fbbf24' }}
               disabled={roleFormData.name === '' || roleFormData.selectedPermissions.length === 0}
             >
-              Créer le Rôle
+              {t('roles.create')}
             </Button>
           </div>
         </form>

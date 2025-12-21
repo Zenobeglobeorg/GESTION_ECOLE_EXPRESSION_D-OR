@@ -80,7 +80,7 @@ export const SidebarParent = ({ isCollapsed, onToggle }: SidebarParentProps) => 
 
   return (
     <div
-      className={`bg-white border-r border-blue-100 h-screen fixed left-0 top-0 z-40 transition-all duration-300 ${
+      className={`bg-white dark:bg-gray-800 border-r border-blue-100 dark:border-gray-700 h-screen fixed left-0 top-0 z-40 transition-all duration-300 ${
         isCollapsed ? 'w-20' : 'w-64'
       } hidden lg:flex lg:flex-col shadow-[2px_0_12px_rgba(30,64,175,0.08)]`}
     >
@@ -112,15 +112,15 @@ export const SidebarParent = ({ isCollapsed, onToggle }: SidebarParentProps) => 
       </div>
 
       {/* Menu items */}
-      <nav className="flex-1 overflow-y-auto py-4 px-2 bg-white">
+      <nav className="flex-1 overflow-y-auto py-4 px-2 bg-white dark:bg-gray-800">
         {menuItems.map((item) => (
           <Link
             key={item.path}
             to={item.path}
             className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all mb-2 border ${
               isActive(item.path)
-                ? 'bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 text-blue-900 shadow-lg border-yellow-300'
-                : 'text-blue-900 border-transparent hover:border-blue-100 hover:bg-blue-50'
+                ? 'bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 text-blue-900 shadow-lg border-yellow-300 dark:from-yellow-500 dark:via-yellow-400 dark:to-yellow-500 dark:text-blue-900'
+                : 'text-blue-900 dark:text-blue-300 border-transparent hover:border-blue-100 dark:hover:border-gray-600 hover:bg-blue-50 dark:hover:bg-gray-700'
             }`}
             title={isCollapsed ? item.label : undefined}
           >
@@ -140,10 +140,10 @@ export const SidebarParent = ({ isCollapsed, onToggle }: SidebarParentProps) => 
       </nav>
 
       {/* Logout button */}
-      <div className="border-t border-gray-200 p-4 shrink-0">
+      <div className="border-t border-gray-200 dark:border-gray-700 p-4 shrink-0">
         <button
           onClick={handleLogout}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 ${
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 border border-transparent hover:border-red-200 dark:hover:border-red-800 ${
             isCollapsed ? 'justify-center' : ''
           }`}
           title={isCollapsed ? 'Déconnexion' : undefined}

@@ -1,7 +1,8 @@
-// Enregistrez ce fichier sous: src/pages/parent/ProfilParentPage.tsx
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import * as profileService from '../../services/profileService';
+import { useAuth } from '../../hooks/useAuth';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 // Interface pour le profil du PARENT
 interface ParentProfile {
@@ -9,7 +10,7 @@ interface ParentProfile {
   lastName: string;
   email: string;
   phone: string;
-  avatarUrl: string; // URL de la photo de profil
+  avatarUrl?: string; // URL de la photo de profil
   notificationPreferences: {
     email: boolean;
     sms: boolean;
@@ -26,26 +27,24 @@ interface PasswordData {
   confirmPassword: string;
 }
 
-// --- DONNÉES FACTICES (MOCK DATA) ---
-const mockParentProfile: ParentProfile = {
-  firstName: 'Ousmane',
-  lastName: 'Diop',
-  email: 'parent@example.com',
-  phone: '+221771234567',
-  avatarUrl: '', // Laisser vide pour utiliser les initiales
-  notificationPreferences: {
-    email: true,
-    sms: false,
-    push: true,
-  },
-  language: 'fr',
-  timezone: 'Africa/Dakar',
-};
-// ---
-
 const ProfilParentPage: React.FC = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { language, setLanguage, t } = useLanguage();
   
-  const [parentData, setParentData] = useState<ParentProfile>(mockParentProfile);
+  const [parentData, setParentData] = useState<ParentProfile>({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    notificationPreferences: {
+      email: true,
+      sms: false,
+      push: false,
+    },
+    language: 'fr',
+    timezone: 'Africa/Dakar',
+  });
   const [activeTab, setActiveTab] = useState<'parent' | 'password'>('parent');
   const [passwordData, setPasswordData] = useState<PasswordData>({
     currentPassword: '',
@@ -53,28 +52,50 @@ const ProfilParentPage: React.FC = () => {
     confirmPassword: ''
   });
   
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [passwordSuccess, setPasswordSuccess] = useState(false);
-  
-  const navigate = useNavigate();
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
-  // --- FAUSSES FONCTIONS DE SAUVEGARDE (Simulation) ---
-  const onParentProfileUpdate = (profile: ParentProfile) => {
-    console.log('FAUX SAUVEGARDE (Parent):', profile);
-    alert('Profil parent mis à jour ! (Simulation)');
-  };
-
-  const onPasswordChange = async (currentPassword: string, newPassword: string): Promise<boolean> => {
-    console.log('FAUX CHANGEMENT DE MDP:', currentPassword, newPassword);
-    if (currentPassword !== 'password123') {
-      console.log('Simulation: mot de passe actuel incorrect');
-      return false; 
+  // Charger le profil du parent connecté
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        setLoading(true);
+        const profile = await profileService.getCurrentUser();
+        const profileLanguage = (profile.language === 'fr' || profile.language === 'en') ? profile.language : 'fr';
+        setParentData({
+          firstName: profile.firstName,
+          lastName: profile.lastName,
+          email: profile.email,
+          phone: profile.phone || '',
+          notificationPreferences: {
+            email: profile.emailNotifications ?? true,
+            sms: false, // Pas encore implémenté côté backend
+            push: false, // Pas encore implémenté côté backend
+          },
+          language: profileLanguage,
+          timezone: 'Africa/Dakar', // Par défaut
+        });
+        // Synchroniser avec le contexte de langue
+        if (profileLanguage !== language) {
+          setLanguage(profileLanguage);
+        }
+      } catch (err) {
+        console.error('Erreur lors du chargement du profil:', err);
+        setError(err instanceof Error ? err.message : 'Erreur lors du chargement du profil');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    if (user) {
+      loadProfile();
     }
-    console.log('Simulation: mot de passe changé');
-    return true;
-  };
-  // ---
+  }, [user]);
 
   // ... (Toute la logique handle...Change et validatePassword reste identique) ...
   const handleParentChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -112,10 +133,38 @@ const ProfilParentPage: React.FC = () => {
     return errors;
   };
   
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onParentProfileUpdate(parentData);
-    navigate('/parent'); 
+    try {
+      setSaving(true);
+      setError(null);
+      setSuccess(null);
+      
+      await profileService.updateProfile({
+        firstName: parentData.firstName,
+        lastName: parentData.lastName,
+        phone: parentData.phone || null,
+      });
+      
+      // Mettre à jour les préférences si nécessaire
+      if (parentData.language) {
+        await profileService.updatePreferences({
+          language: parentData.language as 'fr' | 'en',
+          emailNotifications: parentData.notificationPreferences.email,
+        });
+        // Mettre à jour le contexte de langue
+        setLanguage(parentData.language as 'fr' | 'en');
+      }
+      
+      setSuccess('Profil mis à jour avec succès');
+      setTimeout(() => {
+        setSuccess(null);
+      }, 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur lors de la mise à jour');
+    } finally {
+      setSaving(false);
+    }
   };
   
   const handlePasswordSubmit = async (e: React.FormEvent) => {
@@ -127,20 +176,26 @@ const ProfilParentPage: React.FC = () => {
     }
     setIsChangingPassword(true);
     setPasswordErrors([]);
+    setError(null);
     try {
-      const success = await onPasswordChange(passwordData.currentPassword, passwordData.newPassword);
-      if (success) {
-        setPasswordSuccess(true);
-        setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
-        setTimeout(() => {
-          setPasswordSuccess(false);
-          setActiveTab('parent');
-        }, 2000);
-      } else {
+      await profileService.changePassword({
+        oldPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+      });
+      
+      setPasswordSuccess(true);
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setTimeout(() => {
+        setPasswordSuccess(false);
+        setActiveTab('parent');
+      }, 2000);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erreur lors du changement de mot de passe';
+      if (errorMessage.includes('incorrect') || errorMessage.includes('actuel')) {
         setPasswordErrors(['Le mot de passe actuel est incorrect']);
+      } else {
+        setPasswordErrors([errorMessage]);
       }
-    } catch (error) {
-      setPasswordErrors(['Une erreur est survenue']);
     } finally {
       setIsChangingPassword(false);
     }
@@ -153,15 +208,37 @@ const ProfilParentPage: React.FC = () => {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   }
 
+  if (loading) {
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg w-full overflow-hidden border border-gray-200 dark:border-gray-700 p-8">
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-white rounded-xl shadow-lg w-full overflow-hidden border border-gray-200">
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg w-full overflow-hidden border border-gray-200 dark:border-gray-700 transition-colors">
         
         {/* EN-TÊTE AVEC ONGLETS */}
-        <div className="border-b border-gray-200 px-6 py-4">
+        <div className="border-b border-gray-200 dark:border-gray-700 px-6 py-4">
           {/* (CHANGEMENT : Texte Bleu) */}
-          <h2 className="text-xl font-bold text-blue-900 mb-4">
+          <h2 className="text-xl font-bold text-blue-900 dark:text-blue-400 mb-4">
             Gestion du profil
           </h2>
+          
+          {error && (
+            <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
+              {error}
+            </div>
+          )}
+          
+          {success && (
+            <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-400">
+              {success}
+            </div>
+          )}
           
           <div className="flex space-x-1">
             <button
@@ -332,10 +409,15 @@ const ProfilParentPage: React.FC = () => {
               </button>
               <button
                 type="submit"
+                disabled={saving}
                 // (CHANGEMENT : Bouton Bleu)
-                className="px-6 py-2 text-sm font-medium text-white rounded-lg bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                className={`px-6 py-2 text-sm font-medium text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors ${
+                  saving
+                    ? 'bg-blue-400 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-700'
+                }`}
               >
-                Sauvegarder
+                {saving ? 'Enregistrement...' : 'Sauvegarder'}
               </button>
             </div>
           </form>

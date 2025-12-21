@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Navbar } from '../../components/layout/Navbar';
 import { Card } from '../../components/ui/Card';
@@ -7,8 +7,11 @@ import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
 import * as studentService from '../../services/studentService';
 import * as parentService from '../../services/parentService';
+import * as classService from '../../services/classService';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 export const StudentRegistrationPage = () => {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -26,16 +29,20 @@ export const StudentRegistrationPage = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [foundParent, setFoundParent] = useState<parentService.Parent | null>(null);
 
+  const [classes, setClasses] = useState<classService.Class[]>([]);
+  const [isLoadingClasses, setIsLoadingClasses] = useState(true);
+
   const [formData, setFormData] = useState({
     // Informations élève
     firstName: '',
     lastName: '',
     dateOfBirth: '',
-    class: '',
+    classId: '',
     schoolOfOrigin: '',
     
     // Handicap et orphelin
     hasDisability: false,
+    disabilityDescription: '',
     isOrphan: false,
     orphanType: '',
     
@@ -51,7 +58,7 @@ export const StudentRegistrationPage = () => {
     guardianName: '',
     guardianContact: '',
     
-    // Personnes autorisées
+    // Personnes autorisées a venir prendre l'enfant
     authorizedPerson1Name: '',
     authorizedPerson1Tel: '',
     authorizedPerson2Name: '',
@@ -68,6 +75,42 @@ export const StudentRegistrationPage = () => {
   const [searchEmail, setSearchEmail] = useState('');
   const [isSearching, setIsSearching] = useState(false);
 
+  // Charger les classes au montage du composant
+  useEffect(() => {
+    const loadClasses = async () => {
+      try {
+        setIsLoadingClasses(true);
+        const fetchedClasses = await classService.getClasses();
+        setClasses(fetchedClasses);
+        
+        // Si aucune classe n'existe, créer les classes prédéfinies
+        if (fetchedClasses.length === 0) {
+          const predefinedClasses = [
+            { name: 'Maternelle', level: 'Maternelle' },
+            { name: 'Pré-primaire', level: 'Pré-primaire' },
+            { name: 'CP', level: 'Primaire' },
+            { name: 'CE1', level: 'Primaire' },
+            { name: 'CE2', level: 'Primaire' },
+            { name: 'CM1', level: 'Primaire' },
+            { name: 'CM2', level: 'Primaire' },
+          ];
+          
+          const createdClasses = await Promise.all(
+            predefinedClasses.map(cls => classService.findOrCreateClass(cls))
+          );
+          setClasses(createdClasses);
+        }
+      } catch (err) {
+        console.error('Erreur lors du chargement des classes:', err);
+        setError('Erreur lors du chargement des classes');
+      } finally {
+        setIsLoadingClasses(false);
+      }
+    };
+
+    loadClasses();
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -80,9 +123,10 @@ export const StudentRegistrationPage = () => {
         firstName: formData.firstName,
         lastName: formData.lastName,
         dateOfBirth: formData.dateOfBirth,
-        classId: formData.class ? parseInt(formData.class) : undefined,
+        classId: formData.classId ? parseInt(formData.classId) : undefined,
         schoolOfOrigin: formData.schoolOfOrigin || undefined,
         hasDisability: formData.hasDisability,
+        disabilityDescription: formData.hasDisability ? formData.disabilityDescription : undefined,
         isOrphan: formData.isOrphan,
         orphanType: formData.orphanType || undefined,
         fatherName: formData.fatherName || undefined,
@@ -110,9 +154,10 @@ export const StudentRegistrationPage = () => {
         firstName: '',
         lastName: '',
         dateOfBirth: '',
-        class: '',
+        classId: '',
         schoolOfOrigin: '',
         hasDisability: false,
+        disabilityDescription: '',
         isOrphan: false,
         orphanType: '',
         fatherName: '',
@@ -176,31 +221,31 @@ export const StudentRegistrationPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Navbar />
 
       <main className="pt-16">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="mb-6">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Fiche d'Inscription d'un Élève</h1>
-            <p className="text-gray-600">Remplissez toutes les informations pour inscrire un nouvel élève</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{t('student.title')}</h1>
+            <p className="text-gray-600 dark:text-gray-400">{t('student.subtitle')}</p>
           </div>
 
           {/* Messages d'erreur et de succès */}
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-lg">
               {error}
             </div>
           )}
 
           {success && (
-            <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg">
+            <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 rounded-lg">
               {success}
             </div>
           )}
 
           {foundParent && (
-            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 text-blue-700 rounded-lg">
+            <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400 rounded-lg">
               <p className="font-semibold">Parent trouvé :</p>
               <p>{foundParent.firstName} {foundParent.lastName} ({foundParent.email})</p>
               {foundParent.students && foundParent.students.length > 0 && (
@@ -210,17 +255,20 @@ export const StudentRegistrationPage = () => {
           )}
 
           <form onSubmit={handleSubmit}>
-            <Card title="Informations de l'Élève" className="mb-6 border-0 shadow-lg">
+            <Card className="mb-6 border-0 shadow-lg dark:bg-gray-800">
+              <div className="bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 px-6 py-4 rounded-t-lg mb-4">
+                <h3 className="text-blue-900 dark:text-blue-900 font-bold text-xl text-center">{t('student.studentInfo')}</h3>
+              </div>
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <Input
-                    label="Prénom"
+                    label={t('student.firstName')}
                     value={formData.firstName}
                     onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
                     required
                   />
                   <Input
-                    label="Nom"
+                    label={t('student.lastName')}
                     value={formData.lastName}
                     onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
                     required
@@ -229,70 +277,84 @@ export const StudentRegistrationPage = () => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <Input
-                    label="Date de naissance"
+                    label={t('student.birthDate')}
                     type="date"
                     value={formData.dateOfBirth}
                     onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
                     required
                   />
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Classe</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('student.class')}</label>
                     <select
-                      aria-label="Classe"
-                      value={formData.class}
-                      onChange={(e) => setFormData({ ...formData, class: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      aria-label={t('student.class')}
+                      value={formData.classId}
+                      onChange={(e) => setFormData({ ...formData, classId: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                       required
+                      disabled={isLoadingClasses}
                     >
-                      <option value="">Sélectionner une classe</option>
-                      <option value="pre-primaire">Pré-primaire</option>
-                      <option value="cp">CP</option>
-                      <option value="ce1">CE1</option>
-                      <option value="ce2">CE2</option>
-                      <option value="cm1">CM1</option>
-                      <option value="cm2">CM2</option>
+                      <option value="">{isLoadingClasses ? t('student.loadingClasses') : t('student.selectClass')}</option>
+                      {classes.map((cls) => (
+                        <option key={cls.id} value={cls.id.toString()}>
+                          {cls.name} {cls.level ? `(${cls.level})` : ''}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </div>
 
                 <Input
-                  label="École de provenance"
+                  label={t('student.schoolOrigin')}
                   value={formData.schoolOfOrigin}
                   onChange={(e) => setFormData({ ...formData, schoolOfOrigin: e.target.value })}
-                  placeholder="Nom de l'école précédente"
+                  placeholder={t('student.schoolOriginPlaceholder')}
                 />
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Handicap</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('student.disability')}</label>
                     <div className="flex gap-4">
-                      <label className="flex items-center">
+                      <label className="flex items-center text-gray-900 dark:text-white">
                         <input
                           type="radio"
                           name="hasDisability"
                           checked={formData.hasDisability === true}
-                          onChange={() => setFormData({ ...formData, hasDisability: true })}
+                          onChange={() => setFormData({ ...formData, hasDisability: true, disabilityDescription: formData.hasDisability ? formData.disabilityDescription : '' })}
                           className="mr-2"
                         />
-                        Oui
+                        {t('common.yes')}
                       </label>
-                      <label className="flex items-center">
+                      <label className="flex items-center text-gray-900 dark:text-white">
                         <input
                           type="radio"
                           name="hasDisability"
                           checked={formData.hasDisability === false}
-                          onChange={() => setFormData({ ...formData, hasDisability: false })}
+                          onChange={() => setFormData({ ...formData, hasDisability: false, disabilityDescription: '' })}
                           className="mr-2"
                         />
-                        Non
+                        {t('common.no')}
                       </label>
                     </div>
+                    {formData.hasDisability && (
+                      <div className="mt-3">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          {t('student.disabilityDescription')}
+                        </label>
+                        <textarea
+                          value={formData.disabilityDescription}
+                          onChange={(e) => setFormData({ ...formData, disabilityDescription: e.target.value })}
+                          placeholder={t('student.disabilityPlaceholder')}
+                          rows={3}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        />
+                      </div>
+                    )}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Orphelin</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('student.orphan')}</label>
                     <div className="flex gap-4">
-                      <label className="flex items-center">
+                      <label className="flex items-center text-gray-900 dark:text-white">
                         <input
                           type="radio"
                           name="isOrphan"
@@ -300,9 +362,9 @@ export const StudentRegistrationPage = () => {
                           onChange={() => setFormData({ ...formData, isOrphan: true })}
                           className="mr-2"
                         />
-                        Oui
+                        {t('common.yes')}
                       </label>
-                      <label className="flex items-center">
+                      <label className="flex items-center text-gray-900 dark:text-white">
                         <input
                           type="radio"
                           name="isOrphan"
@@ -310,7 +372,7 @@ export const StudentRegistrationPage = () => {
                           onChange={() => setFormData({ ...formData, isOrphan: false })}
                           className="mr-2"
                         />
-                        Non
+                        {t('common.no')}
                       </label>
                     </div>
                   </div>
@@ -318,9 +380,9 @@ export const StudentRegistrationPage = () => {
 
                 {formData.isOrphan && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('student.orphanType')}</label>
                     <div className="flex gap-4">
-                      <label className="flex items-center">
+                      <label className="flex items-center text-gray-900 dark:text-white">
                         <input
                           type="radio"
                           name="orphanType"
@@ -329,9 +391,9 @@ export const StudentRegistrationPage = () => {
                           onChange={(e) => setFormData({ ...formData, orphanType: e.target.value })}
                           className="mr-2"
                         />
-                        Père
+                        {t('student.father')}
                       </label>
-                      <label className="flex items-center">
+                      <label className="flex items-center text-gray-900 dark:text-white">
                         <input
                           type="radio"
                           name="orphanType"
@@ -340,7 +402,7 @@ export const StudentRegistrationPage = () => {
                           onChange={(e) => setFormData({ ...formData, orphanType: e.target.value })}
                           className="mr-2"
                         />
-                        Mère
+                        {t('student.mother')}
                       </label>
                     </div>
                   </div>
@@ -348,24 +410,27 @@ export const StudentRegistrationPage = () => {
               </div>
             </Card>
 
-            <Card title="Informations sur les Parents" className="mb-6 border-0 shadow-lg">
+            <Card className="mb-6 border-0 shadow-lg dark:bg-gray-800">
+              <div className="bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 px-6 py-4 rounded-t-lg mb-4">
+                <h3 className="text-blue-900 dark:text-blue-900 font-bold text-xl text-center">{t('student.parentInfo')}</h3>
+              </div>
               <div className="space-y-4">
                 <div>
-                  <h3 className="font-semibold text-gray-900 mb-3">Père</h3>
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-3">{t('student.father')}</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <Input
-                      label="Nom"
+                      label={t('student.fatherName')}
                       value={formData.fatherName}
                       onChange={(e) => setFormData({ ...formData, fatherName: e.target.value })}
                     />
                     <Input
-                      label="Contact"
+                      label={t('student.fatherContact')}
                       value={formData.fatherContact}
                       onChange={(e) => setFormData({ ...formData, fatherContact: e.target.value })}
                     />
                   </div>
                   <Input
-                    label="Domicile"
+                    label={t('student.fatherAddress')}
                     value={formData.fatherAddress}
                     onChange={(e) => setFormData({ ...formData, fatherAddress: e.target.value })}
                     className="mt-2"
@@ -373,21 +438,21 @@ export const StudentRegistrationPage = () => {
                 </div>
 
                 <div>
-                  <h3 className="font-semibold text-gray-900 mb-3">Mère</h3>
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-3">{t('student.mother')}</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <Input
-                      label="Nom"
+                      label={t('student.motherName')}
                       value={formData.motherName}
                       onChange={(e) => setFormData({ ...formData, motherName: e.target.value })}
                     />
                     <Input
-                      label="Contact"
+                      label={t('student.motherContact')}
                       value={formData.motherContact}
                       onChange={(e) => setFormData({ ...formData, motherContact: e.target.value })}
                     />
                   </div>
                   <Input
-                    label="Domicile"
+                    label={t('student.motherAddress')}
                     value={formData.motherAddress}
                     onChange={(e) => setFormData({ ...formData, motherAddress: e.target.value })}
                     className="mt-2"
@@ -395,15 +460,15 @@ export const StudentRegistrationPage = () => {
                 </div>
 
                 <div>
-                  <h3 className="font-semibold text-gray-900 mb-3">Tuteur/Tutrice</h3>
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-3">{t('student.guardian')}</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <Input
-                      label="Nom"
+                      label={t('student.guardianName')}
                       value={formData.guardianName}
                       onChange={(e) => setFormData({ ...formData, guardianName: e.target.value })}
                     />
                     <Input
-                      label="Contact"
+                      label={t('student.guardianContact')}
                       value={formData.guardianContact}
                       onChange={(e) => setFormData({ ...formData, guardianContact: e.target.value })}
                     />
@@ -412,7 +477,10 @@ export const StudentRegistrationPage = () => {
               </div>
             </Card>
 
-            <Card title="Personnes Autorisées" className="mb-6 border-0 shadow-lg">
+            <Card className="mb-6 border-0 shadow-lg dark:bg-gray-800">
+              <div className="bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 px-6 py-4 rounded-t-lg mb-4">
+                <h3 className="text-blue-900 dark:text-blue-900 font-bold text-xl text-center">{t('student.authorizedPersons')}</h3>
+              </div>
               <div className="space-y-4">
                 <div>
                   <Input
@@ -443,9 +511,12 @@ export const StudentRegistrationPage = () => {
               </div>
             </Card>
 
-            <Card title="Option de Paiement" className="mb-6 border-0 shadow-lg">
+            <Card className="mb-6 border-0 shadow-lg dark:bg-gray-800">
+              <div className="bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 px-6 py-4 rounded-t-lg mb-4">
+                <h3 className="text-blue-900 dark:text-blue-900 font-bold text-xl text-center">{t('student.paymentOption')}</h3>
+              </div>
               <div className="space-y-3">
-                <label className="flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50">
+                <label className="flex items-start gap-3 p-4 border-2 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
                   <input
                     type="radio"
                     name="paymentOption"
@@ -455,11 +526,11 @@ export const StudentRegistrationPage = () => {
                     className="mt-1"
                   />
                   <div>
-                    <p className="font-semibold">Option 1 : Tous les mois (le 5 du mois)</p>
-                    <p className="text-sm text-gray-600">Dernière échéance le 05 MARS 2026</p>
+                    <p className="font-semibold dark:text-white">{t('student.option1')}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{t('student.option1Desc')}</p>
                   </div>
                 </label>
-                <label className="flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50">
+                <label className="flex items-start gap-3 p-4 border-2 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
                   <input
                     type="radio"
                     name="paymentOption"
@@ -469,11 +540,11 @@ export const StudentRegistrationPage = () => {
                     className="mt-1"
                   />
                   <div>
-                    <p className="font-semibold">Option 2 : Tous les trimestres</p>
-                    <p className="text-sm text-gray-600">Dernière échéance le 05 MARS 2026</p>
+                    <p className="font-semibold dark:text-white">{t('student.option2')}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{t('student.option2Desc')}</p>
                   </div>
                 </label>
-                <label className="flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50">
+                <label className="flex items-start gap-3 p-4 border-2 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
                   <input
                     type="radio"
                     name="paymentOption"
@@ -483,25 +554,28 @@ export const StudentRegistrationPage = () => {
                     className="mt-1"
                   />
                   <div>
-                    <p className="font-semibold">Option 3 : Une ou deux tranches (scolarité annuelle)</p>
-                    <p className="text-sm text-gray-600">Dernière échéance le 05 MARS 2026</p>
+                    <p className="font-semibold dark:text-white">{t('student.option3')}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{t('student.option3Desc')}</p>
                   </div>
                 </label>
               </div>
             </Card>
 
-            <Card title="Association à un Compte Parent" className="mb-6 border-0 shadow-lg">
+            <Card className="mb-6 border-0 shadow-lg dark:bg-gray-800">
+              <div className="bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 px-6 py-4 rounded-t-lg mb-4">
+                <h3 className="text-blue-900 dark:text-blue-900 font-bold text-xl text-center">{t('student.parentAssociation')}</h3>
+              </div>
               <div className="space-y-4">
-                <p className="text-sm text-gray-600">
-                  Recherchez le compte parent existant ou créez-en un nouveau pour associer cet élève
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {t('student.parentSearchDesc')}
                 </p>
                 <div className="flex gap-3">
                   <Input
-                    label="Email du parent"
+                    label={t('student.parentEmail')}
                     type="email"
                     value={formData.parentEmail}
                     onChange={(e) => setFormData({ ...formData, parentEmail: e.target.value })}
-                    placeholder="parent@example.com"
+                    placeholder={t('student.parentEmailPlaceholder')}
                     className="flex-1"
                   />
                   <Button
@@ -510,21 +584,21 @@ export const StudentRegistrationPage = () => {
                     onClick={() => setIsSearchParentModalOpen(true)}
                     className="mt-7"
                   >
-                    Rechercher
+                    {t('student.search')}
                   </Button>
                 </div>
-                <p className="text-xs text-gray-500">
-                  Si le parent n'existe pas, il sera créé automatiquement avec cet email
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {t('student.parentAutoCreate')}
                 </p>
               </div>
             </Card>
 
             <div className="flex justify-end gap-3">
               <Button type="button" variant="outline" onClick={() => navigate(getReturnPath())}>
-                Annuler
+                {t('student.cancel')}
               </Button>
               <Button type="submit" style={{ backgroundColor: '#fbbf24' }} disabled={isLoading}>
-                {isLoading ? 'Enregistrement...' : 'Enregistrer l\'Inscription'}
+                {isLoading ? t('student.saving') : t('student.save')}
               </Button>
             </div>
           </form>
@@ -535,15 +609,15 @@ export const StudentRegistrationPage = () => {
       <Modal
         isOpen={isSearchParentModalOpen}
         onClose={() => setIsSearchParentModalOpen(false)}
-        title="Rechercher un Parent"
+        title={t('student.searchParent')}
       >
         <div className="space-y-4">
           <Input
-            label="Email du parent"
+            label={t('student.parentEmail')}
             type="email"
             value={searchEmail}
             onChange={(e) => setSearchEmail(e.target.value)}
-            placeholder="parent@example.com"
+            placeholder={t('student.parentEmailPlaceholder')}
           />
           <div className="flex justify-end gap-3">
             <Button
@@ -551,7 +625,7 @@ export const StudentRegistrationPage = () => {
               variant="outline"
               onClick={() => setIsSearchParentModalOpen(false)}
             >
-              Annuler
+              {t('student.cancel')}
             </Button>
             <Button
               type="button"
@@ -559,7 +633,7 @@ export const StudentRegistrationPage = () => {
               style={{ backgroundColor: '#fbbf24' }}
               disabled={isSearching}
             >
-              {isSearching ? 'Recherche...' : 'Rechercher'}
+              {isSearching ? t('student.searching') : t('student.search')}
             </Button>
           </div>
         </div>

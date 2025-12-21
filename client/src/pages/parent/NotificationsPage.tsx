@@ -1,70 +1,107 @@
-// Enregistrez ce fichier sous: src/pages/parent/NotificationsPage.tsx
-
-import React, { useState, useMemo } from 'react';
-
-// --- DONNÉES FACTICES (MOCK DATA) ---
-type Notification = {
-  id: string;
-  type: 'note' | 'facture' | 'absence' | 'info';
-  title: string;
-  description: string;
-  time: string;
-  read: boolean;
-};
-
-const mockNotifications: Notification[] = [
-  { 
-    id: '1', type: 'note', 
-    title: 'Nouvelle note disponible', 
-    description: 'Une nouvelle note a été ajoutée en Mathématiques pour Aminata.', 
-    time: 'il y a 2 heures', read: false 
-  },
-  { 
-    id: '2', type: 'facture', 
-    title: 'Facture de scolarité', 
-    description: 'La facture pour la Tranche 2 est maintenant disponible.', 
-    time: 'il y a 1 jour', read: false 
-  },
-  { 
-    id: '3', type: 'absence', 
-    title: 'Absence non justifiée', 
-    description: 'Ibrahima a été marqué absent le 13/11 à 10h00.', 
-    time: 'il y a 2 jours', read: true 
-  },
-  { 
-    id: '4', type: 'info', 
-    title: 'Réunion Parents-Professeurs', 
-    description: 'La réunion aura lieu le 20 Décembre. Plus d\'infos...', 
-    time: 'il y a 1 semaine', read: true 
-  },
-];
+import React, { useState, useMemo, useEffect } from 'react';
+import * as notificationService from '../../services/notificationService';
+import { useSocket } from '../../hooks/useSocket';
 
 // Icônes pour chaque type
-const notificationIcons = {
-  note: '📊',
-  facture: '💰',
-  absence: '✓',
-  info: '🔔',
+const notificationIcons: { [key: string]: string } = {
+  CALENDAR_EVENT: '📅',
+  ASSIGNMENT: '📝',
+  ANNOUNCEMENT: '🔔',
+  GRADE: '📊',
+  ATTENDANCE: '✓',
+  PAYMENT: '💰',
+  BULLETIN: '📄',
 };
-// ---
+
+const formatTime = (dateString: string) => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'À l\'instant';
+  if (diffMins < 60) return `il y a ${diffMins} min${diffMins > 1 ? 's' : ''}`;
+  if (diffHours < 24) return `il y a ${diffHours} heure${diffHours > 1 ? 's' : ''}`;
+  if (diffDays < 7) return `il y a ${diffDays} jour${diffDays > 1 ? 's' : ''}`;
+  return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+};
 
 const NotificationsPage: React.FC = () => {
-  const [notifications, setNotifications] = useState(mockNotifications);
+  const { socket } = useSocket();
+  const [notifications, setNotifications] = useState<notificationService.Notification[]>([]);
   const [activeTab, setActiveTab] = useState<'all' | 'unread'>('all');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Charger les notifications au montage
+  useEffect(() => {
+    loadNotifications();
+  }, [activeTab]);
+
+  // Écouter les nouvelles notifications via WebSocket
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNewNotification = (notification: notificationService.Notification) => {
+      setNotifications(prev => {
+        // Éviter les doublons
+        if (prev.some(n => n.id === notification.id)) {
+          return prev;
+        }
+        return [notification, ...prev];
+      });
+    };
+
+    socket.on('new_notification', handleNewNotification);
+
+    return () => {
+      socket.off('new_notification', handleNewNotification);
+    };
+  }, [socket]);
+
+  const loadNotifications = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await notificationService.getNotifications(activeTab === 'unread');
+      setNotifications(data);
+    } catch (err) {
+      console.error('Erreur lors du chargement des notifications:', err);
+      setError(err instanceof Error ? err.message : 'Erreur lors du chargement des notifications');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Filtre les notifications basées sur l'onglet actif
   const filteredNotifications = useMemo(() => {
     if (activeTab === 'unread') {
-      return notifications.filter(n => !n.read);
+      return notifications.filter(n => !n.isRead);
     }
     return notifications;
   }, [notifications, activeTab]);
 
   // Marque toutes les notifications comme lues
-  const handleMarkAllAsRead = () => {
-    setNotifications(
-      notifications.map(n => ({ ...n, read: true }))
-    );
+  const handleMarkAllAsRead = async () => {
+    try {
+      await notificationService.markAllAsRead();
+      await loadNotifications();
+    } catch (err) {
+      console.error('Erreur lors de la mise à jour:', err);
+      setError(err instanceof Error ? err.message : 'Erreur lors de la mise à jour');
+    }
+  };
+
+  // Marque une notification comme lue
+  const handleMarkAsRead = async (notificationId: number) => {
+    try {
+      await notificationService.markAsRead(notificationId);
+      await loadNotifications();
+    } catch (err) {
+      console.error('Erreur lors de la mise à jour:', err);
+    }
   };
 
   return (
@@ -115,25 +152,34 @@ const NotificationsPage: React.FC = () => {
 
         {/* --- Liste des Notifications --- */}
         <div className="divide-y divide-gray-200 dark:divide-gray-700">
-          {filteredNotifications.length > 0 ? (
+          {loading ? (
+            <div className="p-12 text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">Chargement...</p>
+            </div>
+          ) : error ? (
+            <div className="p-12 text-center">
+              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+            </div>
+          ) : filteredNotifications.length > 0 ? (
             filteredNotifications.map((notification) => (
               <div 
                 key={notification.id} 
-                // (Style : Hover Jaune pour l'interactivité)
-                className="flex items-start gap-4 p-6 transition-colors hover:bg-yellow-50 dark:hover:bg-yellow-900/30"
+                onClick={() => !notification.isRead && handleMarkAsRead(notification.id)}
+                className="flex items-start gap-4 p-6 transition-colors hover:bg-yellow-50 dark:hover:bg-yellow-900/30 cursor-pointer"
               >
                 {/* Icône */}
-                <span className="text-2xl mt-1">{notificationIcons[notification.type]}</span>
+                <span className="text-2xl mt-1">{notificationIcons[notification.type] || '🔔'}</span>
                 
                 {/* Contenu */}
                 <div className="flex-1">
                   <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{notification.title}</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{notification.description}</p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{notification.time}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{notification.content}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{formatTime(notification.createdAt)}</p>
                 </div>
 
                 {/* Point "Non lu" */}
-                {!notification.read && (
+                {!notification.isRead && (
                   <span className="flex-shrink-0 w-3 h-3 mt-1.5 bg-blue-500 rounded-full" title="Non lu"></span>
                 )}
               </div>

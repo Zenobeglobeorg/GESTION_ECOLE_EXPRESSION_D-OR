@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { useAdminTheme } from '../../contexts/AdminThemeContext';
+import { getAdminThemeClasses } from '../../utils/adminTheme';
 
 interface SubMenuItem {
   label: string;
@@ -51,6 +53,7 @@ const MENU_ITEMS: MenuItem[] = [
         { label: 'Gestion Utilisateurs', path: '/admin/users' },
         { label: 'Parents', path: '/admin/users/parents' },
         { label: 'Enseignants', path: '/admin/users/teachers' },
+        { label: 'Administrateurs', path: '/admin/users/admins' },
         { label: 'Permissions', path: '/admin/users/permissions' },
       ],
     },
@@ -79,8 +82,9 @@ const MENU_ITEMS: MenuItem[] = [
         { label: 'Classes & Matières', path: '/admin/classes' },
         { label: 'Emploi du Temps', path: '/admin/timetable' },
         { label: 'Évaluations', path: '/admin/evaluations' },
-        { label: 'Notes & Bulletins', path: '/admin/grades' },
-        { label: 'Remplacements', path: '/admin/replacements' },
+      { label: 'Notes & Bulletins', path: '/admin/grades' },
+      { label: 'Générer Bulletins', path: '/admin/bulletins' },
+      { label: 'Remplacements', path: '/admin/replacements' },
       ],
     },
     {
@@ -141,6 +145,8 @@ export const SidebarAdmin = ({ isCollapsed, onToggle }: SidebarAdminProps) => {
   const { logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { themeColor } = useAdminTheme();
+  const themeClasses = getAdminThemeClasses(themeColor);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(defaultExpandedGroups);
 
   const toggleGroup = (groupLabel: string) => {
@@ -185,14 +191,92 @@ export const SidebarAdmin = ({ isCollapsed, onToggle }: SidebarAdminProps) => {
     }));
   }, [activeGroupLabel]);
 
+  // Classes dynamiques selon le thème
+  const getHeaderBg = () => {
+    const themes: Record<string, string> = {
+      'blue-yellow': 'bg-linear-to-r from-blue-700 via-blue-800 to-blue-900',
+      'green-teal': 'bg-linear-to-r from-green-700 via-green-800 to-green-900',
+      'purple-pink': 'bg-linear-to-r from-purple-700 via-purple-800 to-purple-900',
+      'orange-red': 'bg-linear-to-r from-orange-700 via-orange-800 to-orange-900',
+      'indigo-blue': 'bg-linear-to-r from-indigo-700 via-indigo-800 to-indigo-900',
+    };
+    return themes[themeColor] || themes['blue-yellow'];
+  };
+
+  const getActiveItemClasses = () => {
+    const themes: Record<string, string> = {
+      'blue-yellow': 'bg-linear-to-r from-yellow-400 via-yellow-300 to-yellow-400 text-blue-900 shadow-lg border-yellow-300',
+      'green-teal': 'bg-linear-to-r from-teal-400 via-teal-300 to-teal-400 text-green-900 shadow-lg border-teal-300',
+      'purple-pink': 'bg-linear-to-r from-pink-400 via-pink-300 to-pink-400 text-purple-900 shadow-lg border-pink-300',
+      'orange-red': 'bg-linear-to-r from-red-400 via-red-300 to-red-400 text-orange-900 shadow-lg border-red-300',
+      'indigo-blue': 'bg-linear-to-r from-blue-400 via-blue-300 to-blue-400 text-indigo-900 shadow-lg border-blue-300',
+    };
+    return themes[themeColor] || themes['blue-yellow'];
+  };
+
+  const getGroupActiveClasses = () => {
+    const themes: Record<string, string> = {
+      'blue-yellow': 'bg-linear-to-r from-yellow-300 via-yellow-200 to-yellow-300 text-blue-900 border-yellow-300',
+      'green-teal': 'bg-linear-to-r from-teal-300 via-teal-200 to-teal-300 text-green-900 border-teal-300',
+      'purple-pink': 'bg-linear-to-r from-pink-300 via-pink-200 to-pink-300 text-purple-900 border-pink-300',
+      'orange-red': 'bg-linear-to-r from-red-300 via-red-200 to-red-300 text-orange-900 border-red-300',
+      'indigo-blue': 'bg-linear-to-r from-blue-300 via-blue-200 to-blue-300 text-indigo-900 border-blue-300',
+    };
+    return themes[themeColor] || themes['blue-yellow'];
+  };
+
+  const getSubmenuActiveClasses = () => {
+    const themes: Record<string, string> = {
+      'blue-yellow': 'bg-yellow-100 text-blue-900 font-semibold border border-yellow-300',
+      'green-teal': 'bg-teal-100 text-green-900 font-semibold border border-teal-300',
+      'purple-pink': 'bg-pink-100 text-purple-900 font-semibold border border-pink-300',
+      'orange-red': 'bg-red-100 text-orange-900 font-semibold border border-red-300',
+      'indigo-blue': 'bg-blue-100 text-indigo-900 font-semibold border border-blue-300',
+    };
+    return themes[themeColor] || themes['blue-yellow'];
+  };
+
+  const getBorderColor = () => {
+    const themes: Record<string, string> = {
+      'blue-yellow': 'border-blue-100',
+      'green-teal': 'border-green-100',
+      'purple-pink': 'border-purple-100',
+      'orange-red': 'border-orange-100',
+      'indigo-blue': 'border-indigo-100',
+    };
+    return themes[themeColor] || themes['blue-yellow'];
+  };
+
+  const getHoverClasses = () => {
+    const themes: Record<string, string> = {
+      'blue-yellow': 'hover:border-blue-100 hover:bg-blue-50 text-blue-900',
+      'green-teal': 'hover:border-green-100 hover:bg-green-50 text-green-900',
+      'purple-pink': 'hover:border-purple-100 hover:bg-purple-50 text-purple-900',
+      'orange-red': 'hover:border-orange-100 hover:bg-orange-50 text-orange-900',
+      'indigo-blue': 'hover:border-indigo-100 hover:bg-indigo-50 text-indigo-900',
+    };
+    return themes[themeColor] || themes['blue-yellow'];
+  };
+
+  const getSubmenuBg = () => {
+    const themes: Record<string, string> = {
+      'blue-yellow': 'bg-blue-50/70 border-blue-200',
+      'green-teal': 'bg-green-50/70 border-green-200',
+      'purple-pink': 'bg-purple-50/70 border-purple-200',
+      'orange-red': 'bg-orange-50/70 border-orange-200',
+      'indigo-blue': 'bg-indigo-50/70 border-indigo-200',
+    };
+    return themes[themeColor] || themes['blue-yellow'];
+  };
+
   return (
     <div
-      className={`bg-white border-r border-blue-100 h-screen fixed left-0 top-0 z-40 transition-all duration-300 ${
+      className={`bg-white dark:bg-gray-800 border-r ${getBorderColor()} dark:border-gray-700 h-screen fixed left-0 top-0 z-40 transition-all duration-300 ${
         isCollapsed ? 'w-20' : 'w-64'
       } hidden lg:flex lg:flex-col shadow-[2px_0_12px_rgba(30,64,175,0.08)]`}
     >
       {/* Header avec logo et bouton hamburger */}
-      <div className="relative h-16 flex items-center justify-between px-4 border-b border-blue-100 bg-gradient-to-r from-blue-700 via-blue-800 to-blue-900 flex-shrink-0">
+      <div className={`relative h-16 flex items-center justify-between px-4 border-b ${getBorderColor()} ${getHeaderBg()} flex-shrink-0`}>
         {!isCollapsed && (
           <div className="flex items-center gap-2">
             <div className="w-10 h-10 rounded-full bg-yellow-400 flex items-center justify-center text-blue-900 font-bold shadow-inner">
@@ -205,6 +289,7 @@ export const SidebarAdmin = ({ isCollapsed, onToggle }: SidebarAdminProps) => {
           </div>
         )}
         <button
+          title="Ouvrir/Fermer le menu"
           onClick={onToggle}
           className="p-2 rounded-lg hover:bg-white/20 transition-colors text-white"
         >
@@ -213,12 +298,12 @@ export const SidebarAdmin = ({ isCollapsed, onToggle }: SidebarAdminProps) => {
           </svg>
         </button>
         {!isCollapsed && (
-          <div className="absolute inset-x-0 -bottom-[1px] h-1 bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500" />
+          <div className="absolute inset-x-0 -bottom-px h-1 bg-linear-to-r from-yellow-300 via-yellow-400 to-yellow-500" />
         )}
       </div>
 
       {/* Menu items */}
-      <nav className="flex-1 overflow-y-auto py-4 px-2 bg-white">
+      <nav className="flex-1 overflow-y-auto py-4 px-2 bg-white dark:bg-gray-800">
         {MENU_ITEMS.map((item) => {
           if (isMenuGroup(item)) {
             const isExpanded = expandedGroups[item.label];
@@ -229,8 +314,8 @@ export const SidebarAdmin = ({ isCollapsed, onToggle }: SidebarAdminProps) => {
                   onClick={() => toggleGroup(item.label)}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all border ${
                     groupIsActive
-                      ? 'bg-gradient-to-r from-yellow-300 via-yellow-200 to-yellow-300 text-blue-900 border-yellow-300 shadow-sm'
-                      : 'text-blue-900 border-transparent hover:border-blue-100 hover:bg-blue-50'
+                      ? `${getGroupActiveClasses()} shadow-sm`
+                      : `${getHoverClasses()} border-transparent`
                   }`}
                   title={isCollapsed ? item.label : undefined}
                 >
@@ -253,15 +338,15 @@ export const SidebarAdmin = ({ isCollapsed, onToggle }: SidebarAdminProps) => {
                 </button>
 
                 {isExpanded && !isCollapsed && (
-                  <div className="bg-blue-50/70 rounded-lg mt-2 ml-3 border-l-4 border-blue-200">
+                  <div className={`${getSubmenuBg()} rounded-lg mt-2 ml-3 border-l-4`}>
                     {item.submenu.map((subitem) => (
                       <Link
                         key={subitem.path}
                         to={subitem.path}
                         className={`block px-4 py-2 text-sm rounded-lg transition-all ml-3 mr-3 my-1 ${
                           isActive(subitem.path)
-                            ? 'bg-yellow-100 text-blue-900 font-semibold border border-yellow-300 shadow-sm'
-                            : 'text-blue-800 hover:text-blue-900 hover:bg-blue-100'
+                            ? `${getSubmenuActiveClasses()} shadow-sm`
+                            : `${themeClasses.textPrimaryLight} hover:${themeClasses.textPrimary} hover:${themeClasses.bgPrimary}`
                         }`}
                       >
                         {subitem.label}
@@ -279,8 +364,8 @@ export const SidebarAdmin = ({ isCollapsed, onToggle }: SidebarAdminProps) => {
               to={item.path}
               className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all mb-2 border ${
                 isActive(item.path)
-                  ? 'bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 text-blue-900 shadow-lg border-yellow-300'
-                  : 'text-blue-900 border-transparent hover:border-blue-100 hover:bg-blue-50'
+                  ? `${getActiveItemClasses()}`
+                  : `${getHoverClasses()} border-transparent`
               }`}
               title={isCollapsed ? item.label : undefined}
             >
@@ -292,7 +377,7 @@ export const SidebarAdmin = ({ isCollapsed, onToggle }: SidebarAdminProps) => {
       </nav>
 
       {/* Logout button */}
-      <div className="border-t border-gray-200 p-4 flex-shrink-0">
+      <div className="border-t border-gray-200 p-4 shrink-0">
         <button
           onClick={handleLogout}
           className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 ${

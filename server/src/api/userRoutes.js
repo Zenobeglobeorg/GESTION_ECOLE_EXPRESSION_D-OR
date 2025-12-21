@@ -7,6 +7,12 @@ const router = express.Router();
 // Toutes les routes utilisateurs requièrent une authentification
 router.use(authenticateToken);
 
+// Routes pour le profil de l'utilisateur connecté (tous les rôles)
+router.get('/me', userController.getCurrentUser);
+router.put('/me/profile', userController.updateProfile);
+router.put('/me/password', userController.changePassword);
+router.put('/me/preferences', userController.updatePreferences);
+
 // Seuls SUPER_ADMIN et ADMINISTRATION peuvent gérer les utilisateurs
 router.get('/', requireRole('SUPER_ADMIN', 'ADMINISTRATION'), userController.listUsers);
 router.post('/', requireRole('SUPER_ADMIN', 'ADMINISTRATION'), userController.createUser);

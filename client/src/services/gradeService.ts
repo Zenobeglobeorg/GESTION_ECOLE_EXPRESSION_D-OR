@@ -1,153 +1,271 @@
-/**
- * Service de gestion des notes et évaluations
- * 
- * Gère la saisie et la consultation des notes selon le système pédagogique
- * unique de "Expression d'Or" (paliers, compétences, niveaux de maîtrise).
- */
-
-export interface Competency {
-  id: string;
-  name: string;
-  subjectId: string;
-}
-
-export interface Subject {
-  id: string;
-  name: string;
-  competencies: Competency[];
-}
-
-export interface Palier {
-  id: string;
-  name: string;
-  startDate: string;
-  endDate: string;
-  academicYearId: string;
-}
-
-export interface Evaluation {
-  id: string;
-  name: string;
-  palierId: string;
-  competencyId: string;
-  date: string;
-  type: 'numeric' | 'smiley' | 'acquired'; // numeric pour /10, smiley pour pré-primaire, acquired pour acquis/non acquis
-}
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 export interface Grade {
-  id: string;
-  studentId: string;
-  evaluationId: string;
-  score?: number; // Pour les notes /10
-  evaluationText?: string; // Pour "Acquis", "Non acquis", ou smileys
+  id: number;
+  studentId: number;
+  subjectId: number | null;
+  evaluationId: number;
+  grade: number | null; // Note sur 20
+  score?: number | null; // Note sur 10 (original)
+  evaluationText?: string | null;
+  teacherComments?: string | null;
+  status: 'pending' | 'validated' | 'rejected';
+  date: string;
+  student?: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    class?: {
+      id: number;
+      name: string;
+    } | null;
+  };
+  subject?: {
+    id: number;
+    name: string;
+  } | null;
+  evaluation?: {
+    id: number;
+    name: string;
+    type: string;
+  } | null;
+}
+
+export interface CreateGradeData {
+  studentId: number;
+  evaluationId: number;
+  score?: number; // Note sur 20
+  evaluationText?: string;
   teacherComments?: string;
 }
 
-export type MasteryLevel = 'NON_MAITRISE' | 'MAITRISE_PARTIELLE' | 'MAITRISE_MINIMALE' | 'MAITRISE_MAXIMALE' | 'EXCELLENT';
-
-export interface CompetencyMastery {
-  competencyId: string;
-  competencyName: string;
-  averageScore: number;
-  masteryLevel: MasteryLevel;
+export interface UpdateGradeData {
+  score?: number; // Note sur 20
+  evaluationText?: string;
+  teacherComments?: string;
+  coefficient?: number;
 }
 
-/**
- * Récupère les notes d'un élève pour un palier donné
- */
-export const getStudentGrades = async (studentId: string, _palierId: string): Promise<Grade[]> => {
-  void _palierId;
-  // TODO: Appel API réel
-  // const response = await fetch(`/api/students/${studentId}/grades?palierId=${palierId}`);
-  // return response.json();
-
-  await new Promise(resolve => setTimeout(resolve, 500));
-
-  return [
-    {
-      id: '1',
-      studentId,
-      evaluationId: '1',
-      score: 7,
-      teacherComments: 'Bon travail, continuez ainsi',
-    },
-    {
-      id: '2',
-      studentId,
-      evaluationId: '2',
-      score: 8,
-    },
-  ];
+const getToken = (): string | null => {
+  return localStorage.getItem('token');
 };
 
 /**
- * Saisit une note pour un élève
+ * Récupère les notes des enfants du parent connecté (pour les parents)
  */
-export const submitGrade = async (grade: Omit<Grade, 'id'>): Promise<Grade> => {
-  // TODO: Appel API réel
-  // const response = await fetch('/api/grades', {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify(grade),
-  // });
-  // return response.json();
+export const getMyChildrenGrades = async (): Promise<Grade[]> => {
+  const token = getToken();
+  if (!token) throw new Error('Non authentifié');
 
-  await new Promise(resolve => setTimeout(resolve, 300));
-
-  return {
-    id: Date.now().toString(),
-    ...grade,
-  };
-};
-
-/**
- * Calcule le niveau de maîtrise d'une compétence
- * 
- * Règles de calcul selon le système "Expression d'Or":
- * - Non Maîtrise (N M) : 0 à 2 points
- * - Maîtrise Partielle (Part) : 3 à 4 points
- * - Maîtrise Minimale (Mini) : 5 à 7 points
- * - Maîtrise Maximale (Maxi) : 8 à 9 points
- * - Excellent : 10 points
- */
-export const calculateMasteryLevel = (averageScore: number): MasteryLevel => {
-  if (averageScore >= 0 && averageScore <= 2) return 'NON_MAITRISE';
-  if (averageScore >= 3 && averageScore <= 4) return 'MAITRISE_PARTIELLE';
-  if (averageScore >= 5 && averageScore <= 7) return 'MAITRISE_MINIMALE';
-  if (averageScore >= 8 && averageScore <= 9) return 'MAITRISE_MAXIMALE';
-  if (averageScore === 10) return 'EXCELLENT';
-  return 'NON_MAITRISE';
-};
-
-/**
- * Récupère les niveaux de maîtrise d'un élève pour un palier
- */
-export const getStudentMasteryLevels = async (
-  studentId: string,
-  _palierId: string
-): Promise<CompetencyMastery[]> => {
-  void studentId;
-  void _palierId;
-  // TODO: Appel API réel - Ce calcul devrait être fait côté backend
-  // const response = await fetch(`/api/students/${studentId}/mastery-levels?palierId=${palierId}`);
-  // return response.json();
-
-  await new Promise(resolve => setTimeout(resolve, 500));
-
-  // Mock data
-  return [
-    {
-      competencyId: '1',
-      competencyName: 'Nombres et opérations',
-      averageScore: 7.5,
-      masteryLevel: 'MAITRISE_MINIMALE',
+  const response = await fetch(`${API_BASE_URL}/api/grades/my-children`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
     },
-    {
-      competencyId: '2',
-      competencyName: 'Lecture',
-      averageScore: 8.5,
-      masteryLevel: 'MAITRISE_MAXIMALE',
-    },
-  ];
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors de la récupération des notes');
+  }
+  return response.json();
 };
 
+export const getGrades = async (classId?: number, subjectId?: number, evaluationId?: number, studentId?: number, status?: string): Promise<Grade[]> => {
+  const token = getToken();
+  if (!token) throw new Error('Non authentifié');
+
+  const params = new URLSearchParams();
+  if (classId) params.append('classId', classId.toString());
+  if (subjectId) params.append('subjectId', subjectId.toString());
+  if (evaluationId) params.append('evaluationId', evaluationId.toString());
+  if (studentId) params.append('studentId', studentId.toString());
+  if (status) params.append('status', status);
+
+  const url = params.toString()
+    ? `${API_BASE_URL}/api/grades?${params.toString()}`
+    : `${API_BASE_URL}/api/grades`;
+
+  const response = await fetch(url, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors de la récupération des notes');
+  }
+  return response.json();
+};
+
+export const getGradeById = async (id: number): Promise<Grade> => {
+  const token = getToken();
+  if (!token) throw new Error('Non authentifié');
+
+  const response = await fetch(`${API_BASE_URL}/api/grades/${id}`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors de la récupération de la note');
+  }
+  return response.json();
+};
+
+export interface BulkGradesData {
+  classId: number;
+  domainsConfig: Array<{
+    code: string;
+    label: string;
+    competencyBlocks: Array<{
+      name: string;
+      activities: string[];
+    }>;
+  }>;
+  studentsData: Array<{
+    id: number;
+    firstName: string;
+    lastName: string;
+    notes: { [key: string]: number | null };
+  }>;
+  palierName: string;
+  academicYearName: string;
+}
+
+export const createBulkGrades = async (data: BulkGradesData): Promise<{ success: boolean; message: string; created: number; errors?: any[] }> => {
+  const token = getToken();
+  if (!token) throw new Error('Non authentifié');
+
+  const response = await fetch(`${API_BASE_URL}/api/grades/bulk`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors de l\'enregistrement des notes');
+  }
+  return response.json();
+};
+
+export const createGrade = async (data: CreateGradeData): Promise<Grade> => {
+  const token = getToken();
+  if (!token) throw new Error('Non authentifié');
+
+  const response = await fetch(`${API_BASE_URL}/api/grades`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors de la création de la note');
+  }
+  return response.json();
+};
+
+export const updateGrade = async (id: number, data: UpdateGradeData): Promise<Grade> => {
+  const token = getToken();
+  if (!token) throw new Error('Non authentifié');
+
+  const response = await fetch(`${API_BASE_URL}/api/grades/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors de la mise à jour de la note');
+  }
+  return response.json();
+};
+
+export const deleteGrade = async (id: number): Promise<void> => {
+  const token = getToken();
+  if (!token) throw new Error('Non authentifié');
+
+  const response = await fetch(`${API_BASE_URL}/api/grades/${id}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors de la suppression de la note');
+  }
+};
+
+export const validateGrade = async (id: number): Promise<void> => {
+  const token = getToken();
+  if (!token) throw new Error('Non authentifié');
+
+  const response = await fetch(`${API_BASE_URL}/api/grades/${id}/validate`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors de la validation de la note');
+  }
+};
+
+export const rejectGrade = async (id: number): Promise<void> => {
+  const token = getToken();
+  if (!token) throw new Error('Non authentifié');
+
+  const response = await fetch(`${API_BASE_URL}/api/grades/${id}/reject`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors du rejet de la note');
+  }
+};
+
+export const validateAllPendingGrades = async (): Promise<void> => {
+  const token = getToken();
+  if (!token) throw new Error('Non authentifié');
+
+  const response = await fetch(`${API_BASE_URL}/api/grades/validate-all`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors de la validation des notes');
+  }
+};

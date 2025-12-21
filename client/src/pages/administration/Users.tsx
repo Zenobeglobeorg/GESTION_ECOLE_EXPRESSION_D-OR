@@ -1,7 +1,8 @@
-﻿import { useState } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Card } from '../../components/ui/Card';
 import { AdminLayout } from '../../components/admin/AdminLayout';
+import * as userService from '../../services/userService';
 
 interface UserStats {
   teachers: number;
@@ -11,13 +12,47 @@ interface UserStats {
 }
 
 export const Users = () => {
-  
-  const [stats] = useState<UserStats>({
-    teachers: 24,
-    parents: 156,
-    admins: 3,
-    total: 183,
+  const [stats, setStats] = useState<UserStats>({
+    teachers: 0,
+    parents: 0,
+    admins: 0,
+    total: 0,
   });
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [recentUsers, setRecentUsers] = useState<userService.UserWithDate[]>([]);
+
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const users = await userService.getUsers();
+        
+        const statsData: UserStats = {
+          teachers: users.filter(u => u.role === 'TEACHER').length,
+          parents: users.filter(u => u.role === 'PARENT').length,
+          admins: users.filter(u => u.role === 'ADMINISTRATION').length,
+          total: users.length,
+        };
+        setStats(statsData);
+        
+        // Trier par date de création (plus récents en premier) et prendre les 3 premiers
+        const sorted = [...users].sort((a, b) => 
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        setRecentUsers(sorted.slice(0, 3));
+      } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : 'Erreur lors du chargement des utilisateurs';
+        setError(errorMessage);
+        console.error('Erreur:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadUsers();
+  }, []);
 
   const statCards = [
     {
@@ -93,39 +128,58 @@ export const Users = () => {
             className="p-5 rounded-xl border border-blue-100 bg-white hover:border-yellow-300 hover:shadow-lg transition-all"
           >
             <h3 className="font-semibold text-lg text-blue-900 mb-2">Administrateurs</h3>
-            <p className="text-sm text-blue-700/80">{stats.admins} administrateurs</p>
+            <p className="text-sm text-blue-700/80">{stats.admins} administrateur{stats.admins > 1 ? 's' : ''}</p>
             <p className="text-sm mt-3 font-semibold text-yellow-700">Gérer les administrateurs →</p>
           </Link>
         </div>
       </Card>
 
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+          {error}
+        </div>
+      )}
+
       <Card title="Utilisateurs récents" className="border-0 shadow-lg">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Nom</th>
-              <th>Email</th>
-              <th>Type</th>
-              <th>Statut</th>
-            </tr>
-          </thead>
-          <tbody>
-            {[
-              { name: 'Mr. Dupont', email: 'dupont@ecole.fr', type: 'Enseignant', status: 'Actif' },
-              { name: 'Mme. Bernard', email: 'bernard@ecole.fr', type: 'Enseignant', status: 'Actif' },
-              { name: 'Ahmed Ali', email: 'ali.ahmed@email.com', type: 'Parent', status: 'Actif' },
-            ].map((user, idx) => (
-              <tr key={idx}>
-                <td>{user.name}</td>
-                <td>{user.email}</td>
-                <td>{user.type}</td>
-                <td>
-                  <span className="status active">{user.status}</span>
-                </td>
+        {isLoading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Chargement des utilisateurs...</p>
+          </div>
+        ) : recentUsers.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-500">Aucun utilisateur récent</p>
+          </div>
+        ) : (
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Nom</th>
+                <th>Email</th>
+                <th>Type</th>
+                <th>Date de création</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {recentUsers.map((user) => {
+                const roleLabels: Record<string, string> = {
+                  TEACHER: 'Enseignant',
+                  PARENT: 'Parent',
+                  ADMINISTRATION: 'Administrateur',
+                  SUPER_ADMIN: 'Super Admin',
+                };
+                return (
+                  <tr key={user.id}>
+                    <td>{user.firstName} {user.lastName}</td>
+                    <td>{user.email}</td>
+                    <td>{roleLabels[user.role] || user.role}</td>
+                    <td>{new Date(user.createdAt).toLocaleDateString('fr-FR')}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
       </Card>
     </AdminLayout>
   );
