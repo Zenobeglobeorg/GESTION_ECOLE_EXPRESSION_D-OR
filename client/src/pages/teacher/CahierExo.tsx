@@ -42,7 +42,7 @@ export function CahierExo() {
     try {
       setLoading(true);
       const [classesData, subjectsData, assignmentsData] = await Promise.all([
-        classService.getClasses(),
+        classService.getMyClasses(), // Utiliser getMyClasses() pour charger uniquement les classes où l'enseignant enseigne
         subjectService.getSubjects(),
         assignmentService.getTeacherAssignments(),
       ]);

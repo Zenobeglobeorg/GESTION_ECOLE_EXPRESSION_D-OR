@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useNotificationCount } from '../../hooks/useNotificationCount';
 
 interface MenuItem {
   label: string;
@@ -15,12 +16,13 @@ interface SidebarTeacherProps {
 }
 
 export const SidebarTeacher = ({ isCollapsed, onToggle }: SidebarTeacherProps) => {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useLanguage();
+  const { unreadCount: notificationCount } = useNotificationCount();
 
-  const menuItems: MenuItem[] = [
+  const baseMenuItems: MenuItem[] = [
     {
       label: t('teacher.dashboard') || 'Tableau de Bord',
       icon: (
@@ -94,6 +96,16 @@ export const SidebarTeacher = ({ isCollapsed, onToggle }: SidebarTeacherProps) =
       path: '/teacher/schedule',
     },
     {
+      label: t('teacher.notifications') || 'Notification',
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341A6.002 6.002 0 006 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+        </svg>
+      ),
+      path: '/teacher/notifications',
+      badge: notificationCount > 0 ? notificationCount : undefined,
+    },
+    {
       label: t('profile.title') || 'Profil',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -114,14 +126,30 @@ export const SidebarTeacher = ({ isCollapsed, onToggle }: SidebarTeacherProps) =
     },
   ];
 
+  // Ajouter le menu Dashboard Super Admin si l'utilisateur est SUPER_ADMIN
+  const menuItems: MenuItem[] = user?.role === 'SUPER_ADMIN'
+    ? [
+        {
+          label: 'Dashboard Super Admin',
+          icon: (
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+          ),
+          path: '/superadmin',
+        },
+        ...baseMenuItems,
+      ]
+    : baseMenuItems;
+
   const handleLogout = async () => {
     await logout();
     navigate('/login');
   };
 
   const isActive = (path: string) => {
-    if (path === '/teacher') {
-      return location.pathname === '/teacher';
+    if (path === '/teacher' || path === '/superadmin') {
+      return location.pathname === path;
     }
     return location.pathname.startsWith(path);
   };

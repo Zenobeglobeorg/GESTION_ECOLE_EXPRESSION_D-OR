@@ -1,6 +1,8 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useNotificationCount } from '../../hooks/useNotificationCount';
+import { useMessageCount } from '../../hooks/useMessageCount';
 
 interface MobileSidebarProps {
   isOpen: boolean;
@@ -19,6 +21,8 @@ export const MobileSidebar = ({ isOpen, onClose }: MobileSidebarProps) => {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
+  const { unreadCount: notificationCount } = useNotificationCount();
+  const { unreadCount: messageCount } = useMessageCount();
 
   const menuItems: MenuItem[] = [
     {
@@ -83,6 +87,26 @@ export const MobileSidebar = ({ isOpen, onClose }: MobileSidebarProps) => {
         </svg>
       ),
       path: '/teacher',
+    },
+    {
+      label: t('sidebar.messages') || 'Messages',
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+        </svg>
+      ),
+      path: '/superadmin/messages',
+      badge: messageCount > 0 ? messageCount : undefined,
+    },
+    {
+      label: t('sidebar.notifications'),
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341A6.002 6.002 0 006 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+        </svg>
+      ),
+      path: '/superadmin/notifications',
+      badge: notificationCount > 0 ? notificationCount : undefined,
     },
     {
       label: t('sidebar.profile'),
@@ -158,13 +182,15 @@ export const MobileSidebar = ({ isOpen, onClose }: MobileSidebarProps) => {
                     : 'text-blue-900 dark:text-gray-200 border-transparent hover:border-blue-100 dark:hover:border-gray-600 hover:bg-blue-50 dark:hover:bg-gray-700'
                 }`}
               >
-                <span className="shrink-0">{item.icon}</span>
+                <span className="shrink-0 relative">
+                  {item.icon}
+                  {item.badge && item.badge > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                      {item.badge > 9 ? '9+' : item.badge}
+                    </span>
+                  )}
+                </span>
                 <span className="flex-1 font-medium">{item.label}</span>
-                {item.badge && (
-                  <span className="bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-1 rounded-full">
-                    {item.badge}
-                  </span>
-                )}
               </Link>
             );
           })}

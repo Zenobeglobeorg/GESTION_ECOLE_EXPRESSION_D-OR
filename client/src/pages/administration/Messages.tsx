@@ -16,12 +16,30 @@ export const Messages = () => {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showConversations, setShowConversations] = useState(false); // Pour mobile
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filteredConversations, setFilteredConversations] = useState<messageService.Conversation[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Charger les conversations au montage
   useEffect(() => {
     loadConversations();
   }, []);
+
+  // Filtrer les conversations selon la recherche
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredConversations(conversations);
+    } else {
+      const query = searchQuery.toLowerCase();
+      setFilteredConversations(
+        conversations.filter(
+          (conv) =>
+            conv.name.toLowerCase().includes(query) ||
+            conv.email?.toLowerCase().includes(query)
+        )
+      );
+    }
+  }, [searchQuery, conversations]);
 
   // Charger les messages quand une conversation est sélectionnée
   useEffect(() => {
@@ -106,6 +124,7 @@ export const Messages = () => {
       setError(null);
       const data = await messageService.getConversations();
       setConversations(data);
+      setFilteredConversations(data);
       
       // Si aucune conversation n'est sélectionnée et qu'il y a des conversations, sélectionner la première
       if (!selectedConversation && data.length > 0) {
@@ -258,13 +277,30 @@ export const Messages = () => {
               </svg>
             </button>
           </div>
+          
+          {/* Barre de recherche */}
+          <div className="p-4 border-b border-gray-200">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Rechercher par nom..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              />
+              <svg className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+          </div>
+
           <div className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-thin min-h-0">
-            {conversations.length === 0 ? (
+            {filteredConversations.length === 0 ? (
               <p className="text-sm text-gray-500 text-center py-4">
-                Aucune conversation
+                {searchQuery ? 'Aucune conversation trouvée' : 'Aucune conversation'}
               </p>
             ) : (
-              conversations.map(conv => (
+              filteredConversations.map(conv => (
                 <button
                   key={conv.id}
                   onClick={() => setSelectedConversation(conv)}

@@ -16,6 +16,8 @@ import { RolesPermissionsPage } from './pages/superadmin/RolesPermissionsPage';
 import { OverviewPage } from './pages/superadmin/OverviewPage';
 import { Profile as SuperAdminProfile } from './pages/superadmin/Profile';
 import { Settings as SuperAdminSettings } from './pages/superadmin/Settings';
+import { Notifications as SuperAdminNotifications } from './pages/superadmin/Notifications';
+import { Messages as SuperAdminMessages } from './pages/superadmin/Messages';
 import { DashboardAdmin } from './pages/administration/DashboardAdmin';
 import { StudentRegistrationPage } from './pages/administration/StudentRegistrationPage';
 import { Students } from './pages/administration/Students';
@@ -183,10 +185,28 @@ function App() {
           />
 
           <Route
+            path="/superadmin/notifications"
+            element={
+              <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                <SuperAdminNotifications />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
             path="/superadmin/settings"
             element={
               <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
                 <SuperAdminSettings />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/superadmin/messages"
+            element={
+              <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                <SuperAdminMessages />
               </ProtectedRoute>
             }
           />

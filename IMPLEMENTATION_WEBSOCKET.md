@@ -238,3 +238,5 @@ VITE_API_URL=http://localhost:3000
 4. **Messages groupés** : Support pour les conversations de groupe
 5. **Fichiers joints** : Envoi de fichiers via WebSocket
 
+
+

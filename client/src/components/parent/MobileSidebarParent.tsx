@@ -1,5 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { useNotificationCount } from '../../hooks/useNotificationCount';
+import { useMessageCount } from '../../hooks/useMessageCount';
 
 interface MobileSidebarParentProps {
   isOpen: boolean;
@@ -10,17 +12,19 @@ export const MobileSidebarParent = ({ isOpen, onClose }: MobileSidebarParentProp
   const { logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { unreadCount: notificationCount } = useNotificationCount();
+  const { unreadCount: messageCount } = useMessageCount();
 
   const menuItems = [
-    { label: 'Tableau de Bord', path: '/parent', icon: '🏠' },
-    { label: 'Notes & Bulletins', path: '/parent/grades', icon: '📊' },
-    { label: 'Présences', path: '/parent/attendance', icon: '✓' },
-    { label: 'Emploi du Temps', path: '/parent/schedule', icon: '📅' },
-    { label: 'Frais de Scolarité', path: '/parent/fees', icon: '💰' },
-    { label: 'Messages', path: '/parent/messages', icon: '💬' },
-    { label: 'Profil', path: '/parent/profile', icon: '👤' },
-    { label: 'Paramètres', path: '/parent/settings', icon: '⚙️' },
-    { label: 'Notifications', path: '/parent/notification', icon: '🔔' },
+    { label: 'Tableau de Bord', path: '/parent', icon: '🏠', badge: undefined },
+    { label: 'Notes & Bulletins', path: '/parent/grades', icon: '📊', badge: undefined },
+    { label: 'Présences', path: '/parent/attendance', icon: '✓', badge: undefined },
+    { label: 'Emploi du Temps', path: '/parent/schedule', icon: '📅', badge: undefined },
+    { label: 'Frais de Scolarité', path: '/parent/fees', icon: '💰', badge: undefined },
+    { label: 'Messages', path: '/parent/messages', icon: '💬', badge: messageCount > 0 ? messageCount : undefined },
+    { label: 'Profil', path: '/parent/profile', icon: '👤', badge: undefined },
+    { label: 'Paramètres', path: '/parent/settings', icon: '⚙️', badge: undefined },
+    { label: 'Notifications', path: '/parent/notification', icon: '🔔', badge: notificationCount > 0 ? notificationCount : undefined },
   ];
 
   const handleLogout = async () => {
@@ -77,8 +81,15 @@ export const MobileSidebarParent = ({ isOpen, onClose }: MobileSidebarParentProp
                   : 'text-gray-700 dark:text-gray-300 hover:bg-yellow-100 hover:text-yellow-900 dark:hover:bg-gray-700 dark:hover:text-white' // Inactif
               }`}
             >
-              <span className="text-xl">{item.icon}</span>
-              <span className="font-medium">{item.label}</span>
+              <span className="text-xl relative">
+                {item.icon}
+                {item.badge && item.badge > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                    {item.badge > 9 ? '9+' : item.badge}
+                  </span>
+                )}
+              </span>
+              <span className="font-medium flex-1">{item.label}</span>
             </Link>
           ))}
         </nav>

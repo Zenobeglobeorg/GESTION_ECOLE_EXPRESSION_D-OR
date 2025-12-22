@@ -3,6 +3,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useAdminTheme } from '../../contexts/AdminThemeContext';
 import { getAdminThemeClasses } from '../../utils/adminTheme';
+import { useNotificationCount } from '../../hooks/useNotificationCount';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface SubMenuItem {
   label: string;
@@ -142,12 +144,29 @@ const defaultExpandedGroups = MENU_ITEMS.reduce<Record<string, boolean>>((accumu
 }, {});
 
 export const SidebarAdmin = ({ isCollapsed, onToggle }: SidebarAdminProps) => {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { themeColor } = useAdminTheme();
   const themeClasses = getAdminThemeClasses(themeColor);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(defaultExpandedGroups);
+  const { unreadCount: notificationCount } = useNotificationCount();
+  const { t } = useLanguage();
+  // Ajouter le menu Dashboard Super Admin si l'utilisateur est SUPER_ADMIN
+  const menuItems: MenuItem[] = user?.role === 'SUPER_ADMIN' 
+    ? [
+        {
+            label: t('sidebar.superAdminView'),
+          icon: (
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+          ),
+          path: '/superadmin',
+        },
+        ...MENU_ITEMS,
+      ]
+    : MENU_ITEMS;
 
   const toggleGroup = (groupLabel: string) => {
     setExpandedGroups((prev) => ({
@@ -165,8 +184,8 @@ export const SidebarAdmin = ({ isCollapsed, onToggle }: SidebarAdminProps) => {
   };
 
   const isActive = (path: string) => {
-    if (path === '/admin') {
-      return location.pathname === '/admin';
+    if (path === '/admin' || path === '/superadmin') {
+      return location.pathname === path;
     }
     return location.pathname.startsWith(path);
   };
@@ -304,7 +323,7 @@ export const SidebarAdmin = ({ isCollapsed, onToggle }: SidebarAdminProps) => {
 
       {/* Menu items */}
       <nav className="flex-1 overflow-y-auto py-4 px-2 bg-white dark:bg-gray-800">
-        {MENU_ITEMS.map((item) => {
+        {menuItems.map((item) => {
           if (isMenuGroup(item)) {
             const isExpanded = expandedGroups[item.label];
             const groupIsActive = isGroupActive(item.submenu);
@@ -319,7 +338,14 @@ export const SidebarAdmin = ({ isCollapsed, onToggle }: SidebarAdminProps) => {
                   }`}
                   title={isCollapsed ? item.label : undefined}
                 >
-                  <span className="shrink-0">{item.icon}</span>
+                  <span className="shrink-0 relative">
+                    {item.icon}
+                    {!isCollapsed && item.label === 'Communication' && notificationCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                        {notificationCount > 9 ? '9+' : notificationCount}
+                      </span>
+                    )}
+                  </span>
                   {!isCollapsed && (
                     <>
                       <span className="flex-1 font-medium text-left">{item.label}</span>
@@ -346,10 +372,17 @@ export const SidebarAdmin = ({ isCollapsed, onToggle }: SidebarAdminProps) => {
                         className={`block px-4 py-2 text-sm rounded-lg transition-all ml-3 mr-3 my-1 ${
                           isActive(subitem.path)
                             ? `${getSubmenuActiveClasses()} shadow-sm`
-                            : `${themeClasses.textPrimaryLight} hover:${themeClasses.textPrimary} hover:${themeClasses.bgPrimary}`
+                            : `${themeClasses.textPrimaryLight} hover:${themeClasses.textPrimary} hover:bg-blue-50 dark:hover:bg-gray-700`
                         }`}
                       >
-                        {subitem.label}
+                        <span className="flex items-center justify-between">
+                          {subitem.label}
+                          {subitem.path === '/admin/notifications' && notificationCount > 0 && (
+                            <span className="bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center ml-2">
+                              {notificationCount > 9 ? '9+' : notificationCount}
+                            </span>
+                          )}
+                        </span>
                       </Link>
                     ))}
                   </div>

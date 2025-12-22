@@ -170,7 +170,7 @@ export const createAnnouncement = async (req, res) => {
       const users = await prisma.user.findMany({
         where: {
           role: {
-            in: ['PARENT', 'TEACHER'],
+            in: ['PARENT', 'TEACHER', 'ADMINISTRATION', 'SUPER_ADMIN'],
           },
         },
         select: { id: true },

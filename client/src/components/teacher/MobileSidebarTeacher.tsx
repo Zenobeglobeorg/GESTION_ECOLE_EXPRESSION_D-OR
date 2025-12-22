@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useNotificationCount } from '../../hooks/useNotificationCount';
 
 interface MobileSidebarTeacherProps {
   isOpen: boolean;
@@ -8,23 +9,33 @@ interface MobileSidebarTeacherProps {
 }
 
 export const MobileSidebarTeacher = ({ isOpen, onClose }: MobileSidebarTeacherProps) => {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useLanguage();
+  const { unreadCount: notificationCount } = useNotificationCount();
 
-  const menuItems = [
-    { label: t('teacher.dashboard') || 'Tableau de Bord', path: '/teacher', icon: '🏠' },
-    { label: t('teacher.myClasses') || 'Mes Classes', path: '/teacher/classes', icon: '📚' },
-    { label: t('grades.fillGrades') || 'Remplir Notes', path: '/teacher/RemplitNote', icon: '📝' },
-    { label: t('teacher.gradeBook') || 'Carnet de Notes', path: '/teacher/CarnetNote', icon: '📖' },
-    { label: t('teacher.attendance') || 'Présences', path: '/teacher/Presence', icon: '✓' },
-    { label: t('teacher.attendanceSheet') || 'Fiche Présence', path: '/teacher/FichePresence', icon: '📋' },
-    { label: t('teacher.exerciseBook') || 'Cahier Exercices', path: '/teacher/CahierExo', icon: '📘' },
-    { label: t('teacher.schedule') || 'Emploi du Temps', path: '/teacher/schedule', icon: '📅' },
-    { label: t('profile.title') || 'Profil', path: '/teacher/profile', icon: '👤' },
-    { label: t('settings.title') || 'Paramètres', path: '/teacher/settings', icon: '⚙️' },
+  const baseMenuItems = [
+    { label: t('teacher.dashboard') || 'Tableau de Bord', path: '/teacher', icon: '🏠', badge: undefined },
+    { label: t('teacher.myClasses') || 'Mes Classes', path: '/teacher/classes', icon: '📚', badge: undefined },
+    { label: t('grades.fillGrades') || 'Remplir Notes', path: '/teacher/RemplitNote', icon: '📝', badge: undefined },
+    { label: t('teacher.gradeBook') || 'Carnet de Notes', path: '/teacher/CarnetNote', icon: '📖', badge: undefined },
+    { label: t('teacher.attendance') || 'Présences', path: '/teacher/Presence', icon: '✓', badge: undefined },
+    { label: t('teacher.attendanceSheet') || 'Fiche Présence', path: '/teacher/FichePresence', icon: '📋', badge: undefined },
+    { label: t('teacher.exerciseBook') || 'Cahier Exercices', path: '/teacher/CahierExo', icon: '📘', badge: undefined },
+    { label: t('teacher.schedule') || 'Emploi du Temps', path: '/teacher/schedule', icon: '📅', badge: undefined },
+    { label: t('teacher.notifications') || 'Notification', path: '/teacher/notifications', icon: '📨', badge: notificationCount > 0 ? notificationCount : undefined },
+    { label: t('profile.title') || 'Profil', path: '/teacher/profile', icon: '👤', badge: undefined },
+    { label: t('settings.title') || 'Paramètres', path: '/teacher/settings', icon: '⚙️', badge: undefined },
   ];
+
+  // Ajouter le menu Dashboard Super Admin si l'utilisateur est SUPER_ADMIN
+  const menuItems = user?.role === 'SUPER_ADMIN'
+    ? [
+        { label: 'Dashboard Super Admin', path: '/superadmin', icon: '🛡️', badge: undefined },
+        ...baseMenuItems,
+      ]
+    : baseMenuItems;
 
   const handleLogout = async () => {
     await logout();
@@ -33,8 +44,8 @@ export const MobileSidebarTeacher = ({ isOpen, onClose }: MobileSidebarTeacherPr
   };
 
   const isActive = (path: string) => {
-    if (path === '/teacher') {
-      return location.pathname === '/teacher';
+    if (path === '/teacher' || path === '/superadmin') {
+      return location.pathname === path;
     }
     return location.pathname.startsWith(path);
   };
@@ -63,6 +74,7 @@ export const MobileSidebarTeacher = ({ isOpen, onClose }: MobileSidebarTeacherPr
             </div>
           </div>
           <button
+            title="Fermer la sidebar"
             onClick={onClose}
             className="p-2 rounded-lg hover:bg-white/20 dark:hover:bg-white/10 transition-colors text-white"
           >
@@ -86,8 +98,15 @@ export const MobileSidebarTeacher = ({ isOpen, onClose }: MobileSidebarTeacherPr
                   : 'text-blue-900 dark:text-blue-300 border-transparent hover:border-blue-100 dark:hover:border-gray-600 hover:bg-blue-50 dark:hover:bg-gray-700'
               }`}
             >
-              <span className="text-xl">{item.icon}</span>
-              <span className="font-medium">{item.label}</span>
+              <span className="text-xl relative">
+                {item.icon}
+                {item.badge && item.badge > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                    {item.badge > 9 ? '9+' : item.badge}
+                  </span>
+                )}
+              </span>
+              <span className="font-medium flex-1">{item.label}</span>
             </Link>
           ))}
         </nav>

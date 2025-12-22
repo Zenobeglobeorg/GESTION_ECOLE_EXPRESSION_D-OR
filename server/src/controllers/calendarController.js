@@ -96,7 +96,7 @@ export const createEvent = async (req, res) => {
       },
     });
 
-    // Créer des notifications pour tous les parents et enseignants
+    // Créer des notifications pour tous les parents, enseignants, administrateurs et super administrateurs
     const parents = await prisma.user.findMany({
       where: { role: 'PARENT' },
       select: { id: true },
@@ -107,7 +107,16 @@ export const createEvent = async (req, res) => {
       select: { id: true },
     });
 
-    const allUserIds = [...parents.map(p => p.id), ...teachers.map(t => t.id)];
+    const admins = await prisma.user.findMany({
+      where: {
+        role: {
+          in: ['ADMINISTRATION', 'SUPER_ADMIN'],
+        },
+      },
+      select: { id: true },
+    });
+
+    const allUserIds = [...parents.map(p => p.id), ...teachers.map(t => t.id), ...admins.map(a => a.id)];
 
     if (allUserIds.length > 0) {
       const eventDate = new Date(date).toLocaleDateString('fr-FR');

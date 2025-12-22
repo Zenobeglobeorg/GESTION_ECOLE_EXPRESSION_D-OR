@@ -155,16 +155,44 @@ export const createAssignment = async (req, res) => {
 
     // Vérifier que l'enseignant enseigne dans cette classe
     if (user.role === 'TEACHER') {
-      const classSubject = await prisma.classSubject.findFirst({
-        where: {
-          classId: parseInt(classId),
-          teacherId: user.id,
-          ...(subjectId && { subjectId: parseInt(subjectId) }),
-        },
+      // Vérifier d'abord si l'enseignant est le professeur principal de la classe
+      const classData = await prisma.class.findUnique({
+        where: { id: parseInt(classId) },
+        select: { teacherId: true },
       });
 
-      if (!classSubject) {
-        return res.status(403).json({ error: 'Vous n\'enseignez pas dans cette classe' });
+      const isMainTeacher = classData?.teacherId === user.id;
+
+      // Si l'enseignant n'est pas le professeur principal, vérifier s'il enseigne une matière dans cette classe
+      if (!isMainTeacher) {
+        let classSubject;
+        
+        if (subjectId) {
+          // Si une matière est spécifiée, vérifier que l'enseignant enseigne cette matière dans cette classe
+          classSubject = await prisma.classSubject.findFirst({
+            where: {
+              classId: parseInt(classId),
+              teacherId: user.id,
+              subjectId: parseInt(subjectId),
+            },
+          });
+        } else {
+          // Si aucune matière n'est spécifiée, vérifier que l'enseignant enseigne au moins une matière dans cette classe
+          classSubject = await prisma.classSubject.findFirst({
+            where: {
+              classId: parseInt(classId),
+              teacherId: user.id,
+            },
+          });
+        }
+
+        if (!classSubject) {
+          return res.status(403).json({ 
+            error: subjectId 
+              ? 'Vous n\'enseignez pas cette matière dans cette classe' 
+              : 'Vous n\'enseignez pas dans cette classe' 
+          });
+        }
       }
     }
 
@@ -225,6 +253,38 @@ export const createAssignment = async (req, res) => {
           className: assignment.class.name,
           subjectId: assignment.subjectId,
           subjectName: assignment.subject?.name,
+        }
+      );
+    }
+
+    // Créer des notifications pour les administrateurs et super administrateurs
+    const admins = await prisma.user.findMany({
+      where: {
+        role: {
+          in: ['ADMINISTRATION', 'SUPER_ADMIN'],
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    const adminIds = admins.map(a => a.id);
+
+    if (adminIds.length > 0) {
+      await createNotificationsForUsers(
+        adminIds,
+        'ASSIGNMENT',
+        'Nouveau devoir créé',
+        `L'enseignant ${assignment.teacher.firstName} ${assignment.teacher.lastName} a créé un nouveau devoir "${title}" pour la classe ${assignment.class.name}.`,
+        assignment.id,
+        {
+          classId: assignment.classId,
+          className: assignment.class.name,
+          subjectId: assignment.subjectId,
+          subjectName: assignment.subject?.name,
+          teacherId: assignment.teacherId,
+          teacherName: `${assignment.teacher.firstName} ${assignment.teacher.lastName}`,
         }
       );
     }
