@@ -23,6 +23,7 @@ import paymentRoutes from './api/paymentRoutes.js';
 import messageRoutes from './api/messageRoutes.js';
 import notificationRoutes from './api/notificationRoutes.js';
 import assignmentRoutes from './api/assignmentRoutes.js';
+import dashboardRoutes from './api/dashboardRoutes.js';
 import { initializeSocket } from './websocket/socketHandler.js';
 
 dotenv.config();
@@ -87,6 +88,7 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/assignments', assignmentRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // Route 404
 app.use((req, res) => {

@@ -1,37 +1,65 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Card } from '../../components/ui/Card';
 import { AdminLayout } from '../../components/admin/AdminLayout';
-//import { Button } from '../../components/ui/Button';
+import * as dashboardService from '../../services/dashboardService';
 
 export const DashboardAdmin = () => {
-  const stats = [
+  const [stats, setStats] = useState({
+    students: 0,
+    classes: 0,
+    teachers: 0,
+    pendingPayments: { count: 0, amount: 0 },
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await dashboardService.getAdminStats();
+        setStats(data);
+      } catch (err) {
+        console.error('Erreur lors du chargement des statistiques:', err);
+        setError(err instanceof Error ? err.message : 'Erreur lors du chargement des statistiques');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadStats();
+  }, []);
+
+  const statsDisplay = [
     {
       title: 'Élèves',
-      value: '0',
+      value: loading ? '--' : stats.students.toString(),
       icon: '🎓',
       gradient: 'from-yellow-400 via-yellow-500 to-yellow-600',
       description: 'Élèves inscrits'
     },
     {
       title: 'Classes',
-      value: '0',
+      value: loading ? '--' : stats.classes.toString(),
       icon: '📚',
       gradient: 'from-yellow-400 via-yellow-500 to-yellow-600',
       description: 'Classes actives'
     },
     {
       title: 'Enseignants',
-      value: '0',
+      value: loading ? '--' : stats.teachers.toString(),
       icon: '👨‍🏫',
       gradient: 'from-yellow-400 via-yellow-500 to-yellow-600',
       description: 'Enseignants actifs'
     },
     {
       title: 'Frais en attente',
-      value: '0',
+      value: loading ? '--' : stats.pendingPayments.count.toString(),
       icon: '💰',
       gradient: 'from-yellow-400 via-yellow-500 to-yellow-600',
-      description: 'Paiements en attente'
+      description: `${stats.pendingPayments.amount.toLocaleString('fr-FR')} FCFA`
     }
   ];
 
@@ -47,8 +75,13 @@ export const DashboardAdmin = () => {
       title="Tableau de Bord"
       subtitle="Bienvenue dans votre espace d'administration"
     >
+      {error && (
+        <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
+          {error}
+        </div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => (
+        {statsDisplay.map((stat, index) => (
           <Card
             key={index}
             className={`overflow-hidden hover:shadow-xl transition-all border-0 bg-gradient-to-br ${stat.gradient} text-white`}

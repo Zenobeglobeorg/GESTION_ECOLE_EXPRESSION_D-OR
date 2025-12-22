@@ -95,6 +95,7 @@ const translations: Record<Language, Record<string, string>> = {
     'teacher.takeAttendance': "Faire l'Appel",
     'teacher.schedule': 'Emploi du Temps',
     'teacher.notifications': 'Notification',
+    'teacher.noScheduleToday': 'Aucun cours prévu aujourd\'hui',
     'teacher.viewWeeklySchedule': 'Consulter votre planning hebdomadaire',
     'teacher.noCoursesToday': 'Aucun cours prévu aujourd\'hui',
     'teacher.weeklySchedule': 'Planning Hebdomadaire',
@@ -134,7 +135,15 @@ const translations: Record<Language, Record<string, string>> = {
     'teacher.recentAssignments': 'Vos Récents Devoirs',
     'teacher.noRecentAssignments': 'Aucun devoir récent',
     'teacher.role': 'Enseignant',
-    
+    'teacher.gradeNoteClass': 'Note de la classe remplie',
+    'teacher.noRecentGrades': 'Aucune note récente',
+    'teacher.yesterday': 'Hier',
+    'teacher.daysAgo': 'jours',
+    'teacher.oneWeekAgo': 'Il y a 1 semaine',
+    'teacher.weeksAgo': 'Il y a {weeks} semaines',
+    'teacher.errorLoadingGrades': 'Erreur lors du chargement des notes',
+    'teacher.noRecentActivities': 'Aucune activité récente',
+
     // Profile
     'profile.title': 'Profil',
     'profile.subtitle': 'Mettez à jour vos informations personnelles et vos préférences.',
@@ -481,6 +490,7 @@ const translations: Record<Language, Record<string, string>> = {
     'sidebar.adminView': 'Vue Administration',
     'sidebar.teacherView': 'Vue Enseignant',
     'sidebar.superAdminView': 'Tableau de Bord Super Admin',
+    'sidebar.notifications': 'Notifications',
     'sidebar.messages': 'Messages',
     'sidebar.profile': 'Profil',
     'sidebar.settings': 'Paramètres',
@@ -654,6 +664,7 @@ const translations: Record<Language, Record<string, string>> = {
     'teacher.total': 'Total',
     'teacher.takeAttendance': 'Take Attendance',
     'teacher.schedule': 'Schedule',
+    'teacher.noScheduleToday': 'No courses scheduled today',
     'teacher.viewWeeklySchedule': 'View your weekly schedule',
     'teacher.noCoursesToday': 'No courses scheduled today',
     'teacher.weeklySchedule': 'Weekly Schedule',
@@ -693,7 +704,15 @@ const translations: Record<Language, Record<string, string>> = {
     'teacher.recentAssignments': 'Your Recent Assignments',
     'teacher.noRecentAssignments': 'No recent assignments',
     'teacher.role': 'Teacher',
-    
+    'teacher.gradeNoteClass': 'Grade note for class {className}',
+    'teacher.noRecentGrades': 'No recent grades',
+    'teacher.yesterday': 'Yesterday',
+    'teacher.daysAgo': 'days ago',
+    'teacher.oneWeekAgo': '1 week ago',
+    'teacher.weeksAgo': 'weeks ago',
+    'teacher.errorLoadingGrades': 'Error loading grades',
+    'teacher.noRecentActivities': 'No recent activities',
+
     // Profile
     'profile.title': 'Administrator Profile',
     'profile.subtitle': 'Update your personal information and preferences.',

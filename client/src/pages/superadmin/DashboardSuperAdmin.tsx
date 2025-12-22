@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sidebar } from '../../components/layout/Sidebar';
 import { MobileSidebar } from '../../components/layout/MobileSidebar';
 import { Navbar } from '../../components/layout/Navbar';
@@ -6,16 +6,43 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../contexts/LanguageContext';
+import * as dashboardService from '../../services/dashboardService';
 
 export const DashboardSuperAdmin = () => {
   const { t } = useLanguage();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [stats, setStats] = useState({
+    admins: 0,
+    teachers: 0,
+    parents: 0,
+    students: 0,
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const stats = [
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await dashboardService.getSuperAdminStats();
+        setStats(data);
+      } catch (err) {
+        console.error('Erreur lors du chargement des statistiques:', err);
+        setError(err instanceof Error ? err.message : 'Erreur lors du chargement des statistiques');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadStats();
+  }, []);
+
+  const statsDisplay = [
     {
       title: t('dashboard.adminAccounts'),
-      value: '0',
+      value: loading ? '--' : stats.admins.toString(),
       icon: '👥',
       gradient: 'from-yellow-400 via-yellow-500 to-yellow-600',
       description: t('overview.allAccounts'),
@@ -23,7 +50,7 @@ export const DashboardSuperAdmin = () => {
     },
     {
       title: t('dashboard.teachers'),
-      value: '0',
+      value: loading ? '--' : stats.teachers.toString(),
       icon: '👨‍🏫',
       gradient: 'from-yellow-400 via-yellow-500 to-yellow-600',
       description: t('overview.activeTeachers'),
@@ -31,7 +58,7 @@ export const DashboardSuperAdmin = () => {
     },
     {
       title: t('dashboard.parents'),
-      value: '0',
+      value: loading ? '--' : stats.parents.toString(),
       icon: '👨‍👩‍👧',
       gradient: 'from-yellow-400 via-yellow-500 to-yellow-600',
       description: t('overview.registeredFamilies'),
@@ -39,7 +66,7 @@ export const DashboardSuperAdmin = () => {
     },
     {
       title: t('dashboard.students'),
-      value: '0',
+      value: loading ? '--' : stats.students.toString(),
       icon: '🎓',
       gradient: 'from-yellow-400 via-yellow-500 to-yellow-600',
       description: t('overview.registeredStudents'),
@@ -128,9 +155,14 @@ export const DashboardSuperAdmin = () => {
             <p className="text-gray-600 dark:text-gray-400">{t('dashboard.subtitle')}</p>
           </div>
 
+          {error && (
+            <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
+              {error}
+            </div>
+          )}
           {/* Statistiques avec design amélioré */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {stats.map((stat, index) => (
+            {statsDisplay.map((stat, index) => (
               <Card
                 key={index}
                 className={`overflow-hidden hover:shadow-xl transition-all duration-300 border-0 bg-gradient-to-br ${stat.gradient} transform hover:scale-105`}
