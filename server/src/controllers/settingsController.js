@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
+import { getPrisma } from '../utils/prisma.js';
 
-const prisma = new PrismaClient();
+const prisma = getPrisma();
 
 /**
  * Récupère les paramètres de l'école

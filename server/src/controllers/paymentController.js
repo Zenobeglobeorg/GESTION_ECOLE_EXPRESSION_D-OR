@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
+import { getPrisma } from '../utils/prisma.js';
 
-const prisma = new PrismaClient();
+const prisma = getPrisma();
 
 /**
  * Calcule le montant annuel selon le niveau de classe
@@ -312,24 +313,59 @@ export const getPaymentStats = async (req, res) => {
 export const createPaymentsForStudent = async (studentId, paymentOption, enrollmentDate, level) => {
   const schedule = calculatePaymentSchedule(paymentOption, enrollmentDate, level);
   
-  // Créer tous les paiements
-  const payments = await Promise.all(
-    schedule.map((item) =>
-      prisma.payment.create({
-        data: {
-          studentId,
-          amount: item.amount,
-          dueDate: item.dueDate,
-          installmentNumber: item.installmentNumber,
-          // Le premier paiement est payé à l'inscription, les autres sont en attente
-          status: item.isFirstPayment ? 'PAID' : 'PENDING',
-          paidDate: item.isFirstPayment ? new Date(enrollmentDate) : null,
-        },
-      })
-    )
-  );
-  
-  return payments;
+  // Créer tous les paiements en une seule transaction pour éviter les problèmes de pool
+  // Utiliser une transaction interactive Prisma pour créer tous les paiements atomiquement
+  try {
+    const payments = await prisma.$transaction(async (tx) => {
+      const createdPayments = [];
+      for (const item of schedule) {
+        const payment = await tx.payment.create({
+          data: {
+            studentId,
+            amount: item.amount,
+            dueDate: item.dueDate,
+            installmentNumber: item.installmentNumber,
+            // Le premier paiement est payé à l'inscription, les autres sont en attente
+            status: item.isFirstPayment ? 'PAID' : 'PENDING',
+            paidDate: item.isFirstPayment ? new Date(enrollmentDate) : null,
+          },
+        });
+        createdPayments.push(payment);
+      }
+      return createdPayments;
+    }, {
+      timeout: 30000, // 30 secondes de timeout
+      maxWait: 10000, // Attendre max 10s pour obtenir une connexion
+    });
+    
+    return payments;
+  } catch (error) {
+    console.error('Erreur lors de la création des paiements dans la transaction:', error);
+    console.error('Détails:', error.message);
+    // Fallback: créer les paiements séquentiellement avec un délai entre chaque
+    const payments = [];
+    for (const item of schedule) {
+      try {
+        const payment = await prisma.payment.create({
+          data: {
+            studentId,
+            amount: item.amount,
+            dueDate: item.dueDate,
+            installmentNumber: item.installmentNumber,
+            status: item.isFirstPayment ? 'PAID' : 'PENDING',
+            paidDate: item.isFirstPayment ? new Date(enrollmentDate) : null,
+          },
+        });
+        payments.push(payment);
+        // Petit délai entre chaque création pour éviter la surcharge du pool
+        await new Promise(resolve => setTimeout(resolve, 50));
+      } catch (err) {
+        console.error(`Erreur lors de la création du paiement ${item.installmentNumber}:`, err);
+        // Continuer avec les autres paiements
+      }
+    }
+    return payments;
+  }
 };
 
 /**

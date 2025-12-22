@@ -51,8 +51,8 @@ export const requirePermission = (permissionKey) => {
       }
 
       // Les admins peuvent être contrôlés via rôles personnalisés
-      const { PrismaClient } = await import('@prisma/client');
-      const prisma = new PrismaClient();
+      const { getPrisma } = await import('../utils/prisma.js');
+      const prisma = getPrisma();
 
       // Vérifier si l'utilisateur a un customRole qui possède la permission
       const user = await prisma.user.findUnique({

@@ -202,9 +202,34 @@ export const StudentRegistrationPage = () => {
     try {
       const parent = await parentService.searchParent(searchEmail);
       setFoundParent(parent);
-      setFormData({ ...formData, parentEmail: parent.email });
+      
+      // Auto-remplir le formulaire avec les informations du parent trouvé
+      // Utiliser les informations du premier enfant si disponibles
+      const parentInfo = (parent as any).parentInfo;
+      
+      setFormData(prev => ({
+        ...prev,
+        parentEmail: parent.email,
+        // Remplir les informations parentales depuis le premier enfant
+        ...(parentInfo && {
+          fatherName: parentInfo.fatherName || prev.fatherName,
+          fatherAddress: parentInfo.fatherAddress || prev.fatherAddress,
+          fatherContact: parentInfo.fatherContact || prev.fatherContact,
+          motherName: parentInfo.motherName || prev.motherName,
+          motherAddress: parentInfo.motherAddress || prev.motherAddress,
+          motherContact: parentInfo.motherContact || prev.motherContact,
+          guardianName: parentInfo.guardianName || prev.guardianName,
+          guardianContact: parentInfo.guardianContact || prev.guardianContact,
+          authorizedPerson1Name: parentInfo.authorizedPerson1Name || prev.authorizedPerson1Name,
+          authorizedPerson1Tel: parentInfo.authorizedPerson1Tel || prev.authorizedPerson1Tel,
+          authorizedPerson2Name: parentInfo.authorizedPerson2Name || prev.authorizedPerson2Name,
+          authorizedPerson2Tel: parentInfo.authorizedPerson2Tel || prev.authorizedPerson2Tel,
+        }),
+      }));
+      
       setIsSearchParentModalOpen(false);
       setSearchEmail('');
+      setSuccess(`Parent trouvé : ${parent.firstName} ${parent.lastName}. Les informations ont été pré-remplies.`);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la recherche';
       if (errorMessage.includes('non trouvé')) {

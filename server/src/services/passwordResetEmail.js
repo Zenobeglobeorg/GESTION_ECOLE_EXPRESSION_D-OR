@@ -22,6 +22,14 @@ const createTransporter = () => {
     requireTLS: true,
     debug: true, // Toujours activer pour voir les détails dans Railway
     logger: true, // Toujours activer pour voir les logs dans Railway
+    // Augmenter les timeouts pour Railway
+    connectionTimeout: 60000, // 60 secondes
+    greetingTimeout: 30000, // 30 secondes
+    socketTimeout: 60000, // 60 secondes
+    // Pool de connexions pour améliorer les performances
+    pool: true,
+    maxConnections: 5,
+    maxMessages: 100,
   });
 
   return transporter;
@@ -32,6 +40,9 @@ const createTransporter = () => {
  */
 export const sendPasswordResetEmail = async (email, resetToken, userName) => {
   try {
+    // Normaliser l'email en minuscule pour l'envoi (même si stocké en majuscule)
+    const normalizedEmail = email.toLowerCase().trim();
+    
     // Vérifier la configuration SMTP
     console.log('🔍 Vérification de la configuration SMTP...');
     console.log(`   SMTP_HOST: ${process.env.SMTP_HOST || 'smtp.gmail.com (par défaut)'}`);
@@ -39,6 +50,8 @@ export const sendPasswordResetEmail = async (email, resetToken, userName) => {
     console.log(`   SMTP_USER: ${process.env.SMTP_USER ? '✅ Configuré' : '❌ MANQUANT'}`);
     console.log(`   SMTP_PASS: ${process.env.SMTP_PASS ? '✅ Configuré' : '❌ MANQUANT'}`);
     console.log(`   FRONTEND_URL: ${process.env.FRONTEND_URL || 'http://localhost:5173 (par défaut)'}`);
+    console.log(`   Email original: ${email}`);
+    console.log(`   Email normalisé: ${normalizedEmail}`);
     
     if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
       console.error('❌ ERREUR: Configuration SMTP incomplète !');
@@ -82,7 +95,7 @@ export const sendPasswordResetEmail = async (email, resetToken, userName) => {
 
     const mailOptions = {
       from: `"Expression d'Or" <${process.env.SMTP_USER}>`,
-      to: email,
+      to: normalizedEmail, // Utiliser l'email normalisé
       subject: 'Réinitialisation de votre mot de passe - Expression d\'Or',
       html: `
         <!DOCTYPE html>
@@ -162,14 +175,16 @@ export const sendPasswordResetEmail = async (email, resetToken, userName) => {
       `,
     };
 
-    console.log(`📤 Envoi de l'email de réinitialisation...`);
+    console.log(`📤 Envoi de l'email de réinitialisation à ${normalizedEmail}...`);
     const info = await transporter.sendMail(mailOptions);
-    console.log(`✅ Email de réinitialisation envoyé avec succès à ${email}`);
+    console.log(`✅ Email de réinitialisation envoyé avec succès à ${normalizedEmail}`);
     console.log(`   Message ID: ${info.messageId}`);
     console.log(`   Réponse du serveur: ${info.response || 'N/A'}`);
     return { success: true, messageId: info.messageId };
   } catch (error) {
+    const normalizedEmail = email.toLowerCase().trim();
     console.error('❌ ERREUR lors de l\'envoi de l\'email de réinitialisation:');
+    console.error(`   Email: ${normalizedEmail}`);
     console.error(`   Message: ${error.message}`);
     console.error(`   Code: ${error.code || 'N/A'}`);
     console.error(`   Stack: ${error.stack || 'N/A'}`);
@@ -183,9 +198,14 @@ export const sendPasswordResetEmail = async (email, resetToken, userName) => {
     } else if (error.code === 'ECONNECTION') {
       console.error('   ⚠️ Erreur de connexion au serveur SMTP');
       console.error('   Vérifiez SMTP_HOST et SMTP_PORT dans Railway');
+      console.error('   Note: Railway peut bloquer certaines connexions SMTP. Considérez utiliser un service d\'email tiers (SendGrid, Mailgun, etc.)');
     } else if (error.code === 'ETIMEDOUT') {
       console.error('   ⚠️ Timeout lors de la connexion SMTP');
-      console.error('   Le serveur SMTP ne répond pas');
+      console.error('   Le serveur SMTP ne répond pas dans les délais');
+      console.error('   Solutions possibles:');
+      console.error('   1. Vérifiez que Gmail autorise les connexions depuis Railway');
+      console.error('   2. Utilisez un service d\'email tiers (SendGrid, Mailgun, AWS SES)');
+      console.error('   3. Vérifiez les paramètres de sécurité de votre compte Gmail');
     } else if (error.response) {
       console.error(`   Réponse du serveur: ${error.response}`);
     }

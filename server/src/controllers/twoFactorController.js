@@ -1,8 +1,9 @@
 import { PrismaClient } from '@prisma/client';
+import { getPrisma } from '../utils/prisma.js';
 import crypto from 'crypto';
 import { sendTwoFactorCode, sendTwoFactorActivationEmail } from '../services/twoFactorEmailService.js';
 
-const prisma = new PrismaClient();
+const prisma = getPrisma();
 
 /**
  * Génère un code 2FA à 6 chiffres

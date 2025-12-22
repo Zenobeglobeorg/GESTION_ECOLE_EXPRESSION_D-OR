@@ -2,8 +2,9 @@ import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 import { setSocketIO } from '../controllers/notificationController.js';
+import { getPrisma } from '../utils/prisma.js';
 
-const prisma = new PrismaClient();
+const prisma = getPrisma();
 
 /**
  * Initialise et configure Socket.IO pour la messagerie instantanée

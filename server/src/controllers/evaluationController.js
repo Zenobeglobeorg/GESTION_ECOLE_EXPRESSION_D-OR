@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
+import { getPrisma } from '../utils/prisma.js';
 
-const prisma = new PrismaClient();
+const prisma = getPrisma();
 
 /**
  * Récupère toutes les évaluations

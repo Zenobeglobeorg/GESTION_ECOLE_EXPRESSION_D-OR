@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
+import { getPrisma } from '../utils/prisma.js';
 
-const prisma = new PrismaClient();
+const prisma = getPrisma();
 
 // Variable globale pour stocker l'instance Socket.IO
 let ioInstance = null;

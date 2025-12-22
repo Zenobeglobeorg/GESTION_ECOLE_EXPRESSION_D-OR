@@ -23,8 +23,16 @@ const createTransporter = () => {
     },
     // Options supplémentaires pour éviter les problèmes de certificat
     requireTLS: true,
-    debug: process.env.NODE_ENV === 'development', // Activer les logs en développement
-    logger: process.env.NODE_ENV === 'development', // Logger les activités
+    debug: true, // Toujours activer pour voir les détails dans Railway
+    logger: true, // Toujours activer pour voir les logs dans Railway
+    // Augmenter les timeouts pour Railway
+    connectionTimeout: 60000, // 60 secondes
+    greetingTimeout: 30000, // 30 secondes
+    socketTimeout: 60000, // 60 secondes
+    // Pool de connexions pour améliorer les performances
+    pool: true,
+    maxConnections: 5,
+    maxMessages: 100,
   });
 
   return transporter;
@@ -35,6 +43,9 @@ const createTransporter = () => {
  */
 export const sendWelcomeEmail = async (email, password, parentName) => {
   try {
+    // Normaliser l'email en minuscule pour l'envoi (même si stocké en majuscule)
+    const normalizedEmail = email.toLowerCase().trim();
+    
     // Vérifier que les variables d'environnement sont configurées
     if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
       console.warn('⚠️ SMTP non configuré dans .env');
@@ -43,7 +54,7 @@ export const sendWelcomeEmail = async (email, password, parentName) => {
       console.warn('   SMTP_PORT=587');
       console.warn('   SMTP_USER=your-email@gmail.com');
       console.warn('   SMTP_PASS=your-app-password');
-      console.log(`📧 [DEV] Email de bienvenue pour ${email}:`);
+      console.log(`📧 [DEV] Email de bienvenue pour ${normalizedEmail}:`);
       console.log(`   Mot de passe temporaire: ${password}`);
       return { success: false, message: 'SMTP non configuré dans .env' };
     }
@@ -61,7 +72,7 @@ export const sendWelcomeEmail = async (email, password, parentName) => {
 
     const mailOptions = {
       from: `"Expression d'Or" <${process.env.SMTP_USER}>`,
-      to: email,
+      to: normalizedEmail, // Utiliser l'email normalisé
       subject: 'Bienvenue sur Expression d\'Or - Votre compte parent',
       html: `
         <!DOCTYPE html>
@@ -145,24 +156,34 @@ export const sendWelcomeEmail = async (email, password, parentName) => {
       `,
     };
 
+    console.log(`📤 Envoi de l'email de bienvenue à ${normalizedEmail}...`);
     const info = await transporter.sendMail(mailOptions);
-    console.log(`✅ Email envoyé avec succès à ${email}`);
+    console.log(`✅ Email envoyé avec succès à ${normalizedEmail}`);
     console.log(`   Message ID: ${info.messageId}`);
+    console.log(`   Réponse du serveur: ${info.response || 'N/A'}`);
     return { success: true, messageId: info.messageId };
   } catch (error) {
+    const normalizedEmail = email.toLowerCase().trim();
     console.error('❌ Erreur lors de l\'envoi de l\'email:', error.message);
+    console.error(`   Email: ${normalizedEmail}`);
+    console.error(`   Code: ${error.code || 'N/A'}`);
     if (error.code === 'EAUTH') {
-      console.error('   Erreur d\'authentification. Vérifiez SMTP_USER et SMTP_PASS dans .env');
+      console.error('   Erreur d\'authentification. Vérifiez SMTP_USER et SMTP_PASS dans Railway');
       console.error('   Pour Gmail, utilisez un "Mot de passe d\'application" :');
       console.error('   https://support.google.com/accounts/answer/185833');
     } else if (error.code === 'ECONNECTION') {
-      console.error('   Erreur de connexion. Vérifiez SMTP_HOST et SMTP_PORT dans .env');
+      console.error('   Erreur de connexion. Vérifiez SMTP_HOST et SMTP_PORT dans Railway');
+      console.error('   Note: Railway peut bloquer certaines connexions SMTP. Considérez utiliser un service d\'email tiers');
+    } else if (error.code === 'ETIMEDOUT') {
+      console.error('   ⚠️ Timeout lors de la connexion SMTP');
+      console.error('   Solutions possibles:');
+      console.error('   1. Vérifiez que Gmail autorise les connexions depuis Railway');
+      console.error('   2. Utilisez un service d\'email tiers (SendGrid, Mailgun, AWS SES)');
     } else if (error.message.includes('self-signed certificate')) {
-      console.error('   Erreur de certificat SSL. La configuration TLS a été mise à jour pour ignorer cette erreur en développement.');
-      console.error('   Si le problème persiste, redémarrez le serveur.');
+      console.error('   Erreur de certificat SSL. La configuration TLS a été mise à jour pour ignorer cette erreur.');
     }
     // En cas d'erreur, on log quand même les identifiants pour le développement
-    console.log(`📧 [FALLBACK] Email de bienvenue pour ${email}:`);
+    console.log(`📧 [FALLBACK] Email de bienvenue pour ${normalizedEmail}:`);
     console.log(`   Mot de passe temporaire: ${password}`);
     return { success: false, error: error.message, code: error.code };
   }

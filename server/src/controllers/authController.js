@@ -4,8 +4,9 @@ import * as crypto from 'crypto';
 import { PrismaClient } from '@prisma/client';
 import { sendPasswordResetEmail } from '../services/passwordResetEmail.js';
 import { generateLoginCode, verifyLoginCode } from './twoFactorController.js';
+import { getPrisma } from '../utils/prisma.js';
 
-const prisma = new PrismaClient();
+const prisma = getPrisma();
 
 /**
  * Connexion d'un utilisateur
@@ -244,8 +245,13 @@ export const forgotPassword = async (req, res) => {
       }
     });
 
+    // Normaliser l'email en minuscule pour l'envoi (même si stocké en majuscule)
+    const normalizedEmail = user.email.toLowerCase().trim();
+    
     // Envoyer l'email de réinitialisation
-    console.log(`📧 Tentative d'envoi d'email de réinitialisation à ${user.email}`);
+    console.log(`📧 Tentative d'envoi d'email de réinitialisation à ${normalizedEmail}`);
+    console.log(`   Email original (DB): ${user.email}`);
+    console.log(`   Email normalisé (envoi): ${normalizedEmail}`);
     console.log(`   SMTP_HOST: ${process.env.SMTP_HOST || 'smtp.gmail.com'}`);
     console.log(`   SMTP_PORT: ${process.env.SMTP_PORT || '587'}`);
     console.log(`   SMTP_USER: ${process.env.SMTP_USER ? '✅ Configuré' : '❌ Non configuré'}`);
@@ -253,16 +259,16 @@ export const forgotPassword = async (req, res) => {
     console.log(`   FRONTEND_URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
     
     const emailResult = await sendPasswordResetEmail(
-      user.email,
+      normalizedEmail,
       resetToken,
       `${user.firstName} ${user.lastName}`
     );
 
     if (emailResult.success) {
-      console.log(`✅ Email de réinitialisation envoyé avec succès à ${user.email}`);
+      console.log(`✅ Email de réinitialisation envoyé avec succès à ${normalizedEmail}`);
       console.log(`   Message ID: ${emailResult.messageId || 'N/A'}`);
     } else {
-      console.error(`❌ ÉCHEC de l'envoi de l'email de réinitialisation à ${user.email}`);
+      console.error(`❌ ÉCHEC de l'envoi de l'email de réinitialisation à ${normalizedEmail}`);
       console.error(`   Raison: ${emailResult.error || emailResult.message || 'Inconnue'}`);
       console.error(`   Code d'erreur: ${emailResult.code || 'N/A'}`);
       console.log(`📧 [FALLBACK] Token créé mais email non envoyé. Lien de réinitialisation:`);

@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
+import { getPrisma } from '../utils/prisma.js';
 
-const prisma = new PrismaClient();
+const prisma = getPrisma();
 
 /**
  * Récupère les notes des enfants du parent connecté (pour les parents)

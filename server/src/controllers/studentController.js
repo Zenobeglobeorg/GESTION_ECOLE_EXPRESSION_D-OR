@@ -1,8 +1,9 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import { sendWelcomeEmail } from '../services/emailService.js';
+import { getPrisma } from '../utils/prisma.js';
 
-const prisma = new PrismaClient();
+const prisma = getPrisma();
 
 /**
  * Génère un mot de passe temporaire aléatoire
@@ -54,8 +55,10 @@ async function findOrCreateParent(email, studentData) {
     });
 
     // Envoyer un email avec les identifiants de connexion
+    // Normaliser l'email en minuscule pour l'envoi (même si stocké en majuscule)
+    const normalizedEmail = email.toLowerCase().trim();
     const emailResult = await sendWelcomeEmail(
-      email,
+      normalizedEmail,
       temporaryPassword,
       `${firstName} ${lastName}`
     );

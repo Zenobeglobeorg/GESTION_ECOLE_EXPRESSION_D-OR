@@ -12,12 +12,38 @@ export interface Parent {
     firstName: string;
     lastName: string;
     dateOfBirth: string;
+    fatherName?: string;
+    fatherAddress?: string;
+    fatherContact?: string;
+    motherName?: string;
+    motherAddress?: string;
+    motherContact?: string;
+    guardianName?: string;
+    guardianContact?: string;
+    authorizedPerson1Name?: string;
+    authorizedPerson1Tel?: string;
+    authorizedPerson2Name?: string;
+    authorizedPerson2Tel?: string;
     class?: {
       id: number;
       name: string;
       level?: string;
     };
   }>;
+  parentInfo?: {
+    fatherName?: string;
+    fatherAddress?: string;
+    fatherContact?: string;
+    motherName?: string;
+    motherAddress?: string;
+    motherContact?: string;
+    guardianName?: string;
+    guardianContact?: string;
+    authorizedPerson1Name?: string;
+    authorizedPerson1Tel?: string;
+    authorizedPerson2Name?: string;
+    authorizedPerson2Tel?: string;
+  };
 }
 
 /**

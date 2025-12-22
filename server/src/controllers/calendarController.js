@@ -1,7 +1,8 @@
 import { PrismaClient } from '@prisma/client';
+import { getPrisma } from '../utils/prisma.js';
 import { createNotificationsForUsers } from './notificationController.js';
 
-const prisma = new PrismaClient();
+const prisma = getPrisma();
 
 /**
  * Récupère tous les événements avec filtres optionnels
