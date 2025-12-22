@@ -129,20 +129,21 @@ export const LoginPage = () => {
   const strengthInfo = passwordStrength.split('|');
   const strengthWidth = strengthInfo[0] || '0%';
   const strengthLevel = strengthInfo[1] || '';
-  const strengthColor = strengthInfo[2] || '';
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl shadow-2xl p-8 md:p-12 max-w-md w-full">
+    <div className="min-h-screen bg-linear-to-br from-blue-600 via-blue-500 to-yellow-400 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Decorative background elements */}
+      <div className="absolute top-0 left-0 w-96 h-96 bg-white/10 rounded-full blur-3xl animate-pulse-slow"></div>
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-yellow-300/20 rounded-full blur-3xl animate-pulse-slow delay-1000"></div>
+      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-blue-300/10 rounded-full blur-3xl animate-pulse-slow delay-500"></div>
+      
+      <div className="bg-white/95 backdrop-blur-lg rounded-3xl shadow-2xl p-8 md:p-12 max-w-md w-full relative z-10 border border-white/20 animate-fade-in">
         {/* Logo circulaire */}
         <div className="text-center mb-8">
-          <div className="w-24 h-24 mx-auto mb-6 bg-white shadow-lg flex items-center justify-center overflow-hidden border-2 border-blue-100">
-            {/*<div className="w-20 h-20 rounded-full bg-linear-to-br from-blue-600 to-blue-800 flex items-center justify-center text-white text-2xl font-bold">
-              E
-            </div>*/}
-            <img src="/logo-expression-or.jpg" alt="" />
+          <div className="w-24 h-24 mx-auto mb-6 bg-white shadow-xl flex items-center justify-center overflow-hidden border-2 border-blue-100 rounded-2xl transform hover:scale-105 transition-transform duration-300">
+            <img src="/logo-expression-or.jpg" alt="Pilote School Logo" className="w-20 h-20 object-contain" />
           </div>
-          <h2 className="text-3xl font-bold mb-2 text-blue-800">
+          <h2 className="text-3xl font-bold mb-2 text-blue-800 drop-shadow-sm">
             Pilote School
           </h2>
           <p className="text-gray-600 text-sm">Accédez à votre espace personnel</p>
@@ -218,13 +219,27 @@ export const LoginPage = () => {
                 <div className="mt-2">
                   <div className="flex items-center gap-2 mb-1">
                     <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                      {/* eslint-disable-next-line react/forbid-dom-props */}
                       <div
-                        className="h-full transition-all duration-300"
-                        style={{ width: strengthWidth, backgroundColor: strengthColor }}
+                        className={`h-full transition-all duration-300 ${
+                          strengthLevel === 'Faible' ? 'bg-red-500' :
+                          strengthLevel === 'Moyen' ? 'bg-yellow-500' :
+                          strengthLevel === 'Bon' ? 'bg-green-500' :
+                          'bg-green-600'
+                        }`}
+                        style={{ width: strengthWidth }}
                         title={`Force du mot de passe: ${strengthLevel}`}
                       />
                     </div>
-                    <span className="text-xs font-semibold" style={{ color: strengthColor }} title={strengthLevel}>
+                    <span 
+                      className={`text-xs font-semibold ${
+                        strengthLevel === 'Faible' ? 'text-red-500' :
+                        strengthLevel === 'Moyen' ? 'text-yellow-500' :
+                        strengthLevel === 'Bon' ? 'text-green-500' :
+                        'text-green-600'
+                      }`}
+                      title={strengthLevel}
+                    >
                       {strengthLevel}
                     </span>
                   </div>
@@ -237,7 +252,7 @@ export const LoginPage = () => {
               type="submit"
               variant="primary"
               size="lg"
-              className="w-full bg-yellow-400 hover:bg-yellow-500 text-blue-900"
+              className="w-full bg-yellow-400 hover:bg-yellow-500 text-blue-900 font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-[1.02] uppercase tracking-wide"
               disabled={isLoading}
             >
               <span className="flex items-center justify-center gap-2">
@@ -250,7 +265,7 @@ export const LoginPage = () => {
 
             {/* Lien mot de passe oublié */}
             <div className="text-center">
-              <Link to="/forgot-password" className="text-sm hover:underline text-blue-800">
+              <Link to="/forgot-password" className="text-sm hover:underline text-blue-800 font-medium transition-colors hover:text-blue-600">
                 Mot de passe oublié ?
               </Link>
             </div>
@@ -302,7 +317,7 @@ export const LoginPage = () => {
               size="lg"
               isLoading={twoFactorLoading}
               disabled={twoFactorCode.length !== 6}
-              className="w-full bg-yellow-400 hover:bg-yellow-500 text-blue-900 disabled:opacity-50"
+              className="w-full bg-yellow-400 hover:bg-yellow-500 text-blue-900 disabled:opacity-50 font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-[1.02] uppercase tracking-wide"
             >
               <span className="flex items-center justify-center gap-2">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -320,7 +335,7 @@ export const LoginPage = () => {
                 setTwoFactorCode('');
                 setError('');
               }}
-              className="w-full"
+              className="w-full border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400"
             >
               Retour
             </Button>

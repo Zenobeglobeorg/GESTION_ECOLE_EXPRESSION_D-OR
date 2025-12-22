@@ -89,6 +89,7 @@ export const Navbar = ({ onMenuClick }: NavbarProps) => {
     if (!user) return '/login';
     switch (user.role) {
       case 'SUPER_ADMIN':
+        return '/superadmin/messages';
       case 'ADMINISTRATION':
         return '/admin/messages';
       default:
