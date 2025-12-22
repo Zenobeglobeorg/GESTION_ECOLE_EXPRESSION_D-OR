@@ -6,7 +6,7 @@ export const HomePage = () => {
 
   const slides = [
     {
-      title: "Bienvenue sur Pilote School",
+      title: "Bienvenue sur Ecole de pilote",
       description: "La plateforme de gestion complète pour votre établissement scolaire. Gérez les élèves, les enseignants, les parents et l'administration en toute simplicité.",
       buttonText: "Continuer",
       buttonAction: () => setCurrentSlide(1),
@@ -30,7 +30,7 @@ export const HomePage = () => {
   return (
     <div className="min-h-screen bg-linear-to-br from-blue-600 via-blue-500 to-yellow-400 relative overflow-hidden">
       {/* Status bar simulation (mobile) */}
-      <div className="absolute top-0 left-0 right-0 h-8 bg-black/20 flex items-center justify-between px-4 text-white text-xs z-10">
+      {/*<div className="absolute top-0 left-0 right-0 h-8 bg-black/20 flex items-center justify-between px-4 text-white text-xs z-10">
         <span>9:41</span>
         <div className="flex items-center gap-1">
           <div className="w-4 h-2 border border-white rounded-sm">
@@ -41,7 +41,7 @@ export const HomePage = () => {
             <div className="absolute inset-0 bg-white w-[70%]"></div>
           </div>
         </div>
-      </div>
+      </div>*/}
 
       {/* Background pattern overlay */}
       <div className="absolute inset-0 opacity-10">
@@ -67,7 +67,7 @@ export const HomePage = () => {
           <div className="w-24 h-24 bg-white rounded-2xl shadow-2xl flex items-center justify-center mb-4 transform hover:scale-105 transition-transform duration-300 hover:rotate-3">
             <img src="/logo-expression-or.jpg" alt="Pilote School Logo" className="w-20 h-20 object-contain" />
           </div>
-          <h1 className="text-3xl font-bold text-white drop-shadow-lg tracking-wide">PILOTE SCHOOL</h1>
+          <h1 className="text-3xl font-bold text-white drop-shadow-lg tracking-wide">ECOLE DE PILOTE</h1>
         </div>
 
         {/* Content with glassmorphism background */}
