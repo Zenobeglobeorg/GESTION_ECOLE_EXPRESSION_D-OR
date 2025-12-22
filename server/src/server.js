@@ -98,6 +98,26 @@ app.use((req, res) => {
 // Initialiser Socket.IO
 const io = initializeSocket(server);
 
+// Vérification de la configuration SMTP au démarrage
+console.log('\n📧 Vérification de la configuration email...');
+if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+  console.warn('⚠️  ATTENTION: Configuration SMTP incomplète !');
+  console.warn('   Les emails de réinitialisation de mot de passe ne seront PAS envoyés.');
+  console.warn('   Variables requises dans Railway:');
+  console.warn('   - SMTP_HOST (optionnel, défaut: smtp.gmail.com)');
+  console.warn('   - SMTP_PORT (optionnel, défaut: 587)');
+  console.warn('   - SMTP_USER (REQUIS)');
+  console.warn('   - SMTP_PASS (REQUIS)');
+  console.warn('   - FRONTEND_URL (optionnel, défaut: http://localhost:5173)');
+} else {
+  console.log('✅ Configuration SMTP détectée');
+  console.log(`   Host: ${process.env.SMTP_HOST || 'smtp.gmail.com'}`);
+  console.log(`   Port: ${process.env.SMTP_PORT || '587'}`);
+  console.log(`   User: ${process.env.SMTP_USER}`);
+  console.log(`   Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
+}
+console.log('');
+
 // Démarrage du serveur
 server.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);

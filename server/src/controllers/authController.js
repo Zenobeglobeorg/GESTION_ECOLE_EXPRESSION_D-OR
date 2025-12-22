@@ -245,6 +245,13 @@ export const forgotPassword = async (req, res) => {
     });
 
     // Envoyer l'email de réinitialisation
+    console.log(`📧 Tentative d'envoi d'email de réinitialisation à ${user.email}`);
+    console.log(`   SMTP_HOST: ${process.env.SMTP_HOST || 'smtp.gmail.com'}`);
+    console.log(`   SMTP_PORT: ${process.env.SMTP_PORT || '587'}`);
+    console.log(`   SMTP_USER: ${process.env.SMTP_USER ? '✅ Configuré' : '❌ Non configuré'}`);
+    console.log(`   SMTP_PASS: ${process.env.SMTP_PASS ? '✅ Configuré' : '❌ Non configuré'}`);
+    console.log(`   FRONTEND_URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
+    
     const emailResult = await sendPasswordResetEmail(
       user.email,
       resetToken,
@@ -252,10 +259,14 @@ export const forgotPassword = async (req, res) => {
     );
 
     if (emailResult.success) {
-      console.log(`✅ Email de réinitialisation envoyé à ${user.email}`);
+      console.log(`✅ Email de réinitialisation envoyé avec succès à ${user.email}`);
+      console.log(`   Message ID: ${emailResult.messageId || 'N/A'}`);
     } else {
-      console.log(`⚠️ Email non envoyé, mais le token a été créé.`);
-      console.log(`📧 [DEV] Lien de réinitialisation: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`);
+      console.error(`❌ ÉCHEC de l'envoi de l'email de réinitialisation à ${user.email}`);
+      console.error(`   Raison: ${emailResult.error || emailResult.message || 'Inconnue'}`);
+      console.error(`   Code d'erreur: ${emailResult.code || 'N/A'}`);
+      console.log(`📧 [FALLBACK] Token créé mais email non envoyé. Lien de réinitialisation:`);
+      console.log(`   ${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`);
     }
 
     res.json({ 

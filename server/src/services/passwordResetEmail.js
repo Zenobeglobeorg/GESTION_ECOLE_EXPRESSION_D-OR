@@ -20,8 +20,8 @@ const createTransporter = () => {
       rejectUnauthorized: false,
     },
     requireTLS: true,
-    debug: process.env.NODE_ENV === 'development',
-    logger: process.env.NODE_ENV === 'development',
+    debug: true, // Toujours activer pour voir les détails dans Railway
+    logger: true, // Toujours activer pour voir les logs dans Railway
   });
 
   return transporter;
@@ -32,15 +32,53 @@ const createTransporter = () => {
  */
 export const sendPasswordResetEmail = async (email, resetToken, userName) => {
   try {
+    // Vérifier la configuration SMTP
+    console.log('🔍 Vérification de la configuration SMTP...');
+    console.log(`   SMTP_HOST: ${process.env.SMTP_HOST || 'smtp.gmail.com (par défaut)'}`);
+    console.log(`   SMTP_PORT: ${process.env.SMTP_PORT || '587 (par défaut)'}`);
+    console.log(`   SMTP_USER: ${process.env.SMTP_USER ? '✅ Configuré' : '❌ MANQUANT'}`);
+    console.log(`   SMTP_PASS: ${process.env.SMTP_PASS ? '✅ Configuré' : '❌ MANQUANT'}`);
+    console.log(`   FRONTEND_URL: ${process.env.FRONTEND_URL || 'http://localhost:5173 (par défaut)'}`);
+    
     if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-      console.warn('⚠️ SMTP non configuré - Email de réinitialisation non envoyé');
-      console.log(`📧 [DEV] Lien de réinitialisation pour ${email}:`);
+      console.error('❌ ERREUR: Configuration SMTP incomplète !');
+      console.error('   Les variables d\'environnement suivantes sont requises:');
+      console.error('   - SMTP_HOST (optionnel, défaut: smtp.gmail.com)');
+      console.error('   - SMTP_PORT (optionnel, défaut: 587)');
+      console.error('   - SMTP_USER (REQUIS)');
+      console.error('   - SMTP_PASS (REQUIS)');
+      console.error('   - FRONTEND_URL (optionnel, défaut: http://localhost:5173)');
+      console.log(`📧 [FALLBACK] Lien de réinitialisation pour ${email}:`);
       console.log(`   ${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`);
-      return { success: false, message: 'SMTP non configuré dans .env' };
+      return { 
+        success: false, 
+        message: 'SMTP non configuré dans les variables d\'environnement',
+        error: 'SMTP_USER ou SMTP_PASS manquant'
+      };
     }
 
+    console.log('📧 Création du transporteur email...');
     const transporter = createTransporter();
+    
+    // Vérifier la connexion SMTP avant d'envoyer
+    console.log('🔍 Vérification de la connexion SMTP...');
+    try {
+      await transporter.verify();
+      console.log('✅ Connexion SMTP vérifiée avec succès');
+    } catch (verifyError) {
+      console.error('❌ Échec de la vérification SMTP:', verifyError.message);
+      console.error('   Code d\'erreur:', verifyError.code);
+      console.error('   Vérifiez vos identifiants SMTP dans Railway');
+      return { 
+        success: false, 
+        error: verifyError.message,
+        code: verifyError.code
+      };
+    }
+    
     const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
+    console.log(`📧 Préparation de l'email de réinitialisation pour ${email}`);
+    console.log(`   URL de réinitialisation: ${resetUrl}`);
 
     const mailOptions = {
       from: `"Expression d'Or" <${process.env.SMTP_USER}>`,
@@ -124,15 +162,42 @@ export const sendPasswordResetEmail = async (email, resetToken, userName) => {
       `,
     };
 
+    console.log(`📤 Envoi de l'email de réinitialisation...`);
     const info = await transporter.sendMail(mailOptions);
-    console.log(`✅ Email de réinitialisation envoyé à ${email}`);
+    console.log(`✅ Email de réinitialisation envoyé avec succès à ${email}`);
     console.log(`   Message ID: ${info.messageId}`);
+    console.log(`   Réponse du serveur: ${info.response || 'N/A'}`);
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error('❌ Erreur lors de l\'envoi de l\'email de réinitialisation:', error.message);
-    console.log(`📧 [FALLBACK] Lien de réinitialisation pour ${email}:`);
+    console.error('❌ ERREUR lors de l\'envoi de l\'email de réinitialisation:');
+    console.error(`   Message: ${error.message}`);
+    console.error(`   Code: ${error.code || 'N/A'}`);
+    console.error(`   Stack: ${error.stack || 'N/A'}`);
+    
+    // Détails spécifiques selon le type d'erreur
+    if (error.code === 'EAUTH') {
+      console.error('   ⚠️ Erreur d\'authentification SMTP');
+      console.error('   Vérifiez que SMTP_USER et SMTP_PASS sont corrects dans Railway');
+      console.error('   Pour Gmail, utilisez un "Mot de passe d\'application":');
+      console.error('   https://support.google.com/accounts/answer/185833');
+    } else if (error.code === 'ECONNECTION') {
+      console.error('   ⚠️ Erreur de connexion au serveur SMTP');
+      console.error('   Vérifiez SMTP_HOST et SMTP_PORT dans Railway');
+    } else if (error.code === 'ETIMEDOUT') {
+      console.error('   ⚠️ Timeout lors de la connexion SMTP');
+      console.error('   Le serveur SMTP ne répond pas');
+    } else if (error.response) {
+      console.error(`   Réponse du serveur: ${error.response}`);
+    }
+    
+    console.log(`📧 [FALLBACK] Token créé mais email non envoyé. Lien de réinitialisation:`);
     console.log(`   ${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`);
-    return { success: false, error: error.message, code: error.code };
+    return { 
+      success: false, 
+      error: error.message, 
+      code: error.code,
+      details: error.response || error.stack
+    };
   }
 };
 
