@@ -68,16 +68,29 @@ class EmailJSService {
 
     try {
       // Préparer les paramètres du template
-      // EmailJS remplace les variables {{variable_name}} dans le template
+      // EmailJS remplace les variables {{variable_name}} dans le template configuré dans le dashboard
+      // IMPORTANT: Les templates EmailJS ignorent le HTML/text envoyé ici et utilisent le template du dashboard
       const emailjsTemplateParams = {
         to_email: to,
         to_name: templateParams.toName || 'Utilisateur',
+        // Variables standard EmailJS
         subject: subject,
-        message_html: html,
-        message_text: text,
-        // Ajouter tous les paramètres personnalisés (password, login_url, reset_url, etc.)
+        // Variables personnalisées (doivent correspondre aux noms dans le template EmailJS)
+        password: templateParams.password || '',
+        login_url: templateParams.loginUrl || templateParams.login_url || '',
+        reset_url: templateParams.resetUrl || templateParams.reset_url || '',
+        // Ajouter tous les autres paramètres personnalisés
         ...templateParams,
       };
+      
+      // Log des paramètres envoyés pour debug
+      console.log(`   Paramètres du template:`, {
+        to_email: to,
+        to_name: emailjsTemplateParams.to_name,
+        password: emailjsTemplateParams.password ? '***' : '(vide)',
+        login_url: emailjsTemplateParams.login_url || '(vide)',
+        reset_url: emailjsTemplateParams.reset_url || '(vide)',
+      });
 
       // Utiliser le package officiel @emailjs/nodejs pour les appels backend
       // Ce package nécessite les deux clés : publicKey (User ID) et privateKey (API Key)
@@ -372,14 +385,17 @@ Expression d'Or - Plateforme de gestion scolaire
       console.log(`   💡 Astuce: Créez un template séparé et ajoutez EMAILJS_TEMPLATE_ID_RESET sur Railway`);
     }
 
+    console.log(`📧 Construction de l'URL de réinitialisation: ${resetUrl}`);
+    
     return await this.sendEmail({
       to: normalizedEmail,
       subject: 'Réinitialisation de votre mot de passe - Expression d\'Or',
-      html,
-      text,
+      html, // Ignoré par EmailJS si template utilisé
+      text, // Ignoré par EmailJS si template utilisé
       templateParams: {
         toName: userName,
-        resetUrl: resetUrl,
+        reset_url: resetUrl, // Variable pour le template EmailJS ({{reset_url}})
+        resetUrl: resetUrl, // Alias pour compatibilité
       },
       customTemplateId: templateIdToUse, // Utiliser le template de réinitialisation si disponible
     });
