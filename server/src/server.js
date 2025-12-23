@@ -102,8 +102,11 @@ const io = initializeSocket(server);
 console.log('\n📧 Vérification de la configuration email...');
 
 // Vérifier EmailJS en premier (le plus rapide à configurer)
-if (process.env.EMAILJS_SERVICE_ID && process.env.EMAILJS_TEMPLATE_ID && process.env.EMAILJS_PUBLIC_KEY) {
-  console.log('✅ Configuration EmailJS détectée (RECOMMANDÉ - le plus rapide)');
+if (process.env.EMAILJS_SERVICE_ID && process.env.EMAILJS_TEMPLATE_ID && (process.env.EMAILJS_PRIVATE_KEY || process.env.EMAILJS_PUBLIC_KEY)) {
+  const hasPrivateKey = !!process.env.EMAILJS_PRIVATE_KEY;
+  const keyType = hasPrivateKey ? 'Private Key ✅' : 'Public Key ⚠️ (peut être bloqué en backend)';
+  
+  console.log('✅ Configuration EmailJS détectée');
   console.log(`   Service ID: ${process.env.EMAILJS_SERVICE_ID}`);
   console.log(`   Template ID (Bienvenue): ${process.env.EMAILJS_TEMPLATE_ID}`);
   if (process.env.EMAILJS_TEMPLATE_ID_RESET) {
@@ -111,6 +114,12 @@ if (process.env.EMAILJS_SERVICE_ID && process.env.EMAILJS_TEMPLATE_ID && process
   } else {
     console.log(`   Template ID (Réinitialisation): ${process.env.EMAILJS_TEMPLATE_ID} (même que bienvenue)`);
     console.log(`   💡 Astuce: Créez un template séparé et ajoutez EMAILJS_TEMPLATE_ID_RESET pour personnaliser`);
+  }
+  console.log(`   Clé: ${keyType}`);
+  if (!hasPrivateKey) {
+    console.warn('   ⚠️ EmailJS bloque les appels backend avec Public Key');
+    console.warn('   💡 Solution recommandée : Utilisez Mailgun (GUIDE_MAILGUN.md)');
+    console.warn('   🔑 Alternative : Obtenez une Private Key dans EmailJS → Account → API Keys');
   }
   console.log(`   Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
 } else if (process.env.MAILGUN_API_KEY && process.env.MAILGUN_DOMAIN) {
@@ -130,11 +139,13 @@ if (process.env.EMAILJS_SERVICE_ID && process.env.EMAILJS_TEMPLATE_ID && process
   console.warn('⚠️  ATTENTION: Aucun service d\'email configuré !');
   console.warn('   Les emails ne seront PAS envoyés.');
   console.warn('   Options de configuration dans Railway (par ordre de recommandation):');
-  console.warn('   Option 1 - EmailJS (RECOMMANDÉ - le plus rapide, 5 min de config):');
+  console.warn('   Option 1 - EmailJS (⚠️ Peut être bloqué en backend - voir SOLUTION_EMAILJS_BACKEND.md):');
   console.warn('     - EMAILJS_SERVICE_ID (REQUIS)');
   console.warn('     - EMAILJS_TEMPLATE_ID (REQUIS - pour email de bienvenue)');
-  console.warn('     - EMAILJS_PUBLIC_KEY (REQUIS)');
-  console.warn('     - EMAILJS_TEMPLATE_ID_RESET (optionnel - pour réinitialisation, sinon utilise EMAILJS_TEMPLATE_ID)');
+  console.warn('     - EMAILJS_PRIVATE_KEY (REQUIS pour backend - dans EmailJS → Account → API Keys)');
+  console.warn('     - EMAILJS_TEMPLATE_ID_RESET (optionnel - pour réinitialisation)');
+  console.warn('     ⚠️ Note: EmailJS bloque les appels backend avec Public Key');
+  console.warn('     💡 Recommandation: Utilisez Mailgun pour les appels backend (Option 2)');
   console.warn('   Option 2 - Mailgun (recommandé pour production):');
   console.warn('     - MAILGUN_API_KEY (REQUIS)');
   console.warn('     - MAILGUN_DOMAIN (REQUIS)');

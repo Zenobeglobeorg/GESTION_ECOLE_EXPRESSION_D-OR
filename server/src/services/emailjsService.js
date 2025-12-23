@@ -12,9 +12,23 @@ class EmailJSService {
     this.serviceId = process.env.EMAILJS_SERVICE_ID;
     this.templateId = process.env.EMAILJS_TEMPLATE_ID; // Template pour email de bienvenue
     this.templateIdReset = process.env.EMAILJS_TEMPLATE_ID_RESET; // Template pour réinitialisation (optionnel)
-    this.publicKey = process.env.EMAILJS_PUBLIC_KEY;
+    // EmailJS a deux types de clés :
+    // - Public Key (User ID) : Pour utilisation côté client (navigateur) uniquement
+    // - Private Key (API Key) : Pour utilisation côté serveur (backend)
+    // ⚠️ IMPORTANT : EmailJS peut bloquer les appels backend même avec Private Key
+    // Recommandation : Utilisez Mailgun pour les appels backend
+    this.privateKey = process.env.EMAILJS_PRIVATE_KEY; // Private Key pour backend (optionnel)
+    this.publicKey = process.env.EMAILJS_PUBLIC_KEY; // Public Key (pour référence, mais bloquée en backend)
     this.apiUrl = process.env.EMAILJS_API_URL || 'https://api.emailjs.com/api/v1.0/email/send';
-    this.isConfigured = !!(this.serviceId && this.templateId && this.publicKey);
+    // Utiliser Private Key si disponible, sinon Public Key (mais sera probablement bloqué)
+    this.userId = this.privateKey || this.publicKey;
+    this.isConfigured = !!(this.serviceId && this.templateId && this.userId);
+    
+    if (this.isConfigured && !this.privateKey && this.publicKey) {
+      console.warn('⚠️ EmailJS : Public Key détectée. EmailJS bloque les appels backend avec Public Key.');
+      console.warn('   💡 Solution : Utilisez Mailgun (recommandé) ou obtenez une Private Key dans EmailJS → Account → API Keys');
+      console.warn('   📖 Guide Mailgun : GUIDE_MAILGUN.md');
+    }
   }
 
   /**
@@ -30,7 +44,7 @@ class EmailJSService {
     if (!this.isConfigured) {
       return {
         success: false,
-        error: 'EmailJS non configuré. EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID et EMAILJS_PUBLIC_KEY requis.',
+        error: 'EmailJS non configuré. EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID et EMAILJS_PRIVATE_KEY (ou EMAILJS_PUBLIC_KEY) requis.',
       };
     }
 
@@ -42,7 +56,7 @@ class EmailJSService {
       const emailData = {
         service_id: this.serviceId,
         template_id: templateIdToUse,
-        user_id: this.publicKey,
+        user_id: this.userId, // Utiliser Private Key si disponible, sinon Public Key
         template_params: {
           to_email: to,
           to_name: templateParams.toName || 'Utilisateur',
@@ -54,7 +68,12 @@ class EmailJSService {
         },
       };
 
-      console.log(`📤 Envoi EmailJS à ${to} via service ${this.serviceId}, template ${templateIdToUse}`);
+      const keyType = this.privateKey ? 'Private Key' : 'Public Key';
+      console.log(`📤 Envoi EmailJS à ${to} via service ${this.serviceId}, template ${templateIdToUse} (${keyType})`);
+      
+      if (!this.privateKey) {
+        console.warn('⚠️ EmailJS : Utilisation de Public Key depuis backend - peut être bloqué par EmailJS');
+      }
 
       const response = await fetch(this.apiUrl, {
         method: 'POST',
@@ -80,6 +99,22 @@ class EmailJSService {
 
       if (!response.ok) {
         console.error('❌ Erreur EmailJS:', responseData);
+        
+        // Détecter l'erreur spécifique "API calls are disabled for non-browser applications"
+        if (responseData.message && responseData.message.includes('non-browser applications')) {
+          console.error('❌ EmailJS bloque les appels depuis un serveur backend.');
+          console.error('   💡 Solution recommandée : Utilisez Mailgun pour les appels backend');
+          console.error('   📖 Guide Mailgun : GUIDE_MAILGUN.md');
+          console.error('   🔑 Alternative : Obtenez une Private Key dans EmailJS → Account → API Keys');
+          return {
+            success: false,
+            error: 'EmailJS bloque les appels backend. Utilisez Mailgun ou obtenez une Private Key.',
+            code: response.status,
+            details: responseData,
+            recommendation: 'Utilisez Mailgun (GUIDE_MAILGUN.md) ou configurez EMAILJS_PRIVATE_KEY',
+          };
+        }
+        
         return {
           success: false,
           error: responseData.message || responseData.text || 'Erreur lors de l\'envoi via EmailJS',
