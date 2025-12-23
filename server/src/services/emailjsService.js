@@ -113,23 +113,40 @@ class EmailJSService {
         body: JSON.stringify(requestBody),
       });
 
-      const responseData = await response.json();
+      // EmailJS peut retourner soit du JSON soit du texte simple ("OK")
+      let responseData;
+      const contentType = response.headers.get('content-type');
+      
+      try {
+        if (contentType && contentType.includes('application/json')) {
+          responseData = await response.json();
+        } else {
+          // Réponse texte simple (ex: "OK")
+          const textResponse = await response.text();
+          responseData = { text: textResponse, status: response.status };
+        }
+      } catch (parseError) {
+        // Si le parsing JSON échoue, essayer de lire comme texte
+        const textResponse = await response.text();
+        responseData = { text: textResponse, status: response.status };
+      }
 
       if (!response.ok) {
+        const errorMessage = responseData.message || responseData.error || responseData.text || 'Erreur inconnue';
         throw {
           status: response.status,
-          text: responseData.message || responseData.error || 'Erreur inconnue',
-          message: responseData.message || responseData.error || 'Erreur lors de l\'envoi via EmailJS',
+          text: errorMessage,
+          message: errorMessage,
         };
       }
 
       console.log(`✅ Email envoyé via EmailJS à ${to}`);
       console.log(`   Status: ${response.status}`);
-      console.log(`   Response: ${responseData.text || 'OK'}`);
+      console.log(`   Response: ${responseData.text || responseData.message || 'OK'}`);
       
       return {
         success: true,
-        messageId: responseData.text || 'N/A',
+        messageId: responseData.text || responseData.message || 'OK',
         status: response.status,
         response: responseData,
       };
