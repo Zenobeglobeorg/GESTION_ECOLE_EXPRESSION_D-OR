@@ -1,5 +1,7 @@
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
+import { emailjsService } from './emailjsService.js';
+import { mailgunService } from './mailgunService.js';
 
 dotenv.config();
 
@@ -46,17 +48,39 @@ export const sendWelcomeEmail = async (email, password, parentName) => {
     // Normaliser l'email en minuscule pour l'envoi (même si stocké en majuscule)
     const normalizedEmail = email.toLowerCase().trim();
     
-    // Vérifier que les variables d'environnement sont configurées
+    // Essayer EmailJS en premier (le plus rapide à configurer)
+    if (emailjsService.isConfigured) {
+      console.log('📧 Tentative d\'envoi via EmailJS...');
+      const emailjsResult = await emailjsService.sendWelcomeEmail(normalizedEmail, password, parentName);
+      if (emailjsResult.success) {
+        return emailjsResult;
+      }
+      console.warn('⚠️ Échec de l\'envoi via EmailJS, tentative avec Mailgun...');
+      console.warn(`   Erreur EmailJS: ${emailjsResult.error || 'Inconnue'}`);
+    }
+    
+    // Essayer Mailgun en deuxième (plus fiable depuis Railway)
+    if (mailgunService.isConfigured) {
+      console.log('📧 Tentative d\'envoi via Mailgun...');
+      const mailgunResult = await mailgunService.sendWelcomeEmail(normalizedEmail, password, parentName);
+      if (mailgunResult.success) {
+        return mailgunResult;
+      }
+      console.warn('⚠️ Échec de l\'envoi via Mailgun, tentative avec SMTP...');
+      console.warn(`   Erreur Mailgun: ${mailgunResult.error || 'Inconnue'}`);
+    }
+    
+    // Fallback sur SMTP si EmailJS et Mailgun ne sont pas configurés ou ont échoué
+    // Vérifier que les variables d'environnement SMTP sont configurées
     if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-      console.warn('⚠️ SMTP non configuré dans .env');
-      console.warn('   Pour activer l\'envoi d\'emails, ajoutez dans server/.env :');
-      console.warn('   SMTP_HOST=smtp.gmail.com');
-      console.warn('   SMTP_PORT=587');
-      console.warn('   SMTP_USER=your-email@gmail.com');
-      console.warn('   SMTP_PASS=your-app-password');
+      console.warn('⚠️ Aucun service d\'email configuré (ni EmailJS, ni Mailgun, ni SMTP)');
+      console.warn('   Pour activer l\'envoi d\'emails, configurez l\'un des services suivants :');
+      console.warn('   - EmailJS (RECOMMANDÉ - le plus rapide): EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_PUBLIC_KEY');
+      console.warn('   - Mailgun: MAILGUN_API_KEY, MAILGUN_DOMAIN, MAILGUN_FROM_EMAIL');
+      console.warn('   - SMTP: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS');
       console.log(`📧 [DEV] Email de bienvenue pour ${normalizedEmail}:`);
       console.log(`   Mot de passe temporaire: ${password}`);
-      return { success: false, message: 'SMTP non configuré dans .env' };
+      return { success: false, message: 'Aucun service d\'email configuré' };
     }
 
     // Vérifier la connexion avant d'envoyer

@@ -98,23 +98,54 @@ app.use((req, res) => {
 // Initialiser Socket.IO
 const io = initializeSocket(server);
 
-// Vérification de la configuration SMTP au démarrage
+// Vérification de la configuration email au démarrage
 console.log('\n📧 Vérification de la configuration email...');
-if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-  console.warn('⚠️  ATTENTION: Configuration SMTP incomplète !');
-  console.warn('   Les emails de réinitialisation de mot de passe ne seront PAS envoyés.');
-  console.warn('   Variables requises dans Railway:');
-  console.warn('   - SMTP_HOST (optionnel, défaut: smtp.gmail.com)');
-  console.warn('   - SMTP_PORT (optionnel, défaut: 587)');
-  console.warn('   - SMTP_USER (REQUIS)');
-  console.warn('   - SMTP_PASS (REQUIS)');
-  console.warn('   - FRONTEND_URL (optionnel, défaut: http://localhost:5173)');
-} else {
-  console.log('✅ Configuration SMTP détectée');
+
+// Vérifier EmailJS en premier (le plus rapide à configurer)
+if (process.env.EMAILJS_SERVICE_ID && process.env.EMAILJS_TEMPLATE_ID && process.env.EMAILJS_PUBLIC_KEY) {
+  console.log('✅ Configuration EmailJS détectée (RECOMMANDÉ - le plus rapide)');
+  console.log(`   Service ID: ${process.env.EMAILJS_SERVICE_ID}`);
+  console.log(`   Template ID (Bienvenue): ${process.env.EMAILJS_TEMPLATE_ID}`);
+  if (process.env.EMAILJS_TEMPLATE_ID_RESET) {
+    console.log(`   Template ID (Réinitialisation): ${process.env.EMAILJS_TEMPLATE_ID_RESET} ✅`);
+  } else {
+    console.log(`   Template ID (Réinitialisation): ${process.env.EMAILJS_TEMPLATE_ID} (même que bienvenue)`);
+    console.log(`   💡 Astuce: Créez un template séparé et ajoutez EMAILJS_TEMPLATE_ID_RESET pour personnaliser`);
+  }
+  console.log(`   Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
+} else if (process.env.MAILGUN_API_KEY && process.env.MAILGUN_DOMAIN) {
+  console.log('✅ Configuration Mailgun détectée (recommandé)');
+  console.log(`   Domain: ${process.env.MAILGUN_DOMAIN}`);
+  console.log(`   From Email: ${process.env.MAILGUN_FROM_EMAIL || process.env.SMTP_USER || 'noreply@expressiondor.com'}`);
+  console.log(`   Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
+} else if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+  console.log('✅ Configuration SMTP détectée (fallback)');
   console.log(`   Host: ${process.env.SMTP_HOST || 'smtp.gmail.com'}`);
   console.log(`   Port: ${process.env.SMTP_PORT || '587'}`);
   console.log(`   User: ${process.env.SMTP_USER}`);
   console.log(`   Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
+  console.warn('   ⚠️  Note: SMTP peut avoir des problèmes de timeout depuis Railway.');
+  console.warn('   💡 Recommandation: Utilisez EmailJS ou Mailgun (voir GUIDE_EMAILJS.md)');
+} else {
+  console.warn('⚠️  ATTENTION: Aucun service d\'email configuré !');
+  console.warn('   Les emails ne seront PAS envoyés.');
+  console.warn('   Options de configuration dans Railway (par ordre de recommandation):');
+  console.warn('   Option 1 - EmailJS (RECOMMANDÉ - le plus rapide, 5 min de config):');
+  console.warn('     - EMAILJS_SERVICE_ID (REQUIS)');
+  console.warn('     - EMAILJS_TEMPLATE_ID (REQUIS - pour email de bienvenue)');
+  console.warn('     - EMAILJS_PUBLIC_KEY (REQUIS)');
+  console.warn('     - EMAILJS_TEMPLATE_ID_RESET (optionnel - pour réinitialisation, sinon utilise EMAILJS_TEMPLATE_ID)');
+  console.warn('   Option 2 - Mailgun (recommandé pour production):');
+  console.warn('     - MAILGUN_API_KEY (REQUIS)');
+  console.warn('     - MAILGUN_DOMAIN (REQUIS)');
+  console.warn('     - MAILGUN_FROM_EMAIL (optionnel)');
+  console.warn('   Option 3 - SMTP (peut avoir des timeouts):');
+  console.warn('     - SMTP_HOST (optionnel, défaut: smtp.gmail.com)');
+  console.warn('     - SMTP_PORT (optionnel, défaut: 587)');
+  console.warn('     - SMTP_USER (REQUIS)');
+  console.warn('     - SMTP_PASS (REQUIS)');
+  console.warn('   - FRONTEND_URL (optionnel, défaut: http://localhost:5173)');
+  console.warn('   📖 Voir GUIDE_EMAILJS.md pour la configuration EmailJS (le plus rapide)');
 }
 console.log('');
 
