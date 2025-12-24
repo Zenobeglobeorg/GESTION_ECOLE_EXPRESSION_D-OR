@@ -83,6 +83,19 @@ export const Settings = () => {
       setError(null);
       setSuccess(null);
       const result = await settingsService.enableTwoFactor();
+      
+      // Vérifier si l'email a été envoyé avec succès
+      if (result.success === false || (result.emailSent === false && !result.success)) {
+        setError(
+          result.error || result.message || 
+          (language === "fr" 
+            ? "Erreur lors de l'envoi du code de vérification. Veuillez réessayer ou contacter l'administration."
+            : "Error sending verification code. Please try again or contact administration.")
+        );
+        setTimeout(() => setError(null), 5000);
+        return;
+      }
+      
       setWaitingForCode(true);
       setVerificationCode("");
       setSuccess(

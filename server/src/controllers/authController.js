@@ -51,18 +51,41 @@ export const login = async (req, res) => {
       try {
         const codeResult = await generateLoginCode(user.id);
         
-        return res.json({
-          success: true,
-          requiresTwoFactor: true,
-          message: 'Code de vérification envoyé par email',
-          emailSent: codeResult.emailSent,
-          // En développement, retourner le code pour faciliter les tests
-          ...(process.env.NODE_ENV === 'development' && { devCode: codeResult.code }),
-        });
+        if (codeResult.success && codeResult.emailSent) {
+          return res.json({
+            success: true,
+            requiresTwoFactor: true,
+            message: 'Code de vérification envoyé par email',
+            emailSent: true,
+            // En développement, retourner le code pour faciliter les tests
+            ...(process.env.NODE_ENV === 'development' && { devCode: codeResult.code }),
+          });
+        } else {
+          // Si l'email n'a pas été envoyé, retourner une erreur mais permettre quand même la connexion en développement
+          console.error('❌ Échec de l\'envoi du code 2FA lors de la connexion');
+          if (process.env.NODE_ENV === 'development' && codeResult.code) {
+            console.log(`📧 [DEV] Code 2FA pour ${user.email}: ${codeResult.code}`);
+            return res.json({
+              success: true,
+              requiresTwoFactor: true,
+              message: 'Code de vérification généré (email non envoyé - mode développement)',
+              emailSent: false,
+              devCode: codeResult.code,
+            });
+          }
+          return res.status(500).json({
+            success: false,
+            error: 'Erreur lors de l\'envoi du code de vérification. Veuillez réessayer ou contacter l\'administration.',
+            requiresTwoFactor: false,
+            emailSent: false,
+          });
+        }
       } catch (error) {
         console.error('Error generating 2FA code:', error);
         return res.status(500).json({ 
-          error: 'Erreur lors de l\'envoi du code de vérification' 
+          error: 'Erreur lors de l\'envoi du code de vérification',
+          requiresTwoFactor: false,
+          emailSent: false,
         });
       }
     }
@@ -267,18 +290,22 @@ export const forgotPassword = async (req, res) => {
     if (emailResult.success) {
       console.log(`✅ Email de réinitialisation envoyé avec succès à ${normalizedEmail}`);
       console.log(`   Message ID: ${emailResult.messageId || 'N/A'}`);
+      res.json({ 
+        success: true, 
+        message: 'Si cet email existe, un lien de réinitialisation a été envoyé.' 
+      });
     } else {
       console.error(`❌ ÉCHEC de l'envoi de l'email de réinitialisation à ${normalizedEmail}`);
       console.error(`   Raison: ${emailResult.error || emailResult.message || 'Inconnue'}`);
       console.error(`   Code d'erreur: ${emailResult.code || 'N/A'}`);
       console.log(`📧 [FALLBACK] Token créé mais email non envoyé. Lien de réinitialisation:`);
       console.log(`   ${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`);
+      res.status(500).json({ 
+        success: false,
+        error: 'Erreur lors de l\'envoi de l\'email. Veuillez contacter l\'administration.',
+        message: emailResult.error || 'Impossible d\'envoyer l\'email de réinitialisation'
+      });
     }
-
-    res.json({ 
-      success: true, 
-      message: 'Si cet email existe, un lien de réinitialisation a été envoyé.' 
-    });
   } catch (error) {
     console.error('Forgot password error:', error);
     res.status(500).json({ error: 'Erreur lors de la demande de réinitialisation' });

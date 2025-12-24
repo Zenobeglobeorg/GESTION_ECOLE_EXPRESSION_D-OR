@@ -23,8 +23,13 @@ export const ForgotPasswordPage = () => {
     setIsLoading(true);
     try {
       const result = await forgotPassword(email);
-      setMessage(result.message || 'Si cet email existe, un lien de réinitialisation a été envoyé.');
-      setEmail(''); // Réinitialiser le champ email
+      // Vérifier si l'email a été envoyé avec succès
+      if (result.success === false) {
+        setError(result.error || result.message || 'Erreur lors de l\'envoi de l\'email. Veuillez contacter l\'administration.');
+      } else {
+        setMessage(result.message || 'Si cet email existe, un lien de réinitialisation a été envoyé.');
+        setEmail(''); // Réinitialiser le champ email
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la demande de réinitialisation';
       setError(errorMessage);

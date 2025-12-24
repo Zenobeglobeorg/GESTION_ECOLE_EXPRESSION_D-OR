@@ -106,7 +106,7 @@ if (process.env.EMAILJS_SERVICE_ID && process.env.EMAILJS_TEMPLATE_ID && (proces
   const hasPrivateKey = !!process.env.EMAILJS_PRIVATE_KEY;
   const keyType = hasPrivateKey ? 'Private Key ✅' : 'Public Key ⚠️ (peut être bloqué en backend)';
   
-  console.log('✅ Configuration EmailJS détectée');
+  console.log('✅ Configuration EmailJS détectée (Compte Principal)');
   console.log(`   Service ID: ${process.env.EMAILJS_SERVICE_ID}`);
   console.log(`   Template ID (Bienvenue): ${process.env.EMAILJS_TEMPLATE_ID}`);
   if (process.env.EMAILJS_TEMPLATE_ID_RESET) {
@@ -116,6 +116,25 @@ if (process.env.EMAILJS_SERVICE_ID && process.env.EMAILJS_TEMPLATE_ID && (proces
     console.log(`   💡 Astuce: Créez un template séparé et ajoutez EMAILJS_TEMPLATE_ID_RESET pour personnaliser`);
   }
   console.log(`   Clé: ${keyType}`);
+  
+  // Vérifier la configuration 2FA
+  if (process.env.EMAILJS_SERVICE_ID_2FA && process.env.EMAILJS_TEMPLATE_ID_2FA && process.env.EMAILJS_PRIVATE_KEY_2FA) {
+    console.log('✅ Configuration EmailJS 2FA détectée (Compte Séparé)');
+    console.log(`   Service ID 2FA: ${process.env.EMAILJS_SERVICE_ID_2FA}`);
+    console.log(`   Template ID 2FA: ${process.env.EMAILJS_TEMPLATE_ID_2FA}`);
+    console.log(`   Private Key 2FA: ✅ Configurée`);
+    if (process.env.EMAILJS_PUBLIC_KEY_2FA) {
+      console.log(`   Public Key 2FA: ✅ Configurée`);
+    }
+  } else {
+    console.log('ℹ️  Configuration EmailJS 2FA non détectée');
+    console.log(`   💡 Le système utilisera le compte principal pour la 2FA`);
+    console.log(`   💡 Pour utiliser un compte séparé, ajoutez :`);
+    console.log(`      - EMAILJS_SERVICE_ID_2FA`);
+    console.log(`      - EMAILJS_TEMPLATE_ID_2FA`);
+    console.log(`      - EMAILJS_PRIVATE_KEY_2FA`);
+    console.log(`   📖 Voir GUIDE_TEMPLATE_EMAILJS_2FA.md pour plus d'informations`);
+  }
   if (!hasPrivateKey) {
     console.warn('   ⚠️ EmailJS bloque les appels backend avec Public Key');
     console.warn('   💡 Solution recommandée : Utilisez Mailgun (GUIDE_MAILGUN.md)');

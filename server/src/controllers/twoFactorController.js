@@ -65,11 +65,23 @@ export const enableTwoFactor = async (req, res) => {
       `${user.firstName} ${user.lastName}`
     );
 
-    res.json({
-      success: true,
-      message: 'Code de vérification envoyé par email. Entrez ce code pour activer la 2FA.',
-      emailSent: emailResult.success,
-    });
+    if (emailResult.success) {
+      res.json({
+        success: true,
+        message: 'Code de vérification envoyé par email. Entrez ce code pour activer la 2FA.',
+        emailSent: true,
+      });
+    } else {
+      // Si l'email n'a pas été envoyé, retourner une erreur
+      console.error(`❌ Échec de l'envoi du code 2FA à ${user.email}`);
+      console.error(`   Raison: ${emailResult.error || emailResult.message || 'Inconnue'}`);
+      res.status(500).json({
+        success: false,
+        error: 'Erreur lors de l\'envoi du code de vérification. Veuillez réessayer ou contacter l\'administration.',
+        message: emailResult.error || emailResult.message || 'Impossible d\'envoyer le code de vérification',
+        emailSent: false,
+      });
+    }
   } catch (err) {
     console.error('enableTwoFactor error:', err);
     res.status(500).json({ error: 'Erreur lors de l\'activation de la 2FA', details: err.message });

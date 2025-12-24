@@ -16,18 +16,29 @@ dotenv.config();
  */
 class EmailJSService {
   constructor() {
+    // Compte EmailJS principal (pour bienvenue et réinitialisation)
     this.serviceId = process.env.EMAILJS_SERVICE_ID;
     this.templateId = process.env.EMAILJS_TEMPLATE_ID; // Template pour email de bienvenue
     this.templateIdReset = process.env.EMAILJS_TEMPLATE_ID_RESET; // Template pour réinitialisation (optionnel)
+    
+    // Compte EmailJS séparé pour la 2FA (optionnel)
+    this.serviceId2FA = process.env.EMAILJS_SERVICE_ID_2FA; // Service ID pour 2FA
+    this.templateId2FA = process.env.EMAILJS_TEMPLATE_ID_2FA; // Template ID pour 2FA
+    
     // EmailJS a deux types de clés :
     // - Public Key (User ID) : Pour utilisation côté client (navigateur) uniquement
     // - Private Key (API Key) : Pour utilisation côté serveur (backend) - REQUIS pour backend
     this.privateKey = process.env.EMAILJS_PRIVATE_KEY; // Private Key pour backend (REQUIS)
     this.publicKey = process.env.EMAILJS_PUBLIC_KEY; // Public Key (optionnel, pour référence)
     
+    // Private Key pour le compte 2FA (peut être la même ou différente)
+    this.privateKey2FA = process.env.EMAILJS_PRIVATE_KEY_2FA || this.privateKey; // Fallback sur la clé principale si non spécifiée
+    this.publicKey2FA = process.env.EMAILJS_PUBLIC_KEY_2FA || this.publicKey; // Fallback sur la clé principale si non spécifiée
+    
     // Pour les appels backend avec @emailjs/nodejs, la Private Key est REQUISE
     // La Public Key est recommandée mais optionnelle
     this.isConfigured = !!(this.serviceId && this.templateId && this.privateKey);
+    this.isConfigured2FA = !!(this.serviceId2FA && this.templateId2FA && this.privateKey2FA);
     
     if (this.serviceId && this.templateId && !this.privateKey && this.publicKey) {
       console.warn('⚠️ EmailJS : Public Key détectée mais Private Key manquante.');
@@ -294,6 +305,205 @@ Expression d'Or - Plateforme de gestion scolaire
         password: password,
         loginUrl: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/login`,
       },
+    });
+  }
+
+  /**
+   * Envoie un code 2FA par email
+   * Utilise le compte EmailJS 2FA si configuré, sinon utilise le compte principal
+   */
+  async sendTwoFactorCode(email, code, userName) {
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Utiliser le compte 2FA si configuré, sinon le compte principal
+    const serviceIdToUse = this.serviceId2FA || this.serviceId;
+    const templateIdToUse = this.templateId2FA || this.templateId;
+    const privateKeyToUse = this.privateKey2FA || this.privateKey;
+    const publicKeyToUse = this.publicKey2FA || this.publicKey;
+    
+    if (!serviceIdToUse || !templateIdToUse || !privateKeyToUse) {
+      return {
+        success: false,
+        error: 'EmailJS non configuré pour la 2FA. EMAILJS_SERVICE_ID_2FA, EMAILJS_TEMPLATE_ID_2FA et EMAILJS_PRIVATE_KEY_2FA requis (ou utilisez le compte principal).',
+      };
+    }
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #2563eb 0%, #fbbf24 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
+          .code-box { background-color: #f0f9ff; border: 2px dashed #2563eb; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center; }
+          .code { font-size: 32px; font-weight: bold; color: #2563eb; letter-spacing: 8px; font-family: 'Courier New', monospace; }
+          .warning { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 4px; }
+          .footer { text-align: center; margin-top: 30px; color: #6b7280; font-size: 12px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>🔐 Code de Vérification</h1>
+          </div>
+          <div class="content">
+            <p>Bonjour ${userName},</p>
+            <p>Vous avez demandé à vous connecter à votre compte <strong>Expression d'Or</strong>.</p>
+            <p>Utilisez le code suivant pour compléter votre connexion :</p>
+            <div class="code-box">
+              <div class="code">${code}</div>
+            </div>
+            <div class="warning">
+              <strong>⚠️ Important :</strong>
+              <ul style="margin: 10px 0; padding-left: 20px;">
+                <li>Ce code est valide pendant <strong>10 minutes</strong> uniquement</li>
+                <li>Ne partagez jamais ce code avec personne</li>
+                <li>Si vous n'avez pas demandé ce code, ignorez cet email</li>
+              </ul>
+            </div>
+            <p>Si vous n'avez pas demandé ce code, veuillez ignorer cet email ou contacter le support.</p>
+            <div class="footer">
+              <p>Cet email a été envoyé automatiquement. Merci de ne pas y répondre.</p>
+              <p>Expression d'Or - Système de gestion scolaire</p>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const text = `
+Code de vérification - Expression d'Or
+
+Bonjour ${userName},
+
+Vous avez demandé à vous connecter à votre compte Expression d'Or.
+
+Votre code de vérification est : ${code}
+
+Ce code est valide pendant 10 minutes uniquement.
+
+Si vous n'avez pas demandé ce code, ignorez cet email.
+
+Cet email a été envoyé automatiquement. Merci de ne pas y répondre.
+    `;
+
+    return await this.sendEmail({
+      to: normalizedEmail,
+      subject: 'Code de vérification - Double authentification',
+      html,
+      text,
+      templateParams: {
+        toName: userName,
+        code: code,
+        verification_code: code, // Alias pour compatibilité
+      },
+      customTemplateId: templateIdToUse, // Utiliser le template 2FA
+      customServiceId: serviceIdToUse, // Utiliser le service 2FA
+      customPrivateKey: privateKeyToUse, // Utiliser la clé 2FA
+      customPublicKey: publicKeyToUse, // Utiliser la clé publique 2FA
+    });
+  }
+
+  /**
+   * Envoie un email de confirmation d'activation de la 2FA
+   * Utilise le compte EmailJS 2FA si configuré, sinon utilise le compte principal
+   */
+  async sendTwoFactorActivationEmail(email, userName) {
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Utiliser le compte 2FA si configuré, sinon le compte principal
+    const serviceIdToUse = this.serviceId2FA || this.serviceId;
+    const templateIdToUse = this.templateId2FA || this.templateId;
+    const privateKeyToUse = this.privateKey2FA || this.privateKey;
+    const publicKeyToUse = this.publicKey2FA || this.publicKey;
+    
+    if (!serviceIdToUse || !templateIdToUse || !privateKeyToUse) {
+      return {
+        success: false,
+        error: 'EmailJS non configuré pour la 2FA. EMAILJS_SERVICE_ID_2FA, EMAILJS_TEMPLATE_ID_2FA et EMAILJS_PRIVATE_KEY_2FA requis (ou utilisez le compte principal).',
+      };
+    }
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
+          .success-box { background: #d1fae5; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0; border-radius: 4px; }
+          .footer { text-align: center; margin-top: 30px; color: #6b7280; font-size: 12px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>✅ Double Authentification Activée</h1>
+          </div>
+          <div class="content">
+            <p>Bonjour ${userName},</p>
+            <div class="success-box">
+              <p><strong>La double authentification a été activée avec succès sur votre compte.</strong></p>
+            </div>
+            <p>Désormais, à chaque connexion, vous recevrez un code de vérification par email que vous devrez entrer pour accéder à votre compte.</p>
+            <p><strong>Comment ça fonctionne :</strong></p>
+            <ul>
+              <li>Vous entrez votre email et mot de passe</li>
+              <li>Un code à 6 chiffres vous est envoyé par email</li>
+              <li>Vous entrez ce code pour finaliser votre connexion</li>
+              <li>Le code est valide pendant 10 minutes</li>
+            </ul>
+            <p>Si vous n'avez pas activé cette fonctionnalité, veuillez contacter immédiatement le support.</p>
+            <p>Merci d'utiliser Expression d'Or !</p>
+            <div class="footer">
+              <p>Cet email a été envoyé automatiquement. Merci de ne pas y répondre.</p>
+              <p>Expression d'Or - Système de gestion scolaire</p>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const text = `
+Double authentification activée - Expression d'Or
+
+Bonjour ${userName},
+
+La double authentification a été activée avec succès sur votre compte.
+
+Désormais, à chaque connexion, vous recevrez un code de vérification par email que vous devrez entrer pour accéder à votre compte.
+
+Comment ça fonctionne :
+- Vous entrez votre email et mot de passe
+- Un code à 6 chiffres vous est envoyé par email
+- Vous entrez ce code pour finaliser votre connexion
+- Le code est valide pendant 10 minutes
+
+Si vous n'avez pas activé cette fonctionnalité, veuillez contacter immédiatement le support.
+
+Merci d'utiliser Expression d'Or !
+    `;
+
+    return await this.sendEmail({
+      to: normalizedEmail,
+      subject: 'Double authentification activée - Expression d\'Or',
+      html,
+      text,
+      templateParams: {
+        toName: userName,
+      },
+      customTemplateId: templateIdToUse, // Utiliser le template 2FA
+      customServiceId: serviceIdToUse, // Utiliser le service 2FA
+      customPrivateKey: privateKeyToUse, // Utiliser la clé 2FA
+      customPublicKey: publicKeyToUse, // Utiliser la clé publique 2FA
     });
   }
 
