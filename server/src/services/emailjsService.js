@@ -66,16 +66,19 @@ class EmailJSService {
    * @param {object} templateParams - Paramètres pour remplacer les variables dans le template
    * @param {string} customTemplateId - Template ID personnalisé (optionnel, pour utiliser un template différent)
    */
-  async sendEmail({ to, subject, html, text, templateParams = {}, customTemplateId = null }) {
-    if (!this.isConfigured) {
+  async sendEmail({ to, subject, html, text, templateParams = {}, customTemplateId = null, customServiceId = null, customPrivateKey = null, customPublicKey = null }) {
+    // Utiliser les paramètres personnalisés si fournis (pour 2FA), sinon utiliser les paramètres par défaut
+    const serviceIdToUse = customServiceId || this.serviceId;
+    const templateIdToUse = customTemplateId || this.templateId;
+    const privateKeyToUse = customPrivateKey || this.privateKey;
+    const publicKeyToUse = customPublicKey || this.publicKey;
+    
+    if (!serviceIdToUse || !templateIdToUse || !privateKeyToUse) {
       return {
         success: false,
         error: 'EmailJS non configuré. EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID et EMAILJS_PRIVATE_KEY requis.',
       };
     }
-
-    // Utiliser le template personnalisé si fourni, sinon utiliser le template par défaut
-    const templateIdToUse = customTemplateId || this.templateId;
 
     try {
       // Préparer les paramètres du template
@@ -90,6 +93,8 @@ class EmailJSService {
         password: templateParams.password || '',
         login_url: templateParams.loginUrl || templateParams.login_url || '',
         reset_url: templateParams.resetUrl || templateParams.reset_url || '',
+        code: templateParams.code || templateParams.verification_code || '',
+        verification_code: templateParams.verification_code || templateParams.code || '',
         // Ajouter tous les autres paramètres personnalisés
         ...templateParams,
       };
@@ -101,20 +106,24 @@ class EmailJSService {
         password: emailjsTemplateParams.password ? '***' : '(vide)',
         login_url: emailjsTemplateParams.login_url || '(vide)',
         reset_url: emailjsTemplateParams.reset_url || '(vide)',
+        code: emailjsTemplateParams.code ? '***' : '(vide)',
       });
 
       // Utiliser le package officiel @emailjs/nodejs pour les appels backend
       // Ce package nécessite les deux clés : publicKey (User ID) et privateKey (API Key)
       // La privateKey est utilisée pour l'authentification backend
       // La publicKey est utilisée pour identifier le compte
-      if (!this.publicKey) {
+      if (!publicKeyToUse) {
         console.warn('⚠️ EmailJS : Public Key manquante. Elle est recommandée pour les appels backend.');
         console.warn('   💡 Ajoutez EMAILJS_PUBLIC_KEY sur Railway pour une meilleure compatibilité.');
       }
       
-      console.log(`📤 Envoi EmailJS à ${to} via service ${this.serviceId}, template ${templateIdToUse}`);
-      console.log(`   Public Key: ${this.publicKey ? '✅ Configurée' : '❌ Manquante'}`);
+      console.log(`📤 Envoi EmailJS à ${to} via service ${serviceIdToUse}, template ${templateIdToUse}`);
+      console.log(`   Public Key: ${publicKeyToUse ? '✅ Configurée' : '❌ Manquante'}`);
       console.log(`   Private Key: ✅ Configurée`);
+      if (customServiceId) {
+        console.log(`   ℹ️ Utilisation du compte EmailJS 2FA (séparé)`);
+      }
 
       // Utiliser l'API REST directement au lieu du package (évite les problèmes de modules ESM)
       // Documentation: https://www.emailjs.com/docs/rest-api/send/
@@ -122,11 +131,11 @@ class EmailJSService {
       
       // Pour les appels backend avec Private Key, utiliser accessToken dans le body
       const requestBody = {
-        service_id: this.serviceId,
+        service_id: serviceIdToUse,
         template_id: templateIdToUse,
-        user_id: this.publicKey || '', // Public Key (User ID) - recommandée
+        user_id: publicKeyToUse || '', // Public Key (User ID) - recommandée
         template_params: emailjsTemplateParams,
-        accessToken: this.privateKey, // Private Key (API Key) - REQUISE pour backend
+        accessToken: privateKeyToUse, // Private Key (API Key) - REQUISE pour backend
       };
 
       const response = await fetch(emailjsApiUrl, {

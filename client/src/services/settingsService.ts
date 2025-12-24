@@ -35,8 +35,9 @@ export interface TwoFactorStatus {
 
 export interface TwoFactorEnableResponse {
   success: boolean;
-  message: string;
+  message?: string;
   emailSent: boolean;
+  error?: string;
 }
 
 /**
