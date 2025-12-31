@@ -20,6 +20,18 @@ export const listUsers = async (req, res) => {
         teacherStatus: true,
         employmentStartDate: true,
         employmentEndDate: true,
+        function: true,
+        userToPermissions: {
+          select: {
+            permission: {
+              select: {
+                id: true,
+                key: true,
+                name: true,
+              },
+            },
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -43,7 +55,8 @@ export const createUser = async (req, res) => {
       teacherLevel,
       teacherStatus,
       employmentStartDate,
-      employmentEndDate
+      employmentEndDate,
+      function: adminFunction
     } = req.body;
     
     if (!email || !password || !firstName || !lastName || !role) {
@@ -73,6 +86,7 @@ export const createUser = async (req, res) => {
         teacherStatus: teacherStatus || null,
         employmentStartDate: employmentStartDate ? new Date(employmentStartDate) : null,
         employmentEndDate: employmentEndDate ? new Date(employmentEndDate) : null,
+        function: adminFunction || null,
       },
       select: { 
         id: true, 
@@ -86,6 +100,7 @@ export const createUser = async (req, res) => {
         teacherStatus: true,
         employmentStartDate: true,
         employmentEndDate: true,
+        function: true,
         createdAt: true 
       },
     });
@@ -116,6 +131,7 @@ export const getUserById = async (req, res) => {
         teacherStatus: true,
         employmentStartDate: true,
         employmentEndDate: true,
+        function: true,
       },
     });
     if (!user) return res.status(404).json({ error: 'Utilisateur non trouvé' });
@@ -138,7 +154,8 @@ export const updateUser = async (req, res) => {
       teacherLevel,
       teacherStatus,
       employmentStartDate,
-      employmentEndDate
+      employmentEndDate,
+      function: adminFunction
     } = req.body;
     const user = await prisma.user.update({
       where: { id },
@@ -152,6 +169,7 @@ export const updateUser = async (req, res) => {
         teacherStatus: teacherStatus ?? null,
         employmentStartDate: employmentStartDate ? new Date(employmentStartDate) : null,
         employmentEndDate: employmentEndDate ? new Date(employmentEndDate) : null,
+        function: adminFunction !== undefined ? (adminFunction || null) : undefined,
       },
       select: { 
         id: true, 
@@ -165,6 +183,7 @@ export const updateUser = async (req, res) => {
         teacherStatus: true,
         employmentStartDate: true,
         employmentEndDate: true,
+        function: true,
         updatedAt: true 
       },
     });
@@ -209,6 +228,7 @@ export const getCurrentUser = async (req, res) => {
         language: true,
         emailNotifications: true,
         adminThemeColor: true,
+        function: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -374,6 +394,166 @@ export const updatePreferences = async (req, res) => {
   } catch (err) {
     console.error('updatePreferences error:', err);
     res.status(500).json({ error: 'Erreur lors de la mise à jour des préférences' });
+  }
+};
+
+/**
+ * Récupère les permissions d'un utilisateur (directes + via customRole)
+ */
+export const getUserPermissions = async (req, res) => {
+  try {
+    const userId = Number(req.params.id);
+    
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        role: true,
+        customRole: {
+          select: {
+            permissions: {
+              select: {
+                id: true,
+                key: true,
+                name: true,
+                description: true,
+                category: true,
+              },
+            },
+          },
+        },
+        userToPermissions: {
+          select: {
+            permission: {
+              select: {
+                id: true,
+                key: true,
+                name: true,
+                description: true,
+                category: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'Utilisateur non trouvé' });
+    }
+
+    // Super-Admin a toutes les permissions
+    if (user.role === 'SUPER_ADMIN') {
+      const allPermissions = await prisma.permission.findMany({
+        select: {
+          id: true,
+          key: true,
+          name: true,
+          description: true,
+          category: true,
+        },
+      });
+      return res.json({ permissions: allPermissions, isSuperAdmin: true });
+    }
+
+    // Combiner les permissions du customRole et les permissions directes
+    const rolePermissions = user.customRole?.permissions || [];
+    const directPerms = (user.userToPermissions || []).map(utp => utp.permission);
+    
+    // Créer un Set pour éviter les doublons
+    const permissionMap = new Map();
+    
+    [...rolePermissions, ...directPerms].forEach(perm => {
+      permissionMap.set(perm.key, perm);
+    });
+
+    const allPermissions = Array.from(permissionMap.values());
+
+    res.json({ permissions: allPermissions, isSuperAdmin: false });
+  } catch (err) {
+    console.error('getUserPermissions error:', err);
+    res.status(500).json({ error: 'Erreur lors de la récupération des permissions' });
+  }
+};
+
+/**
+ * Met à jour les permissions directes d'un utilisateur
+ */
+export const updateUserPermissions = async (req, res) => {
+  try {
+    const userId = Number(req.params.id);
+    const { permissions } = req.body; // Array de permission keys
+
+    if (!Array.isArray(permissions)) {
+      return res.status(400).json({ error: 'permissions doit être un tableau' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'Utilisateur non trouvé' });
+    }
+
+    // Super-Admin ne peut pas avoir ses permissions modifiées
+    if (user.role === 'SUPER_ADMIN') {
+      return res.status(400).json({ error: 'Les permissions du Super-Admin ne peuvent pas être modifiées' });
+    }
+
+    // Récupérer les IDs des permissions à partir des keys
+    const permissionRecords = await prisma.permission.findMany({
+      where: {
+        key: { in: permissions },
+      },
+      select: { id: true },
+    });
+
+    const permissionIds = permissionRecords.map(p => p.id);
+
+    // Supprimer toutes les permissions directes existantes et les remplacer
+    await prisma.userToPermission.deleteMany({
+      where: { userId },
+    });
+
+    // Ajouter les nouvelles permissions
+    if (permissionIds.length > 0) {
+      await prisma.userToPermission.createMany({
+        data: permissionIds.map(permissionId => ({
+          userId,
+          permissionId,
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    // Récupérer les permissions mises à jour
+    const updatedUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        userToPermissions: {
+          select: {
+            permission: {
+              select: {
+                id: true,
+                key: true,
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    res.json({ 
+      success: true, 
+      message: 'Permissions mises à jour avec succès',
+      permissions: (updatedUser?.userToPermissions || []).map(utp => utp.permission),
+    });
+  } catch (err) {
+    console.error('updateUserPermissions error:', err);
+    res.status(500).json({ error: 'Erreur lors de la mise à jour des permissions' });
   }
 };
 

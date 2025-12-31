@@ -19,6 +19,8 @@ router.post('/', requireRole('SUPER_ADMIN', 'ADMINISTRATION'), userController.cr
 router.get('/:id', requireRole('SUPER_ADMIN', 'ADMINISTRATION'), userController.getUserById);
 router.put('/:id', requireRole('SUPER_ADMIN', 'ADMINISTRATION'), userController.updateUser);
 router.delete('/:id', requireRole('SUPER_ADMIN', 'ADMINISTRATION'), userController.deleteUser);
+router.get('/:id/permissions', requireRole('SUPER_ADMIN', 'ADMINISTRATION'), userController.getUserPermissions);
+router.put('/:id/permissions', requireRole('SUPER_ADMIN', 'ADMINISTRATION'), userController.updateUserPermissions);
 
 export default router;
 

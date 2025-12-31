@@ -13,7 +13,8 @@
     "db:migrate:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "db:seed": "node prisma/seed.js",
-    "db:seed-permissions": "node prisma/seed-permissions.js"
+    "db:seed-permissions": "node prisma/seed-permissions.js",
+    "db:seed-superadmin": "node prisma/seed-superadmin.js"
   },
   "keywords": [],
   "author": "",

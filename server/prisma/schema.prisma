@@ -30,6 +30,9 @@ model User {
   employmentStartDate DateTime? // Date de début d'emploi
   employmentEndDate   DateTime? // Date de fin (pour vacataires et consultants)
 
+  // Champs spécifiques aux administrateurs
+  function            String? // Fonction de l'administrateur (Directeur, Fondateur, Secrétaire, etc.)
+
   // Préférences utilisateur
   theme              String? @default("light") // "light" ou "dark"
   language           String? @default("fr") // "fr" ou "en"
@@ -51,8 +54,9 @@ model User {
   createdBulletins         Bulletin[]           @relation("BulletinCreator") // Bulletins créés par cet utilisateur
   sentMessages             Message[]            @relation("MessageSender") // Messages envoyés
   receivedMessages         Message[]            @relation("MessageReceiver") // Messages reçus
-  notifications            Notification[]       @relation("UserNotifications") // Notifications reçues
+  notifications            Notification[]       @relation("UserNotifications") // Notifications reçus
   createdAssignments       Assignment[]         @relation("AssignmentTeacher") // Devoirs créés
+  userToPermissions        UserToPermission[]   @relation("UserToPermission_user") // Permissions directes assignées à l'utilisateur
 
   @@map("users")
 }
@@ -103,6 +107,8 @@ model Permission {
   roles             Role[]
   // Opposite side of RoleToPermission relation
   roleToPermissions RoleToPermission[] @relation("RoleToPermission_permission")
+  // Opposite side of UserToPermission relation
+  userToPermissions UserToPermission[] @relation("UserToPermission_permission")
 
   @@map("permissions")
 }
@@ -117,6 +123,18 @@ model RoleToPermission {
 
   @@unique([roleId, permissionId])
   @@map("_role_to_permission")
+}
+
+// Table de jonction Utilisateurs-Permissions (permissions directes)
+model UserToPermission {
+  userId       Int
+  permissionId Int
+
+  user       User       @relation("UserToPermission_user", fields: [userId], references: [id], onDelete: Cascade)
+  permission Permission @relation("UserToPermission_permission", fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, permissionId])
+  @@map("_user_to_permission")
 }
 
 // Add explicit opposite relation fields on Role and Permission models:

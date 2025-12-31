@@ -54,7 +54,7 @@ export const requirePermission = (permissionKey) => {
       const { getPrisma } = await import('../utils/prisma.js');
       const prisma = getPrisma();
 
-      // Vérifier si l'utilisateur a un customRole qui possède la permission
+      // Vérifier si l'utilisateur a la permission via customRole ou permissions directes
       const user = await prisma.user.findUnique({
         where: { id: req.user.id },
         select: {
@@ -67,10 +67,22 @@ export const requirePermission = (permissionKey) => {
               },
             },
           },
+          userToPermissions: {
+            where: {
+              permission: {
+                key: permissionKey,
+              },
+            },
+            select: { id: true },
+          },
         },
       });
 
-      const hasPermission = Boolean(user?.customRole?.permissions?.length);
+      // Vérifier si l'utilisateur a la permission via customRole ou permissions directes
+      const hasPermissionViaRole = Boolean(user?.customRole?.permissions?.length);
+      const hasPermissionDirect = Boolean(user?.userToPermissions?.length);
+      const hasPermission = hasPermissionViaRole || hasPermissionDirect;
+
       if (!hasPermission) {
         return res.status(403).json({ error: 'Permission refusée' });
       }
