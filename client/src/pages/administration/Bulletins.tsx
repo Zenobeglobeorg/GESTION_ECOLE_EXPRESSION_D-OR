@@ -3,6 +3,7 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { AdminLayout } from '../../components/admin/AdminLayout';
+import { ProtectedContent } from '../../components/permissions/ProtectedContent';
 import { BulletinGenerator } from '../../components/bulletins/BulletinGenerator';
 import * as studentService from '../../services/studentService';
 import * as classService from '../../services/classService';
@@ -117,13 +118,18 @@ export const Bulletins = () => {
       title={t('bulletins.title') || 'Génération des Bulletins'}
       subtitle={t('bulletins.subtitle') || 'Générez et imprimez les bulletins scolaires des élèves'}
     >
-      {error && (
-        <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
-          {error}
+      <ProtectedContent permission="reports.generate" fallback={
+        <div className="p-4 rounded-xl border border-yellow-200 bg-yellow-50 text-yellow-700">
+          Vous n'avez pas la permission de générer des bulletins.
         </div>
-      )}
+      }>
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
+            {error}
+          </div>
+        )}
 
-      <div className="space-y-6">
+        <div className="space-y-6">
         {/* Filtres */}
         <Card className="border-0 shadow-lg dark:bg-gray-800">
           <div className="p-6">
@@ -136,6 +142,7 @@ export const Bulletins = () => {
                   {t('bulletins.filterByClass') || 'Filtrer par classe'}
                 </label>
                 <select
+                  title="Sélectionner une classe"
                   value={classFilter || ''}
                   onChange={(e) => setClassFilter(e.target.value ? parseInt(e.target.value) : null)}
                   className="w-full px-3 py-2 border border-blue-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-700 text-blue-900 dark:text-white"
@@ -233,14 +240,16 @@ export const Bulletins = () => {
                             {studentClass?.level || '—'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleGenerateBulletin(student)}
-                              className="border-yellow-400 dark:border-yellow-600 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/30 hover:border-yellow-500"
-                            >
-                              📄 {t('bulletins.generate') || 'Générer le bulletin'}
-                            </Button>
+                            <ProtectedContent permission="reports.generate">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleGenerateBulletin(student)}
+                                className="border-yellow-400 dark:border-yellow-600 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/30 hover:border-yellow-500"
+                              >
+                                📄 {t('bulletins.generate') || 'Générer le bulletin'}
+                              </Button>
+                            </ProtectedContent>
                           </td>
                         </tr>
                       );
@@ -288,6 +297,7 @@ export const Bulletins = () => {
           </div>
         </div>
       )}
+      </ProtectedContent>
     </AdminLayout>
   );
 };

@@ -2,6 +2,7 @@
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { AdminLayout } from "../../components/admin/AdminLayout";
+import { ProtectedContent } from "../../components/permissions/ProtectedContent";
 import * as studentService from "../../services/studentService";
 import * as userService from "../../services/userService";
 
@@ -109,20 +110,25 @@ export const StudentsAssociate = () => {
       title="Association Élèves / Parents"
       subtitle="Sélectionnez un élève et un parent à relier entre eux."
     >
-      {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
-          {error}
+      <ProtectedContent permission="students.update" fallback={
+        <div className="p-4 rounded-xl border border-yellow-200 bg-yellow-50 text-yellow-700">
+          Vous n'avez pas la permission d'associer des élèves aux parents.
         </div>
-      )}
+      }>
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+            {error}
+          </div>
+        )}
 
-      <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-        <p className="text-sm text-blue-900">
-          <strong>Note :</strong> Cette fonctionnalité permet d'associer ou de réassocier un élève à un parent. 
-          Vous pouvez également changer l'association d'un élève déjà associé.
-        </p>
-      </div>
+        <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <p className="text-sm text-blue-900">
+            <strong>Note :</strong> Cette fonctionnalité permet d'associer ou de réassocier un élève à un parent. 
+            Vous pouvez également changer l'association d'un élève déjà associé.
+          </p>
+        </div>
 
-      <form onSubmit={handleAssociate} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <form onSubmit={handleAssociate} className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="border-0 shadow-lg">
           <div className="p-4">
             <h2 className="font-bold text-lg text-blue-900 mb-3">Sélection de l&apos;élève</h2>
@@ -226,16 +232,19 @@ export const StudentsAssociate = () => {
           </div>
         </Card>
 
-        <div className="col-span-1 md:col-span-2 flex justify-end">
-          <Button
-            type="submit"
-            disabled={!selectedStudent || !selectedParent || isAssociating}
-            className="px-8 py-3 bg-gradient-to-r from-blue-600 via-blue-700 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isAssociating ? 'Association en cours...' : "Confirmer l'association"}
-          </Button>
-        </div>
-      </form>
+          <div className="col-span-1 md:col-span-2 flex justify-end">
+            <ProtectedContent permission="students.update">
+              <Button
+                type="submit"
+                disabled={!selectedStudent || !selectedParent || isAssociating}
+                className="px-8 py-3 bg-gradient-to-r from-blue-600 via-blue-700 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isAssociating ? 'Association en cours...' : "Confirmer l'association"}
+              </Button>
+            </ProtectedContent>
+          </div>
+        </form>
+      </ProtectedContent>
     </AdminLayout>
   );
 };

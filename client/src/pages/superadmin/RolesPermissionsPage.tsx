@@ -8,6 +8,7 @@ import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
 import * as roleService from '../../services/roleService';
 import * as permissionService from '../../services/permissionService';
+import * as userService from '../../services/userService';
 import type { Permission, Role } from '../../services/roleService';
 import { useLanguage } from '../../contexts/LanguageContext';
 
@@ -21,6 +22,16 @@ export const RolesPermissionsPage = () => {
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  // Onglet actif : 'roles' ou 'users'
+  const [activeTab, setActiveTab] = useState<'roles' | 'users'>('roles');
+
+  // États pour la gestion des permissions utilisateurs
+  const [users, setUsers] = useState<userService.UserWithDate[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const [selectedUserPerms, setSelectedUserPerms] = useState<string[]>([]);
+  const [loadingUserPerms, setLoadingUserPerms] = useState(false);
 
   const [roleFormData, setRoleFormData] = useState({
     name: '',
@@ -37,18 +48,61 @@ export const RolesPermissionsPage = () => {
     try {
       setIsLoading(true);
       setError(null);
-      const [rolesData, permissionsData] = await Promise.all([
+      const [rolesData, permissionsData, usersData] = await Promise.all([
         roleService.getRoles(),
         permissionService.getPermissions(),
+        userService.getUsers(),
       ]);
       setRoles(rolesData);
       setPermissions(permissionsData);
+      setUsers(usersData);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erreur lors du chargement des données';
       setError(errorMessage);
       console.error('Erreur:', err);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadUserPermissions = async (userId: number) => {
+    setLoadingUserPerms(true);
+    setSelectedUserPerms([]);
+    try {
+      const data = await userService.getUserPermissions(userId);
+      const permissionKeys = (data.permissions || []).map((p: { key: string }) => p.key);
+      setSelectedUserPerms(permissionKeys);
+    } catch (err) {
+      console.warn('Could not load user permissions', err);
+      setError(err instanceof Error ? err.message : 'Erreur lors du chargement des permissions');
+    } finally {
+      setLoadingUserPerms(false);
+    }
+  };
+
+  const handleToggleUserPermission = (key: string) => {
+    setSelectedUserPerms(prev => 
+      prev.includes(key) 
+        ? prev.filter(p => p !== key) 
+        : [...prev, key]
+    );
+  };
+
+  const handleSaveUserPermissions = async () => {
+    if (!selectedUserId) {
+      setError('Sélectionnez un utilisateur');
+      return;
+    }
+    try {
+      setError(null);
+      setSuccess(null);
+      await userService.updateUserPermissions(selectedUserId, selectedUserPerms);
+      setSuccess('Permissions mises à jour avec succès');
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la sauvegarde';
+      setError(errorMessage);
+      setTimeout(() => setError(null), 5000);
     }
   };
 
@@ -132,31 +186,65 @@ export const RolesPermissionsPage = () => {
             <p className="text-gray-600 dark:text-gray-400">{t('roles.subtitle')}</p>
           </div>
 
-          {/* Barre d'actions */}
-          <div className="mb-6 flex items-center justify-end">
-            <Button
-              onClick={() => setIsCreateRoleModalOpen(true)}
-              style={{ backgroundColor: '#fbbf24' }}
-              className="flex items-center gap-2"
+          {/* Onglets */}
+          <div className="mb-6 flex gap-2 border-b border-gray-200 dark:border-gray-700">
+            <button
+              type="button"
+              onClick={() => setActiveTab('roles')}
+              className={`px-4 py-2 font-medium text-sm transition-colors ${
+                activeTab === 'roles'
+                  ? 'border-b-2 border-yellow-400 text-yellow-600 dark:text-yellow-400'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+              }`}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              {t('roles.newRole')}
-            </Button>
+              Gestion des Rôles
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('users')}
+              className={`px-4 py-2 font-medium text-sm transition-colors ${
+                activeTab === 'users'
+                  ? 'border-b-2 border-yellow-400 text-yellow-600 dark:text-yellow-400'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+              }`}
+            >
+              Permissions Utilisateurs
+            </button>
           </div>
 
-          {/* Message d'erreur */}
+          {/* Barre d'actions */}
+          {activeTab === 'roles' && (
+            <div className="mb-6 flex items-center justify-end">
+              <Button
+                onClick={() => setIsCreateRoleModalOpen(true)}
+                style={{ backgroundColor: '#fbbf24' }}
+                className="flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                {t('roles.newRole')}
+              </Button>
+            </div>
+          )}
+
+          {/* Messages d'erreur et de succès */}
           {error && (
             <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-lg">
               {error}
             </div>
           )}
+          {success && (
+            <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 rounded-lg">
+              {success}
+            </div>
+          )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Liste des Rôles */}
-            <div className="lg:col-span-1">
-              <Card title={t('roles.createdRoles')} className="border-0 shadow-lg dark:bg-gray-800">
+          {activeTab === 'roles' ? (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Liste des Rôles */}
+              <div className="lg:col-span-1">
+                <Card title={t('roles.createdRoles')} className="border-0 shadow-lg dark:bg-gray-800">
                 {isLoading ? (
                   <div className="text-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-2"></div>
@@ -276,6 +364,98 @@ export const RolesPermissionsPage = () => {
               )}
             </div>
           </div>
+          ) : (
+            /* Section Permissions Utilisateurs */
+            <Card className="border-0 shadow-lg dark:bg-gray-800 max-w-5xl">
+              <div className="space-y-6">
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300" htmlFor="permissions-user">
+                    Utilisateur
+                  </label>
+                  <select
+                    id="permissions-user"
+                    className="form-control dark:bg-gray-700 dark:text-white dark:border-gray-600"
+                    value={selectedUserId ?? ''}
+                    onChange={(e) => {
+                      const id = e.target.value ? Number(e.target.value) : null;
+                      setSelectedUserId(id);
+                      if (id) loadUserPermissions(id);
+                    }}
+                  >
+                    <option value="">Sélectionner un utilisateur</option>
+                    {users
+                      .filter(u => u.role !== 'SUPER_ADMIN') // Exclure les super-admins
+                      .map(u => (
+                        <option key={u.id} value={u.id}>
+                          {u.firstName ?? u.email} {u.lastName ?? ''} ({u.role === 'ADMINISTRATION' ? 'Admin' : u.role === 'TEACHER' ? 'Enseignant' : u.role === 'PARENT' ? 'Parent' : u.role})
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                {selectedUserId && (
+                  <>
+                    <div className="space-y-3">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Permissions ({selectedUserPerms.length} sélectionnées)
+                      </label>
+                      <div className="max-h-96 overflow-y-auto space-y-6 border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-white dark:bg-gray-800">
+                        {categories.map((category) => {
+                          const categoryPerms = permissions.filter(p => p.category === category.key);
+                          
+                          return (
+                            <div key={category.key}>
+                              <h4 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                                <span>{category.icon}</span>
+                                {category.label}
+                              </h4>
+                              <div className="space-y-2">
+                                {categoryPerms.map((perm) => (
+                                  <label
+                                    key={perm.id}
+                                    className="flex items-start gap-3 p-3 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedUserPerms.includes(perm.key)}
+                                      onChange={() => handleToggleUserPermission(perm.key)}
+                                      className="mt-1 w-4 h-4 text-yellow-600 dark:text-yellow-500 border-gray-300 dark:border-gray-600 rounded focus:ring-yellow-500 dark:focus:ring-yellow-400 bg-white dark:bg-gray-700"
+                                    />
+                                    <div className="flex-1">
+                                      <p className="text-sm font-medium text-gray-900 dark:text-white">{perm.name}</p>
+                                      {perm.description && (
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{perm.description}</p>
+                                      )}
+                                    </div>
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end">
+                      <Button
+                        onClick={handleSaveUserPermissions}
+                        disabled={loadingUserPerms}
+                        className="bg-linear-to-r from-blue-600 via-blue-700 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                      >
+                        {loadingUserPerms ? 'Enregistrement...' : 'Enregistrer les permissions'}
+                      </Button>
+                    </div>
+                  </>
+                )}
+
+                {!selectedUserId && (
+                  <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+                    <p>Sélectionnez un utilisateur pour gérer ses permissions</p>
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
         </div>
       </main>
 

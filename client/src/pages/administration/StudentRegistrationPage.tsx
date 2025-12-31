@@ -5,6 +5,7 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
+import { ProtectedContent } from '../../components/permissions/ProtectedContent';
 import * as studentService from '../../services/studentService';
 import * as parentService from '../../services/parentService';
 import * as classService from '../../services/classService';
@@ -251,35 +252,40 @@ export const StudentRegistrationPage = () => {
 
       <main className="pt-16">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{t('student.title')}</h1>
-            <p className="text-gray-600 dark:text-gray-400">{t('student.subtitle')}</p>
-          </div>
-
-          {/* Messages d'erreur et de succès */}
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-lg">
-              {error}
+          <ProtectedContent permission="students.create" fallback={
+            <div className="p-4 rounded-xl border border-yellow-200 bg-yellow-50 text-yellow-700">
+              Vous n'avez pas la permission de créer des élèves.
             </div>
-          )}
-
-          {success && (
-            <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 rounded-lg">
-              {success}
+          }>
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{t('student.title')}</h1>
+              <p className="text-gray-600 dark:text-gray-400">{t('student.subtitle')}</p>
             </div>
-          )}
 
-          {foundParent && (
-            <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400 rounded-lg">
-              <p className="font-semibold">Parent trouvé :</p>
-              <p>{foundParent.firstName} {foundParent.lastName} ({foundParent.email})</p>
-              {foundParent.students && foundParent.students.length > 0 && (
-                <p className="text-sm mt-1">A déjà {foundParent.students.length} enfant(s) inscrit(s)</p>
-              )}
-            </div>
-          )}
+            {/* Messages d'erreur et de succès */}
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-lg">
+                {error}
+              </div>
+            )}
 
-          <form onSubmit={handleSubmit}>
+            {success && (
+              <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 rounded-lg">
+                {success}
+              </div>
+            )}
+
+            {foundParent && (
+              <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400 rounded-lg">
+                <p className="font-semibold">Parent trouvé :</p>
+                <p>{foundParent.firstName} {foundParent.lastName} ({foundParent.email})</p>
+                {foundParent.students && foundParent.students.length > 0 && (
+                  <p className="text-sm mt-1">A déjà {foundParent.students.length} enfant(s) inscrit(s)</p>
+                )}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit}>
             <Card className="mb-6 border-0 shadow-lg dark:bg-gray-800">
               <div className="bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 px-6 py-4 rounded-t-lg mb-4">
                 <h3 className="text-blue-900 dark:text-blue-900 font-bold text-xl text-center">{t('student.studentInfo')}</h3>
@@ -618,15 +624,18 @@ export const StudentRegistrationPage = () => {
               </div>
             </Card>
 
-            <div className="flex justify-end gap-3">
-              <Button type="button" variant="outline" onClick={() => navigate(getReturnPath())}>
-                {t('student.cancel')}
-              </Button>
-              <Button type="submit" style={{ backgroundColor: '#fbbf24' }} disabled={isLoading}>
-                {isLoading ? t('student.saving') : t('student.save')}
-              </Button>
-            </div>
-          </form>
+              <div className="flex justify-end gap-3">
+                <Button type="button" variant="outline" onClick={() => navigate(getReturnPath())}>
+                  {t('student.cancel')}
+                </Button>
+                <ProtectedContent permission="students.create">
+                  <Button type="submit" style={{ backgroundColor: '#fbbf24' }} disabled={isLoading}>
+                    {isLoading ? t('student.saving') : t('student.save')}
+                  </Button>
+                </ProtectedContent>
+              </div>
+            </form>
+          </ProtectedContent>
         </div>
       </main>
 

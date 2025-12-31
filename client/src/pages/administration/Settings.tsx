@@ -2,6 +2,7 @@
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { AdminLayout } from "../../components/admin/AdminLayout";
+import { ProtectedContent } from "../../components/permissions/ProtectedContent";
 import * as settingsService from "../../services/settingsService";
 
 export const Settings = () => {
@@ -209,16 +210,21 @@ export const Settings = () => {
       title="Paramètres Système"
       subtitle="Configurez les informations de l'établissement, les options académiques et les sauvegardes."
     >
-      {error && (
-        <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
-          {error}
+      <ProtectedContent permission="users.read" fallback={
+        <div className="p-4 rounded-xl border border-yellow-200 bg-yellow-50 text-yellow-700">
+          Vous n'avez pas la permission d'accéder aux paramètres.
         </div>
-      )}
-      {success && (
-        <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-400">
-          {success}
-        </div>
-      )}
+      }>
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
+            {error}
+          </div>
+        )}
+        {success && (
+          <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-400">
+            {success}
+          </div>
+        )}
 
       <div className="flex flex-wrap gap-2 mb-6">
         {tabs.map((tab) => (
@@ -536,6 +542,7 @@ export const Settings = () => {
     </div>
         </Card>
       )}
+      </ProtectedContent>
     </AdminLayout>
   );
 };

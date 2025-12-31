@@ -214,13 +214,17 @@ export const Navbar = ({ onMenuClick }: NavbarProps) => {
               {user?.lastName?.charAt(0)}
             </div>
 
-            {/* Nom et rôle */}
+            {/* Nom et fonction/rôle */}
             <div className="text-left hidden sm:block">
               <p className="text-sm font-medium text-gray-900 dark:text-white">
                 {user?.firstName} {user?.lastName}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                {user?.role === 'SUPER_ADMIN' ? 'Super-Administrateur' : user?.role}
+                {(user?.role === 'ADMINISTRATION' || user?.role === 'SUPER_ADMIN') && user?.function
+                  ? user.function
+                  : user?.role === 'SUPER_ADMIN'
+                  ? 'Super-Administrateur'
+                  : user?.role}
               </p>
             </div>
 
@@ -244,6 +248,13 @@ export const Navbar = ({ onMenuClick }: NavbarProps) => {
               <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
                 <p className="text-sm font-semibold text-gray-900 dark:text-white">
                   {user?.firstName} {user?.lastName}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  {(user?.role === 'ADMINISTRATION' || user?.role === 'SUPER_ADMIN') && user?.function
+                    ? user.function
+                    : user?.role === 'SUPER_ADMIN'
+                    ? 'Super-Administrateur'
+                    : user?.role}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{user?.email}</p>
               </div>

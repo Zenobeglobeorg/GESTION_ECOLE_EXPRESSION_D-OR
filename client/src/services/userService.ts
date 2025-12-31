@@ -7,6 +7,7 @@ export interface UserWithDate extends User {
   teacherStatus?: 'PERMANENT' | 'CONSULTANT' | 'VACATAIRE' | null;
   employmentStartDate?: string | null;
   employmentEndDate?: string | null;
+  function?: string | null; // Fonction de l'administrateur
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -23,6 +24,7 @@ export interface CreateUserData {
   teacherStatus?: 'PERMANENT' | 'CONSULTANT' | 'VACATAIRE';
   employmentStartDate?: string;
   employmentEndDate?: string;
+  function?: string; // Fonction de l'administrateur (Directeur, Fondateur, etc.)
 }
 
 export interface UpdateUserData {
@@ -35,6 +37,7 @@ export interface UpdateUserData {
   teacherStatus?: 'PERMANENT' | 'CONSULTANT' | 'VACATAIRE' | null;
   employmentStartDate?: string | null;
   employmentEndDate?: string | null;
+  function?: string | null; // Fonction de l'administrateur
 }
 
 /**
@@ -155,5 +158,51 @@ export const deleteUser = async (userId: number): Promise<void> => {
     const error = await response.json();
     throw new Error(error.error || 'Erreur lors de la suppression de l\'utilisateur');
   }
+};
+
+/**
+ * Récupère les permissions d'un utilisateur
+ */
+export const getUserPermissions = async (userId: number): Promise<{ permissions: Array<{ id: number; key: string; name: string; description?: string; category: string }>; isSuperAdmin: boolean }> => {
+  const token = getToken();
+  if (!token) throw new Error('Non authentifié');
+
+  const response = await fetch(`${API_BASE_URL}/api/users/${userId}/permissions`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors de la récupération des permissions');
+  }
+
+  return response.json();
+};
+
+/**
+ * Met à jour les permissions d'un utilisateur
+ */
+export const updateUserPermissions = async (userId: number, permissionKeys: string[]): Promise<{ success: boolean; message: string; permissions: Array<{ id: number; key: string; name: string }> }> => {
+  const token = getToken();
+  if (!token) throw new Error('Non authentifié');
+
+  const response = await fetch(`${API_BASE_URL}/api/users/${userId}/permissions`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ permissions: permissionKeys }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors de la mise à jour des permissions');
+  }
+
+  return response.json();
 };
 

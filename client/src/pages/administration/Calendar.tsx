@@ -2,6 +2,7 @@
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { AdminLayout } from '../../components/admin/AdminLayout';
+import { ProtectedContent } from '../../components/permissions/ProtectedContent';
 import * as calendarService from '../../services/calendarService';
 
 const getTypeLabel = (type: string) => {
@@ -190,18 +191,23 @@ export const Calendar = () => {
       title="Calendrier scolaire"
       subtitle="Visualisez les événements clés, réunions et examens."
     >
-      {error && (
-        <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
-          {error}
+      <ProtectedContent permission="schedule.manage" fallback={
+        <div className="p-4 rounded-xl border border-yellow-200 bg-yellow-50 text-yellow-700">
+          Vous n'avez pas la permission de gérer le calendrier.
         </div>
-      )}
-      {success && (
-        <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-400">
-          {success}
-        </div>
-      )}
+      }>
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
+            {error}
+          </div>
+        )}
+        {success && (
+          <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-400">
+            {success}
+          </div>
+        )}
 
-      <div className="max-w-6xl grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="max-w-6xl grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2 border-0 shadow-lg">
           <div className="p-6">
             <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
@@ -298,14 +304,16 @@ export const Calendar = () => {
           <div className="p-4 space-y-3">
             <div className="flex justify-between items-center">
               <h3 className="font-semibold text-lg text-blue-900 dark:text-blue-400">Événements à venir</h3>
-              <Button
-                size="sm"
-                variant="outline"
-                className="border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400"
-                onClick={() => handleOpenModal()}
-              >
-                + Ajouter
-              </Button>
+              <ProtectedContent permission="schedule.manage">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400"
+                  onClick={() => handleOpenModal()}
+                >
+                  + Ajouter
+                </Button>
+              </ProtectedContent>
             </div>
             {loading ? (
               <div className="text-center py-4 text-gray-500 dark:text-gray-400">Chargement...</div>
@@ -327,17 +335,19 @@ export const Calendar = () => {
                     <span className="inline-block px-2 py-0.5 bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 text-xs rounded-full">
                       {getTypeLabel(event.type)}
                     </span>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 text-xs"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(event.id);
-                      }}
-                    >
-                      Supprimer
-                    </Button>
+                    <ProtectedContent permission="schedule.manage">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(event.id);
+                        }}
+                      >
+                        Supprimer
+                      </Button>
+                    </ProtectedContent>
                   </div>
                 </div>
               ))
@@ -450,18 +460,21 @@ export const Calendar = () => {
                 >
                   Annuler
                 </Button>
-                <Button
-                  type="submit"
-                  className="bg-linear-to-r from-green-500 via-green-600 to-green-600 text-white hover:from-green-600 hover:to-green-700"
-                  disabled={saving}
-                >
-                  {saving ? 'Enregistrement...' : editingEvent ? 'Modifier' : 'Créer'}
-                </Button>
+                <ProtectedContent permission="schedule.manage">
+                  <Button
+                    type="submit"
+                    className="bg-linear-to-r from-green-500 via-green-600 to-green-600 text-white hover:from-green-600 hover:to-green-700"
+                    disabled={saving}
+                  >
+                    {saving ? 'Enregistrement...' : editingEvent ? 'Modifier' : 'Créer'}
+                  </Button>
+                </ProtectedContent>
               </div>
             </form>
           </Card>
         </div>
       )}
+      </ProtectedContent>
     </AdminLayout>
   );
 };

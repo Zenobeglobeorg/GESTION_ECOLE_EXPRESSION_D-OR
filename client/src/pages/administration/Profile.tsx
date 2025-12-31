@@ -2,6 +2,7 @@
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { AdminLayout } from "../../components/admin/AdminLayout";
+import { ProtectedContent } from "../../components/permissions/ProtectedContent";
 import * as profileService from "../../services/profileService";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useLanguage } from "../../contexts/LanguageContext";
@@ -220,16 +221,21 @@ export const Profile = () => {
       title={t("profile.title")}
       subtitle={t("profile.subtitle")}
     >
-      {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-          {error}
+      <ProtectedContent permission="users.read" fallback={
+        <div className="p-4 rounded-xl border border-yellow-200 bg-yellow-50 text-yellow-700">
+          Vous n'avez pas la permission d'accéder à votre profil.
         </div>
-      )}
-      {success && (
-        <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
-          {success}
-        </div>
-      )}
+      }>
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+            {error}
+          </div>
+        )}
+        {success && (
+          <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
+            {success}
+          </div>
+        )}
 
       <div className="max-w-6xl grid grid-cols-1 md:grid-cols-4 gap-8">
         <div className="space-y-4">
@@ -516,6 +522,7 @@ export const Profile = () => {
               )}
             </div>
           </div>
+      </ProtectedContent>
     </AdminLayout>
   );
 };

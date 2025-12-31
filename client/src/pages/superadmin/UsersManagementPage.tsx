@@ -35,6 +35,17 @@ export const UsersManagementPage = () => {
     lastName: '',
     phone: '',
     role: 'ADMINISTRATION' as UserRole,
+    function: '',
+  });
+
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserWithDate | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    firstName: '',
+    lastName: '',
+    phone: '',
+    role: 'ADMINISTRATION' as UserRole,
+    function: '',
   });
 
   // Charger les données au montage et quand la vue change
@@ -95,6 +106,7 @@ export const UsersManagementPage = () => {
         lastName: '',
         phone: '',
         role: 'ADMINISTRATION',
+        function: '',
       });
       await loadUsers(); // Recharger la liste
     } catch (err) {
@@ -122,6 +134,35 @@ export const UsersManagementPage = () => {
     if (window.confirm(t('users.suspendConfirm'))) {
       // TODO: Implémenter la suspension (nécessite un champ isActive dans le modèle User)
       console.log('Suspendre utilisateur:', userId);
+    }
+  };
+
+  const handleEdit = (user: UserWithDate) => {
+    setEditingUser(user);
+    setEditFormData({
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phone: user.phone || '',
+      role: user.role,
+      function: user.function || '',
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+
+    try {
+      setError(null);
+      await userService.updateUser(editingUser.id, editFormData);
+      setIsEditModalOpen(false);
+      setEditingUser(null);
+      await loadUsers(); // Recharger la liste
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la mise à jour de l\'utilisateur';
+      setError(errorMessage);
+      console.error('Erreur:', err);
     }
   };
 
@@ -350,6 +391,11 @@ export const UsersManagementPage = () => {
                               <div className="text-sm font-medium text-gray-900 dark:text-white">
                                 {user.firstName} {user.lastName}
                               </div>
+                              {user.role === 'ADMINISTRATION' && user.function && (
+                                <div className="text-xs text-blue-600 dark:text-blue-400 font-medium mt-0.5">
+                                  {user.function}
+                                </div>
+                              )}
                               {user.phone && (
                                 <div className="text-sm text-gray-500 dark:text-gray-400">{user.phone}</div>
                               )}
@@ -366,6 +412,7 @@ export const UsersManagementPage = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex items-center justify-end gap-2">
                             <button
+                              onClick={() => handleEdit(user)}
                               className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
                               title={t('users.edit')}
                             >
@@ -581,6 +628,16 @@ export const UsersManagementPage = () => {
             </p>
           </div>
 
+          {formData.role === 'ADMINISTRATION' && (
+            <Input
+              label="Fonction"
+              value={formData.function}
+              onChange={(e) => setFormData({ ...formData, function: e.target.value })}
+              placeholder="Ex: Directeur, Fondateur, Secrétaire, etc."
+              helperText="Fonction de l'administrateur dans l'établissement"
+            />
+          )}
+
           <Input
             label={t('users.password')}
             type="password"
@@ -607,6 +664,111 @@ export const UsersManagementPage = () => {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Modal de modification */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingUser(null);
+          setEditFormData({
+            firstName: '',
+            lastName: '',
+            phone: '',
+            role: 'ADMINISTRATION',
+            function: '',
+          });
+        }}
+        title={`Modifier - ${editingUser?.firstName} ${editingUser?.lastName}`}
+        size="lg"
+      >
+        {editingUser && (
+          <form onSubmit={handleUpdate} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label={t('users.firstName')}
+                value={editFormData.firstName}
+                onChange={(e) => setEditFormData({ ...editFormData, firstName: e.target.value })}
+                required
+              />
+              <Input
+                label={t('users.lastName')}
+                value={editFormData.lastName}
+                onChange={(e) => setEditFormData({ ...editFormData, lastName: e.target.value })}
+                required
+              />
+            </div>
+
+            <Input
+              label={t('users.email')}
+              type="email"
+              value={editingUser.email}
+              disabled
+              helperText="L'email ne peut pas être modifié"
+            />
+
+            <Input
+              label={t('users.phone')}
+              type="tel"
+              value={editFormData.phone}
+              onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+            />
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t('users.accountType')}</label>
+              <select
+                title="Type de Compte"
+                value={editFormData.role}
+                onChange={(e) => setEditFormData({ ...editFormData, role: e.target.value as UserRole })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              >
+                {roles.map((role) => (
+                  <option key={role.value} value={role.value}>
+                    {role.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {editFormData.role === 'ADMINISTRATION' && (
+              <Input
+                label="Fonction"
+                value={editFormData.function}
+                onChange={(e) => setEditFormData({ ...editFormData, function: e.target.value })}
+                placeholder="Ex: Directeur, Fondateur, Secrétaire, etc."
+                helperText="Fonction de l'administrateur dans l'établissement"
+              />
+            )}
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsEditModalOpen(false);
+                  setEditingUser(null);
+                  setEditFormData({
+                    firstName: '',
+                    lastName: '',
+                    phone: '',
+                    role: 'ADMINISTRATION',
+                    function: '',
+                  });
+                }}
+              >
+                {t('users.cancel')}
+              </Button>
+              <Button
+                type="submit"
+                style={{ backgroundColor: '#fbbf24' }}
+              >
+                Enregistrer les modifications
+              </Button>
+            </div>
+          </form>
+        )}
       </Modal>
     </div>
   );

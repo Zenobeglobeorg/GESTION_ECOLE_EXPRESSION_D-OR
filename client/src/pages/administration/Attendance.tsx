@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { AdminLayout } from '../../components/admin/AdminLayout';
+import { ProtectedContent } from '../../components/permissions/ProtectedContent';
 import * as studentService from '../../services/studentService';
 import * as classService from '../../services/classService';
 import * as attendanceService from '../../services/attendanceService';
@@ -270,18 +271,23 @@ export const Attendance = () => {
       title="Gestion des Présences"
       subtitle="Enregistrer et suivre la présence des élèves"
     >
-      {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-          {error}
+      <ProtectedContent permission="attendance.manage" fallback={
+        <div className="p-4 rounded-xl border border-yellow-200 bg-yellow-50 text-yellow-700">
+          Vous n'avez pas la permission de gérer les présences.
         </div>
-      )}
-      {success && (
-        <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
-          {success}
+      }>
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+            {error}
           </div>
-      )}
+        )}
+        {success && (
+          <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
+            {success}
+          </div>
+        )}
 
-      {alerts.length > 0 && (
+        {alerts.length > 0 && (
         <Card title="Alertes et notifications" className="mb-8 border-0 shadow-lg">
             <div className="p-4 space-y-2">
             {alerts.map((alertItem, idx) => (
@@ -314,16 +320,16 @@ export const Attendance = () => {
           </Card>
       )}
 
-      <Card 
-        title="Enregistrer les présences" 
-        className="mb-8 border-0 shadow-lg dark:bg-gray-800"
-        headerActions={
-          <div className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">
-            ℹ️ {t('attendance.adminNote') || 'Note: Les enseignants enregistrent généralement les présences. Cette section permet à l\'admin de corriger ou compléter les données si nécessaire.'}
-          </div>
-        }
-      >
-            <form onSubmit={handleMarkAttendance} className="p-4 space-y-4">
+        <Card 
+          title="Enregistrer les présences" 
+          className="mb-8 border-0 shadow-lg dark:bg-gray-800"
+          headerActions={
+            <div className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">
+              ℹ️ {t('attendance.adminNote') || 'Note: Les enseignants enregistrent généralement les présences. Cette section permet à l\'admin de corriger ou compléter les données si nécessaire.'}
+            </div>
+          }
+        >
+          <form onSubmit={handleMarkAttendance} className="p-4 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="form-group">
               <label className="text-sm font-medium text-blue-900" htmlFor="attendance-date">
@@ -433,15 +439,17 @@ export const Attendance = () => {
             </div>
           )}
 
-          <Button
-            type="submit"
-            className="w-full bg-linear-to-r from-yellow-400 via-yellow-500 to-yellow-400 text-blue-900 hover:from-yellow-500 hover:to-yellow-500"
-            disabled={saving || !attendanceClass || classStudents.length === 0}
-          >
-            {saving ? 'Enregistrement...' : 'Enregistrer les présences'}
-          </Button>
-            </form>
-          </Card>
+            <ProtectedContent permission="attendance.manage">
+              <Button
+                type="submit"
+                className="w-full bg-linear-to-r from-yellow-400 via-yellow-500 to-yellow-400 text-blue-900 hover:from-yellow-500 hover:to-yellow-500"
+                disabled={saving || !attendanceClass || classStudents.length === 0}
+              >
+                {saving ? 'Enregistrement...' : 'Enregistrer les présences'}
+              </Button>
+            </ProtectedContent>
+          </form>
+        </Card>
 
       <Card title="Statistiques des présences" className="mb-8 border-0 shadow-lg">
             <div className="p-4 grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -564,22 +572,26 @@ export const Attendance = () => {
                       {att.comment || '-'}
                     </td>
                     <td className="flex gap-2 justify-end">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400"
-                        onClick={() => handleEdit(att)}
-                      >
-                        Modifier
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
-                        onClick={() => handleDeleteAttendance(att.id)}
-                      >
-                        Supprimer
-                      </Button>
+                      <ProtectedContent permission="attendance.manage">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400"
+                          onClick={() => handleEdit(att)}
+                        >
+                          Modifier
+                        </Button>
+                      </ProtectedContent>
+                      <ProtectedContent permission="attendance.manage">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
+                          onClick={() => handleDeleteAttendance(att.id)}
+                        >
+                          Supprimer
+                        </Button>
+                      </ProtectedContent>
                     </td>
                       </tr>
                 ))}
@@ -678,19 +690,22 @@ export const Attendance = () => {
                 >
                   Annuler
                 </Button>
-                <Button
-                  type="button"
-                  className="bg-linear-to-r from-green-500 via-green-600 to-green-600 text-white hover:from-green-600 hover:to-green-700"
-                  onClick={handleUpdateAttendance}
-                  disabled={saving}
-                >
-                  {saving ? 'Enregistrement...' : 'Enregistrer'}
-                </Button>
+                <ProtectedContent permission="attendance.manage">
+                  <Button
+                    type="button"
+                    className="bg-linear-to-r from-green-500 via-green-600 to-green-600 text-white hover:from-green-600 hover:to-green-700"
+                    onClick={handleUpdateAttendance}
+                    disabled={saving}
+                  >
+                    {saving ? 'Enregistrement...' : 'Enregistrer'}
+                  </Button>
+                </ProtectedContent>
               </div>
             </div>
           </Card>
         </div>
       )}
+      </ProtectedContent>
     </AdminLayout>
-    );
-  };
+  );
+};

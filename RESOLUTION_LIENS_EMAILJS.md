@@ -142,3 +142,6 @@ const resetUrl = `https://gestion-ecole-expression-d-or.vercel.app/reset-passwor
 
 Consultez `GUIDE_TEMPLATES_EMAILJS.md` pour les templates HTML complets à copier dans EmailJS.
 
+
+
+

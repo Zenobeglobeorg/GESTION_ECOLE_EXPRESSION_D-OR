@@ -4,6 +4,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
 import { AdminLayout } from '../../components/admin/AdminLayout';
+import { ProtectedContent } from '../../components/permissions/ProtectedContent';
 import * as userService from '../../services/userService';
 import * as classService from '../../services/classService';
 import * as scheduleService from '../../services/scheduleService';
@@ -525,19 +526,24 @@ export const Timetable = () => {
       title="Générer l'emploi du temps"
       subtitle="Créer et gérer les horaires des classes."
     >
-      {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
-          {error}
+      <ProtectedContent permission="schedule.manage" fallback={
+        <div className="p-4 rounded-xl border border-yellow-200 bg-yellow-50 text-yellow-700">
+          Vous n'avez pas la permission de gérer les emplois du temps.
         </div>
-      )}
+      }>
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+            {error}
+          </div>
+        )}
 
-      {success && (
-        <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg">
-          {success}
-        </div>
-      )}
+        {success && (
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg">
+            {success}
+          </div>
+        )}
 
-      <Card title="Sélection de la classe" className="mb-8 border-0 shadow-lg">
+        <Card title="Sélection de la classe" className="mb-8 border-0 shadow-lg">
         <div className="p-6">
           <div className="form-group">
             <label className="text-sm font-medium text-blue-900 mb-2 block" htmlFor="timetable-class">
@@ -615,17 +621,19 @@ export const Timetable = () => {
                               />
                             </div>
                             {timeSlots.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleRemoveTimeSlot(slot.id);
-                                }}
-                                className="mt-1 text-[10px] px-1 py-0.5 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
-                                title="Supprimer ce créneau horaire"
-                              >
-                                ✕
-                              </button>
+                              <ProtectedContent permission="schedule.manage">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRemoveTimeSlot(slot.id);
+                                  }}
+                                  className="mt-1 text-[10px] px-1 py-0.5 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                                  title="Supprimer ce créneau horaire"
+                                >
+                                  ✕
+                                </button>
+                              </ProtectedContent>
                             )}
                           </div>
                         </td>
@@ -671,18 +679,20 @@ export const Timetable = () => {
                                       </div>
                                     </>
                                   )}
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    className="mt-1 text-[10px] px-1 py-0.5 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDeleteSchedule(schedule.id);
-                                    }}
-                                  >
-                                    Supprimer
-                                  </Button>
+                                  <ProtectedContent permission="schedule.manage">
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      className="mt-1 text-[10px] px-1 py-0.5 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteSchedule(schedule.id);
+                                      }}
+                                    >
+                                      Supprimer
+                                    </Button>
+                                  </ProtectedContent>
                                 </div>
                               ) : (
                                 <div className="text-xs text-blue-400 text-center">+ Ajouter</div>
@@ -696,15 +706,17 @@ export const Timetable = () => {
                   <tfoot>
                     <tr>
                       <td className="border border-blue-100 p-2 bg-blue-50 sticky left-0 z-10 bg-blue-50">
-                        <button
-                          type="button"
-                          onClick={handleAddTimeSlot}
-                          className="w-full px-3 py-2 text-sm font-medium text-green-700 bg-green-50 border border-green-300 rounded-lg hover:bg-green-100 hover:border-green-400 transition-colors flex items-center justify-center gap-2"
-                          title="Ajouter un nouveau créneau horaire"
-                        >
-                          <span className="text-lg">+</span>
-                          <span>Ajouter une ligne</span>
-                        </button>
+                        <ProtectedContent permission="schedule.manage">
+                          <button
+                            type="button"
+                            onClick={handleAddTimeSlot}
+                            className="w-full px-3 py-2 text-sm font-medium text-green-700 bg-green-50 border border-green-300 rounded-lg hover:bg-green-100 hover:border-green-400 transition-colors flex items-center justify-center gap-2"
+                            title="Ajouter un nouveau créneau horaire"
+                          >
+                            <span className="text-lg">+</span>
+                            <span>Ajouter une ligne</span>
+                          </button>
+                        </ProtectedContent>
                       </td>
                       {days.map(day => (
                         <td key={`footer-${day}`} className="border border-blue-100 p-2 bg-gray-50">
@@ -720,28 +732,34 @@ export const Timetable = () => {
             )}
 
             <div className="flex flex-wrap gap-2 justify-center mt-6">
-              <Button
-                variant="outline"
-                className="border-green-300 text-green-700 hover:bg-green-50 hover:border-green-400"
-                onClick={handleAddTimeSlot}
-              >
-                + Ajouter un créneau horaire
-              </Button>
-              <Button
-                variant="outline"
-                className="border-green-400 text-green-800 hover:bg-green-100 hover:border-green-500"
-                onClick={handleAddMultipleTimeSlots}
-                title="Ajouter plusieurs créneaux horaires à la fois"
-              >
-                + Ajouter plusieurs créneaux
-              </Button>
-              <Button
-                variant="outline"
-                className="border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400"
-                onClick={handlePublish}
-              >
-                Publier
-              </Button>
+              <ProtectedContent permission="schedule.manage">
+                <Button
+                  variant="outline"
+                  className="border-green-300 text-green-700 hover:bg-green-50 hover:border-green-400"
+                  onClick={handleAddTimeSlot}
+                >
+                  + Ajouter un créneau horaire
+                </Button>
+              </ProtectedContent>
+              <ProtectedContent permission="schedule.manage">
+                <Button
+                  variant="outline"
+                  className="border-green-400 text-green-800 hover:bg-green-100 hover:border-green-500"
+                  onClick={handleAddMultipleTimeSlots}
+                  title="Ajouter plusieurs créneaux horaires à la fois"
+                >
+                  + Ajouter plusieurs créneaux
+                </Button>
+              </ProtectedContent>
+              <ProtectedContent permission="schedule.manage">
+                <Button
+                  variant="outline"
+                  className="border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400"
+                  onClick={handlePublish}
+                >
+                  Publier
+                </Button>
+              </ProtectedContent>
               <Button
                 variant="outline"
                 className="border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400"
@@ -863,13 +881,15 @@ export const Timetable = () => {
               />
             </div>
 
-            <Button
-              type="submit"
-              disabled={loading}
-              className="bg-linear-to-r from-yellow-400 via-yellow-500 to-yellow-400 text-blue-900 hover:from-yellow-500 hover:to-yellow-500"
-            >
-              {loading ? 'Programmation...' : 'Programmer le remplacement'}
-            </Button>
+            <ProtectedContent permission="schedule.manage">
+              <Button
+                type="submit"
+                disabled={loading}
+                className="bg-linear-to-r from-yellow-400 via-yellow-500 to-yellow-400 text-blue-900 hover:from-yellow-500 hover:to-yellow-500"
+              >
+                {loading ? 'Programmation...' : 'Programmer le remplacement'}
+              </Button>
+            </ProtectedContent>
           </form>
 
           {/* Liste des remplacements actifs */}
@@ -1013,16 +1033,19 @@ export const Timetable = () => {
             >
               Annuler
             </Button>
-            <Button
-              type="submit"
-              disabled={loading}
-              className="bg-linear-to-r from-yellow-400 via-yellow-500 to-yellow-400 text-blue-900 hover:from-yellow-500 hover:to-yellow-500"
-            >
-              {loading ? 'Enregistrement...' : editingSchedule ? 'Modifier' : 'Créer'}
-            </Button>
+            <ProtectedContent permission="schedule.manage">
+              <Button
+                type="submit"
+                disabled={loading}
+                className="bg-linear-to-r from-yellow-400 via-yellow-500 to-yellow-400 text-blue-900 hover:from-yellow-500 hover:to-yellow-500"
+              >
+                {loading ? 'Enregistrement...' : editingSchedule ? 'Modifier' : 'Créer'}
+              </Button>
+            </ProtectedContent>
           </div>
         </form>
       </Modal>
+      </ProtectedContent>
     </AdminLayout>
   );
 };

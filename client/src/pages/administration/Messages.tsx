@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect, useRef } from "react";
 import { Button } from "../../components/ui/Button";
 import { AdminLayout } from "../../components/admin/AdminLayout";
+import { ProtectedContent } from "../../components/permissions/ProtectedContent";
 import { useAuth } from "../../hooks/useAuth";
 import { useSocket } from "../../hooks/useSocket";
 import * as messageService from "../../services/messageService";
@@ -235,11 +236,16 @@ export const Messages = () => {
       title="Messagerie"
       subtitle="Communiquez avec les enseignants, parents et élèves."
     >
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-3 md:p-4 text-sm md:text-base text-red-700 mb-4">
-          {error}
+      <ProtectedContent permission="users.read" fallback={
+        <div className="p-4 rounded-xl border border-yellow-200 bg-yellow-50 text-yellow-700">
+          Vous n'avez pas la permission d'accéder à la messagerie.
         </div>
-      )}
+      }>
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-3 md:p-4 text-sm md:text-base text-red-700 mb-4">
+            {error}
+          </div>
+        )}
 
       {/* Indicateur de connexion WebSocket */}
       {!isConnected && (
@@ -411,6 +417,7 @@ export const Messages = () => {
           )}
         </div>
       </div>
+      </ProtectedContent>
     </AdminLayout>
   );
 };

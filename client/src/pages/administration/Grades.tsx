@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { AdminLayout } from '../../components/admin/AdminLayout';
+import { ProtectedContent } from '../../components/permissions/ProtectedContent';
 import * as gradeService from '../../services/gradeService';
 import * as classService from '../../services/classService';
 import * as subjectService from '../../services/subjectService';
@@ -356,18 +357,23 @@ export const Grades = () => {
       title="Valider et Modifier les Notes"
       subtitle="Gérer et valider les résultats scolaires."
     >
-      {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-          {error}
+      <ProtectedContent permission="grades.validate" fallback={
+        <div className="p-4 rounded-xl border border-yellow-200 bg-yellow-50 text-yellow-700">
+          Vous n'avez pas la permission de consulter les notes.
         </div>
-      )}
-      {success && (
-        <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
-          {success}
-        </div>
-      )}
+      }>
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+            {error}
+          </div>
+        )}
+        {success && (
+          <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
+            {success}
+          </div>
+        )}
 
-      <Card title="Filtres et Recherche" className="mb-8 border-0 shadow-lg">
+        <Card title="Filtres et Recherche" className="mb-8 border-0 shadow-lg">
         <div className="p-4 grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="form-group">
             <label className="text-sm font-medium text-blue-900" htmlFor="grade-filter-class">Classe</label>
@@ -504,53 +510,61 @@ export const Grades = () => {
                     <td className="flex flex-wrap gap-2 justify-end">
                       {grade.status === 'pending' && (
                         <>
-                          <Button
-                            size="sm"
-                            className="bg-linear-to-r from-green-500 via-green-600 to-green-600 text-white hover:from-green-600 hover:to-green-700"
-                            onClick={() => handleValidateGrade(grade.id)}
-                          >
-                            Valider
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
-                            onClick={() => handleRejectGrade(grade.id)}
-                          >
-                            Rejeter
-                          </Button>
+                          <ProtectedContent permission="grades.validate">
+                            <Button
+                              size="sm"
+                              className="bg-linear-to-r from-green-500 via-green-600 to-green-600 text-white hover:from-green-600 hover:to-green-700"
+                              onClick={() => handleValidateGrade(grade.id)}
+                            >
+                              Valider
+                            </Button>
+                          </ProtectedContent>
+                          <ProtectedContent permission="grades.validate">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
+                              onClick={() => handleRejectGrade(grade.id)}
+                            >
+                              Rejeter
+                            </Button>
+                          </ProtectedContent>
                         </>
                       )}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400"
-                        onClick={() => handleEdit(grade)}
-                      >
-                        Modifier
-                      </Button>
-                      {grade.student && (
+                      <ProtectedContent permission="grades.modify">
                         <Button
                           size="sm"
                           variant="outline"
-                          className="border-yellow-400 text-yellow-700 hover:bg-yellow-50 hover:border-yellow-500"
-                          onClick={() => {
-                            const studentClass = grade.student!.class;
-                            const classInfo = classes.find(c => c.id === studentClass?.id);
-                            handleGenerateBulletin({
-                              id: grade.student!.id,
-                              firstName: grade.student!.firstName,
-                              lastName: grade.student!.lastName,
-                              class: studentClass ? {
-                                id: studentClass.id,
-                                name: studentClass.name,
-                                level: classInfo?.level || '',
-                              } : null,
-                            });
-                          }}
+                          className="border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400"
+                          onClick={() => handleEdit(grade)}
                         >
-                          📄 Bulletin
+                          Modifier
                         </Button>
+                      </ProtectedContent>
+                      {grade.student && (
+                        <ProtectedContent permission="reports.generate">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-yellow-400 text-yellow-700 hover:bg-yellow-50 hover:border-yellow-500"
+                            onClick={() => {
+                              const studentClass = grade.student!.class;
+                              const classInfo = classes.find(c => c.id === studentClass?.id);
+                              handleGenerateBulletin({
+                                id: grade.student!.id,
+                                firstName: grade.student!.firstName,
+                                lastName: grade.student!.lastName,
+                                class: studentClass ? {
+                                  id: studentClass.id,
+                                  name: studentClass.name,
+                                  level: classInfo?.level || '',
+                                } : null,
+                              });
+                            }}
+                          >
+                            📄 Bulletin
+                          </Button>
+                        </ProtectedContent>
                       )}
                     </td>
                   </tr>
@@ -675,17 +689,19 @@ export const Grades = () => {
                                          grade.status === 'validated' ? 'Validé' : 
                                          'Rejeté'}
                                       </span>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        className="border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400 text-xs"
-                                        onClick={() => {
-                                          const gradeObj = filteredGrades.find(g => g.id === grade.id);
-                                          if (gradeObj) handleEdit(gradeObj);
-                                        }}
-                                      >
-                                        Modifier
-                                      </Button>
+                                      <ProtectedContent permission="grades.modify">
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400 text-xs"
+                                          onClick={() => {
+                                            const gradeObj = filteredGrades.find(g => g.id === grade.id);
+                                            if (gradeObj) handleEdit(gradeObj);
+                                          }}
+                                        >
+                                          Modifier
+                                        </Button>
+                                      </ProtectedContent>
                                     </div>
                                   </div>
                                 ))}
@@ -703,35 +719,41 @@ export const Grades = () => {
         </div>
 
         <div className="p-4 flex flex-wrap gap-3 border-t border-blue-100">
-          <Button
-            className="bg-linear-to-r from-green-500 via-green-600 to-green-600 text-white hover:from-green-600 hover:to-green-700"
-            onClick={handleValidateAll}
-          >
-            Valider tout en attente
-          </Button>
-          <Button
-            variant="outline"
-            className="border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400"
-            onClick={() => setIsImportModalOpen(true)}
-          >
-            Générer les bulletins (Excel)
-          </Button>
-          {uniqueStudents.length > 0 && (
+          <ProtectedContent permission="grades.validate">
+            <Button
+              className="bg-linear-to-r from-green-500 via-green-600 to-green-600 text-white hover:from-green-600 hover:to-green-700"
+              onClick={handleValidateAll}
+            >
+              Valider tout en attente
+            </Button>
+          </ProtectedContent>
+          <ProtectedContent permission="reports.generate">
             <Button
               variant="outline"
-              className="border-yellow-400 text-yellow-700 hover:bg-yellow-50 hover:border-yellow-500"
-              onClick={() => {
-                // Ouvrir un modal pour sélectionner l'élève
-                if (uniqueStudents.length === 1) {
-                  handleGenerateBulletin(uniqueStudents[0]);
-                } else {
-                  // Si plusieurs élèves, on peut ouvrir un select ou prendre le premier
-                  handleGenerateBulletin(uniqueStudents[0]);
-                }
-              }}
+              className="border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400"
+              onClick={() => setIsImportModalOpen(true)}
             >
-              Générer un bulletin
+              Générer les bulletins (Excel)
             </Button>
+          </ProtectedContent>
+          {uniqueStudents.length > 0 && (
+            <ProtectedContent permission="reports.generate">
+              <Button
+                variant="outline"
+                className="border-yellow-400 text-yellow-700 hover:bg-yellow-50 hover:border-yellow-500"
+                onClick={() => {
+                  // Ouvrir un modal pour sélectionner l'élève
+                  if (uniqueStudents.length === 1) {
+                    handleGenerateBulletin(uniqueStudents[0]);
+                  } else {
+                    // Si plusieurs élèves, on peut ouvrir un select ou prendre le premier
+                    handleGenerateBulletin(uniqueStudents[0]);
+                  }
+                }}
+              >
+                Générer un bulletin
+              </Button>
+            </ProtectedContent>
           )}
         </div>
       </Card>
@@ -831,13 +853,15 @@ export const Grades = () => {
             </div>
 
             <div className="flex gap-2 justify-end">
-              <Button
-                type="submit"
-                className="bg-linear-to-r from-green-500 via-green-600 to-green-600 text-white hover:from-green-600 hover:to-green-700"
-                disabled={saving}
-              >
-                {saving ? 'Enregistrement...' : 'Enregistrer'}
-              </Button>
+              <ProtectedContent permission="grades.modify">
+                <Button
+                  type="submit"
+                  className="bg-linear-to-r from-green-500 via-green-600 to-green-600 text-white hover:from-green-600 hover:to-green-700"
+                  disabled={saving}
+                >
+                  {saving ? 'Enregistrement...' : 'Enregistrer'}
+                </Button>
+              </ProtectedContent>
               <Button
                 type="button"
                 variant="outline"
@@ -932,14 +956,16 @@ export const Grades = () => {
                 >
                   Annuler
                 </Button>
-                <Button
-                  type="button"
-                  className="bg-linear-to-r from-green-500 via-green-600 to-green-600 text-white hover:from-green-600 hover:to-green-700"
-                  onClick={handleSubmitImport}
-                  disabled={importLoading || !importFile}
-                >
-                  {importLoading ? 'Import en cours...' : 'Importer'}
-                </Button>
+                <ProtectedContent permission="reports.generate">
+                  <Button
+                    type="button"
+                    className="bg-linear-to-r from-green-500 via-green-600 to-green-600 text-white hover:from-green-600 hover:to-green-700"
+                    onClick={handleSubmitImport}
+                    disabled={importLoading || !importFile}
+                  >
+                    {importLoading ? 'Import en cours...' : 'Importer'}
+                  </Button>
+                </ProtectedContent>
               </div>
             </div>
           </Card>
@@ -981,6 +1007,7 @@ export const Grades = () => {
           </div>
         </div>
       )}
+      </ProtectedContent>
     </AdminLayout>
   );
 };

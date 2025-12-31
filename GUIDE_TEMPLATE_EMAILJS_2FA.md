@@ -225,3 +225,6 @@ Après avoir configuré :
 
 Votre système de 2FA utilise maintenant un compte EmailJS séparé (ou le même si vous préférez). Les codes de vérification seront envoyés via EmailJS avec le template personnalisé.
 
+
+
+

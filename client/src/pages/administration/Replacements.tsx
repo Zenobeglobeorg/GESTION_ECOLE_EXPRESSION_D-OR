@@ -4,6 +4,7 @@ import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Modal } from "../../components/ui/Modal";
 import { AdminLayout } from "../../components/admin/AdminLayout";
+import { ProtectedContent } from "../../components/permissions/ProtectedContent";
 import * as replacementService from "../../services/replacementService";
 import * as userService from "../../services/userService";
 
@@ -219,24 +220,30 @@ export const Replacements = () => {
       title="Gestion des remplaçants"
       subtitle="Planifiez les substitutions d'enseignants et suivez leur statut."
     >
-      {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
-          {error}
+      <ProtectedContent permission="schedule.manage" fallback={
+        <div className="p-4 rounded-xl border border-yellow-200 bg-yellow-50 text-yellow-700">
+          Vous n'avez pas la permission de gérer les remplacements.
         </div>
-      )}
-
-      {success && (
-        <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg">
-          {success}
-        </div>
-      )}
-
-      <div className="max-w-6xl grid grid-cols-1 md:grid-cols-2 gap-8">
-        <Card className="border-0 shadow-lg">
-          <div className="bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 px-6 py-4 rounded-t-lg mb-4">
-            <h2 className="font-semibold text-lg text-blue-900 text-center">Nouvelle substitution</h2>
+      }>
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+            {error}
           </div>
-          <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        )}
+
+        {success && (
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg">
+            {success}
+          </div>
+        )}
+
+        <div className="max-w-6xl grid grid-cols-1 md:grid-cols-2 gap-8">
+          <ProtectedContent permission="schedule.manage">
+            <Card className="border-0 shadow-lg">
+              <div className="bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 px-6 py-4 rounded-t-lg mb-4">
+                <h2 className="font-semibold text-lg text-blue-900 text-center">Nouvelle substitution</h2>
+              </div>
+              <form onSubmit={handleSubmit} className="p-6 space-y-4">
             <div className="form-group">
               <label className="text-sm font-medium text-blue-900 mb-2 block" htmlFor="absent">
                 Enseignant absent
@@ -337,15 +344,16 @@ export const Replacements = () => {
                 placeholder="Informations supplémentaires..."
               />
             </div>
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-linear-to-r from-yellow-400 via-yellow-500 to-yellow-400 text-blue-900 hover:from-yellow-500 hover:to-yellow-500"
-            >
-              {loading ? 'Création...' : 'Créer le remplacement'}
-            </Button>
-          </form>
-        </Card>
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-linear-to-r from-yellow-400 via-yellow-500 to-yellow-400 text-blue-900 hover:from-yellow-500 hover:to-yellow-500"
+                >
+                  {loading ? 'Création...' : 'Créer le remplacement'}
+                </Button>
+              </form>
+            </Card>
+          </ProtectedContent>
 
         <Card className="border-0 shadow-lg">
           <div className="p-6 space-y-4">
@@ -397,22 +405,26 @@ export const Replacements = () => {
                         </p>
                       )}
                       <div className="flex gap-2 mt-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="border-blue-300 text-blue-600 hover:bg-blue-50 hover:border-blue-400"
-                          onClick={() => handleEdit(r)}
-                        >
-                          Modifier
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
-                          onClick={() => handleDelete(r.id)}
-                        >
-                          Supprimer
-                        </Button>
+                        <ProtectedContent permission="schedule.manage">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-blue-300 text-blue-600 hover:bg-blue-50 hover:border-blue-400"
+                            onClick={() => handleEdit(r)}
+                          >
+                            Modifier
+                          </Button>
+                        </ProtectedContent>
+                        <ProtectedContent permission="schedule.manage">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
+                            onClick={() => handleDelete(r.id)}
+                          >
+                            Supprimer
+                          </Button>
+                        </ProtectedContent>
                       </div>
                     </div>
                   ))
@@ -540,17 +552,20 @@ export const Replacements = () => {
               >
                 Annuler
               </Button>
-              <Button
-                type="submit"
-                disabled={loading}
-                style={{ backgroundColor: '#fbbf24' }}
-              >
-                {loading ? 'Modification...' : 'Enregistrer les modifications'}
-              </Button>
+              <ProtectedContent permission="schedule.manage">
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  style={{ backgroundColor: '#fbbf24' }}
+                >
+                  {loading ? 'Modification...' : 'Enregistrer les modifications'}
+                </Button>
+              </ProtectedContent>
             </div>
           </form>
         )}
       </Modal>
+      </ProtectedContent>
     </AdminLayout>
   );
 };

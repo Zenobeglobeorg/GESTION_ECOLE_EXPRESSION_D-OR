@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { AdminLayout } from '../../components/admin/AdminLayout';
+import { ProtectedContent } from '../../components/permissions/ProtectedContent';
 import { Modal } from '../../components/ui/Modal';
 
 interface ParsedRow {
@@ -249,13 +250,18 @@ export const StudentsImport = () => {
       title="Importation d'élèves (CSV)"
       subtitle="Chargez un fichier CSV, visualisez l'aperçu puis validez l'import."
     >
-      {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg whitespace-pre-line">
-          {error}
+      <ProtectedContent permission="students.create" fallback={
+        <div className="p-4 rounded-xl border border-yellow-200 bg-yellow-50 text-yellow-700">
+          Vous n'avez pas la permission d'importer des élèves.
         </div>
-      )}
+      }>
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg whitespace-pre-line">
+            {error}
+          </div>
+        )}
 
-      <Card className="border-0 shadow-lg max-w-6xl">
+        <Card className="border-0 shadow-lg max-w-6xl">
         <div className="space-y-6">
           {/* Instructions */}
           <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
@@ -371,13 +377,15 @@ export const StudentsImport = () => {
             >
               Réinitialiser
             </Button>
-            <Button
-              onClick={submit}
-              disabled={loading || rows.length === 0 || validationErrors.length > 0}
-              className="bg-gradient-to-r from-blue-600 via-blue-700 to-blue-700 hover:from-blue-700 hover:to-blue-800"
-            >
-              {loading ? 'Import en cours...' : `Importer ${rows.length} élève${rows.length > 1 ? 's' : ''}`}
-            </Button>
+            <ProtectedContent permission="students.create">
+              <Button
+                onClick={submit}
+                disabled={loading || rows.length === 0 || validationErrors.length > 0}
+                className="bg-gradient-to-r from-blue-600 via-blue-700 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+              >
+                {loading ? 'Import en cours...' : `Importer ${rows.length} élève${rows.length > 1 ? 's' : ''}`}
+              </Button>
+            </ProtectedContent>
           </div>
         </div>
       </Card>
@@ -491,6 +499,7 @@ export const StudentsImport = () => {
     </div>
         )}
       </Modal>
+      </ProtectedContent>
     </AdminLayout>
   );
 };

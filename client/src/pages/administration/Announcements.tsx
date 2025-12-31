@@ -2,6 +2,7 @@
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { AdminLayout } from '../../components/admin/AdminLayout';
+import { ProtectedContent } from '../../components/permissions/ProtectedContent';
 import * as announcementService from '../../services/announcementService';
 import * as classService from '../../services/classService';
 
@@ -185,20 +186,26 @@ export const Announcements = () => {
 
   return (
     <AdminLayout title="Envoyer des annonces" subtitle="Informez rapidement les familles et l'équipe pédagogique.">
-      {error && (
-        <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
-          {error}
+      <ProtectedContent permission="announcements.create" fallback={
+        <div className="p-4 rounded-xl border border-yellow-200 bg-yellow-50 text-yellow-700">
+          Vous n'avez pas la permission de créer des annonces.
         </div>
-      )}
-      {success && (
-        <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-400">
-          {success}
-        </div>
-      )}
+      }>
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
+            {error}
+          </div>
+        )}
+        {success && (
+          <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-400">
+            {success}
+          </div>
+        )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <Card className="border-0 shadow-lg dark:bg-gray-800">
-          <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <ProtectedContent permission="announcements.create">
+            <Card className="border-0 shadow-lg dark:bg-gray-800">
+              <form onSubmit={handleSubmit} className="p-6 space-y-4">
             <h2 className="font-semibold text-lg text-blue-900 dark:text-blue-400">Nouvelle annonce</h2>
             <div className="form-group">
               <label className="text-sm font-medium text-blue-900 dark:text-blue-400" htmlFor="announcement-title">
@@ -295,15 +302,16 @@ export const Announcements = () => {
                 <option value="URGENT">Urgente</option>
               </select>
             </div>
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full bg-linear-to-r from-yellow-400 via-yellow-500 to-yellow-400 text-blue-900 hover:from-yellow-500 hover:to-yellow-500 disabled:opacity-50"
-            >
-              {isSubmitting ? 'Envoi en cours...' : "Envoyer l'annonce"}
-            </Button>
-          </form>
-        </Card>
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full bg-linear-to-r from-yellow-400 via-yellow-500 to-yellow-400 text-blue-900 hover:from-yellow-500 hover:to-yellow-500 disabled:opacity-50"
+                >
+                  {isSubmitting ? 'Envoi en cours...' : "Envoyer l'annonce"}
+                </Button>
+              </form>
+            </Card>
+          </ProtectedContent>
 
         <Card className="lg:col-span-2 border-0 shadow-lg dark:bg-gray-800">
           <div className="p-6 space-y-4">
@@ -346,22 +354,26 @@ export const Announcements = () => {
                     </div>
                   </div>
                   <div className="mt-3 flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-blue-300 dark:border-blue-600 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:border-blue-400 dark:hover:border-blue-500"
-                      onClick={() => handleResend(ann.id)}
-                    >
-                      Relancer
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="border-red-300 dark:border-red-600 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 hover:border-red-400 dark:hover:border-red-500"
-                      onClick={() => handleDelete(ann.id)}
-                    >
-                      Supprimer
-                    </Button>
+                    <ProtectedContent permission="announcements.create">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-blue-300 dark:border-blue-600 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:border-blue-400 dark:hover:border-blue-500"
+                        onClick={() => handleResend(ann.id)}
+                      >
+                        Relancer
+                      </Button>
+                    </ProtectedContent>
+                    <ProtectedContent permission="announcements.create">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-red-300 dark:border-red-600 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 hover:border-red-400 dark:hover:border-red-500"
+                        onClick={() => handleDelete(ann.id)}
+                      >
+                        Supprimer
+                      </Button>
+                    </ProtectedContent>
                   </div>
                 </div>
               ))}
@@ -373,7 +385,8 @@ export const Announcements = () => {
             </div>
           </div>
         </Card>
-      </div>
+        </div>
+      </ProtectedContent>
     </AdminLayout>
   );
 };

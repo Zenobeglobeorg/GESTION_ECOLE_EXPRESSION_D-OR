@@ -2,6 +2,7 @@
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { AdminLayout } from "../../components/admin/AdminLayout";
+import { ProtectedContent } from "../../components/permissions/ProtectedContent";
 import { Input } from "../../components/ui/Input";
 import { Modal } from "../../components/ui/Modal";
 import * as userService from "../../services/userService";
@@ -179,24 +180,31 @@ export const UsersParents = () => {
       title="Gestion des Parents"
       subtitle="Créez des comptes familles et maintenez leurs informations à jour."
     >
-      {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
-          {error}
+      <ProtectedContent permission="users.read" fallback={
+        <div className="p-4 rounded-xl border border-yellow-200 bg-yellow-50 text-yellow-700">
+          Vous n'avez pas la permission de consulter les parents.
         </div>
-      )}
+      }>
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+            {error}
+          </div>
+        )}
 
-      <div className="mb-6 flex justify-end">
-        <Button
-          onClick={() => setIsCreateModalOpen(true)}
-          style={{ backgroundColor: '#fbbf24' }}
-          className="flex items-center gap-2"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Nouveau Parent
-        </Button>
-      </div>
+        <div className="mb-6 flex justify-end">
+          <ProtectedContent permission="users.create">
+            <Button
+              onClick={() => setIsCreateModalOpen(true)}
+              style={{ backgroundColor: '#fbbf24' }}
+              className="flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Nouveau Parent
+            </Button>
+          </ProtectedContent>
+        </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
@@ -247,32 +255,36 @@ export const UsersParents = () => {
                         <td className="text-xs">{parent.students?.length || 0}</td>
                         <td className="text-right" onClick={(e) => e.stopPropagation()}>
                           <div className="flex gap-2 justify-end">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="border-blue-300 text-blue-600 hover:bg-blue-50 hover:border-blue-400"
-                              onClick={() => {
-                                setEditForm({
-                                  firstName: parent.firstName,
-                                  lastName: parent.lastName,
-                                  email: parent.email,
-                                  phone: parent.phone || "",
-                                });
-                                handleEdit(parent);
-                              }}
-                            >
-                              Modifier
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
-                              onClick={() => handleDelete(parent.id)}
-                            >
-                              Supprimer
-                            </Button>
+                            <ProtectedContent permission="users.update">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="border-blue-300 text-blue-600 hover:bg-blue-50 hover:border-blue-400"
+                                onClick={() => {
+                                  setEditForm({
+                                    firstName: parent.firstName,
+                                    lastName: parent.lastName,
+                                    email: parent.email,
+                                    phone: parent.phone || "",
+                                  });
+                                  handleEdit(parent);
+                                }}
+                              >
+                                Modifier
+                              </Button>
+                            </ProtectedContent>
+                            <ProtectedContent permission="users.delete">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
+                                onClick={() => handleDelete(parent.id)}
+                              >
+                                Supprimer
+                              </Button>
+                            </ProtectedContent>
                           </div>
                         </td>
                       </tr>
@@ -498,24 +510,27 @@ export const UsersParents = () => {
               >
                 Annuler
               </Button>
-              <Button
-                type="submit"
-                style={{ backgroundColor: '#fbbf24' }}
-              >
-                Enregistrer les modifications
-              </Button>
+              <ProtectedContent permission="users.update">
+                <Button
+                  type="submit"
+                  style={{ backgroundColor: '#fbbf24' }}
+                >
+                  Enregistrer les modifications
+                </Button>
+              </ProtectedContent>
             </div>
           </form>
         )}
       </Modal>
 
       {/* Modal de création */}
-      <Modal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        title="Créer un Nouveau Parent"
-        size="lg"
-      >
+      <ProtectedContent permission="users.create">
+        <Modal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          title="Créer un Nouveau Parent"
+          size="lg"
+        >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <Input
@@ -565,15 +580,19 @@ export const UsersParents = () => {
             >
               Annuler
             </Button>
-            <Button
-              type="submit"
-              style={{ backgroundColor: '#fbbf24' }}
-            >
-              Créer le Compte
-            </Button>
+            <ProtectedContent permission="users.create">
+              <Button
+                type="submit"
+                style={{ backgroundColor: '#fbbf24' }}
+              >
+                Créer le Compte
+              </Button>
+            </ProtectedContent>
           </div>
         </form>
       </Modal>
+      </ProtectedContent>
+      </ProtectedContent>
     </AdminLayout>
   );
 };

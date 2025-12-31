@@ -67,7 +67,7 @@ export const HomePage = () => {
           <div className="w-24 h-24 bg-white rounded-2xl shadow-2xl flex items-center justify-center mb-4 transform hover:scale-105 transition-transform duration-300 hover:rotate-3">
             <img src="/logo-expression-or.jpg" alt="Pilote School Logo" className="w-20 h-20 object-contain" />
           </div>
-          <h1 className="text-3xl font-bold text-white drop-shadow-lg tracking-wide">ECOLE DE PILOTE</h1>
+          <h1 className="text-3xl font-bold text-white drop-shadow-lg tracking-wide">Connect School</h1>
         </div>
 
         {/* Content with glassmorphism background */}

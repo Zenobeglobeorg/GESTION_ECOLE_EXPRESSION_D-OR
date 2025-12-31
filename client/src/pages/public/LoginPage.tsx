@@ -144,7 +144,7 @@ export const LoginPage = () => {
             <img src="/logo-expression-or.jpg" alt="Pilote School Logo" className="w-20 h-20 object-contain" />
           </div>
           <h2 className="text-3xl font-bold mb-2 text-blue-800 drop-shadow-sm">
-            Ecole de pilote
+            Connect School
           </h2>
           <p className="text-gray-600 text-sm">Accédez à votre espace personnel</p>
         </div>

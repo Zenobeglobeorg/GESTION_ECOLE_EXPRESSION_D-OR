@@ -4,6 +4,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
 import { AdminLayout } from '../../components/admin/AdminLayout';
+import { ProtectedContent } from '../../components/permissions/ProtectedContent';
 import * as userService from '../../services/userService';
 import * as classService from '../../services/classService';
 
@@ -334,13 +335,19 @@ export const Classes = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="border-0 shadow-lg">
-          <div className="bg-linear-to-r from-yellow-400 via-yellow-300 to-yellow-400 px-6 py-4 rounded-t-lg mb-4">
-            <h2 className="text-lg font-bold text-blue-900 text-center">Créer une nouvelle classe</h2>
-          </div>
-          <div className="space-y-4 p-6">
-            <form onSubmit={handleCreateClass} className="space-y-4">
+      <ProtectedContent permission="classes.manage" fallback={
+        <div className="p-4 rounded-xl border border-yellow-200 bg-yellow-50 text-yellow-700">
+          Vous n'avez pas la permission de gérer les classes.
+        </div>
+      }>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <ProtectedContent permission="classes.create">
+            <Card className="border-0 shadow-lg">
+              <div className="bg-linear-to-r from-yellow-400 via-yellow-300 to-yellow-400 px-6 py-4 rounded-t-lg mb-4">
+                <h2 className="text-lg font-bold text-blue-900 text-center">Créer une nouvelle classe</h2>
+              </div>
+              <div className="space-y-4 p-6">
+                <form onSubmit={handleCreateClass} className="space-y-4">
               <Input
                 label="Nom de la classe"
                 value={newClassName}
@@ -400,11 +407,13 @@ export const Classes = () => {
             </form>
           </div>
         </Card>
+        </ProtectedContent>
 
-        <Card className="border-0 shadow-lg">
-          <div className="bg-linear-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-lg mb-4">
-            <h2 className="text-lg font-bold text-white text-center">Ajouter une matière</h2>
-          </div>
+        <ProtectedContent permission="classes.create">
+          <Card className="border-0 shadow-lg">
+            <div className="bg-linear-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-lg mb-4">
+              <h2 className="text-lg font-bold text-white text-center">Ajouter une matière</h2>
+            </div>
           <div className="space-y-4 p-6">
             <form onSubmit={handleCreateSubject} className="space-y-4">
               <Input
@@ -468,6 +477,7 @@ export const Classes = () => {
             </form>
           </div>
         </Card>
+        </ProtectedContent>
       </div>
 
       <section className="space-y-4 mt-8">
@@ -484,7 +494,6 @@ export const Classes = () => {
             classes.map(classItem => {
               const classTeacher = classItem.teacher;
               const classSubjects = subjects.filter(s => s.classId === classItem.id);
-              const classSubjectsCount = classSubjects.length;
               return (
                 <Card key={classItem.id} className="border-0 shadow-lg">
                   <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 border-b border-blue-100 pb-4 mb-4">
@@ -540,24 +549,28 @@ export const Classes = () => {
                       >
                         {classTeacher ? 'Changer l\'enseignant' : 'Associer un enseignant'}
                       </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="border-yellow-300 text-yellow-700 hover:bg-yellow-50 hover:border-yellow-400"
-                        onClick={() => handleEdit(classItem)}
-                      >
-                        Modifier
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
-                        onClick={() => handleDeleteClass(classItem.id)}
-                      >
-                        Supprimer
-                      </Button>
+                      <ProtectedContent permission="classes.manage">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="border-yellow-300 text-yellow-700 hover:bg-yellow-50 hover:border-yellow-400"
+                          onClick={() => handleEdit(classItem)}
+                        >
+                          Modifier
+                        </Button>
+                      </ProtectedContent>
+                      <ProtectedContent permission="classes.manage">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
+                          onClick={() => handleDeleteClass(classItem.id)}
+                        >
+                          Supprimer
+                        </Button>
+                      </ProtectedContent>
                     </div>
                   </div>
                 </Card>
@@ -601,24 +614,28 @@ export const Classes = () => {
                         <td>{subject.hours || 4}h</td>
                         <td>
                           <div className="flex gap-2 justify-end">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="border-yellow-300 text-yellow-700 hover:bg-yellow-50 hover:border-yellow-400"
-                              onClick={() => handleEditSubject(subject)}
-                            >
-                              Modifier
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
-                              onClick={() => handleDeleteSubject(subject.id)}
-                            >
-                              Supprimer
-                            </Button>
+                            <ProtectedContent permission="classes.manage">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="border-yellow-300 text-yellow-700 hover:bg-yellow-50 hover:border-yellow-400"
+                                onClick={() => handleEditSubject(subject)}
+                              >
+                                Modifier
+                              </Button>
+                            </ProtectedContent>
+                            <ProtectedContent permission="classes.manage">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
+                                onClick={() => handleDeleteSubject(subject.id)}
+                              >
+                                Supprimer
+                              </Button>
+                            </ProtectedContent>
                           </div>
                         </td>
                       </tr>
@@ -849,6 +866,7 @@ export const Classes = () => {
           </form>
         )}
       </Modal>
+      </ProtectedContent>
     </AdminLayout>
   );
 };

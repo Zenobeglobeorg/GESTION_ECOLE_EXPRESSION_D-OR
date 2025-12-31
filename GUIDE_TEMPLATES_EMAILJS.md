@@ -229,3 +229,6 @@ const loginUrl = 'https://gestion-ecole-expression-d-or.vercel.app/login';
 
 Mais il est recommandé d'utiliser `process.env.FRONTEND_URL` pour la flexibilité.
 
+
+
+

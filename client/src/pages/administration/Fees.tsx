@@ -4,6 +4,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
 import { AdminLayout } from '../../components/admin/AdminLayout';
+import { ProtectedContent } from '../../components/permissions/ProtectedContent';
 import * as feesService from '../../services/feesService';
 import * as classService from '../../services/classService';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -239,19 +240,24 @@ export const Fees = () => {
       title={t('fees.title') || 'Gestion des frais'}
       subtitle={t('fees.subtitle') || 'Suivez les paiements, relancez les familles et exportez les relevés.'}
     >
-      {error && (
-        <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
-          {error}
+      <ProtectedContent permission="fees.manage" fallback={
+        <div className="p-4 rounded-xl border border-yellow-200 bg-yellow-50 text-yellow-700">
+          Vous n'avez pas la permission de gérer les frais.
         </div>
-      )}
-      
-      {success && (
-        <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-400">
-          {success}
-        </div>
-      )}
+      }>
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
+            {error}
+          </div>
+        )}
+        
+        {success && (
+          <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-400">
+            {success}
+          </div>
+        )}
 
-      <div className="max-w-7xl space-y-8">
+        <div className="max-w-7xl space-y-8">
         {/* Statistiques */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className={`border-0 shadow-lg bg-linear-to-br from-blue-500 via-blue-600 to-blue-700 dark:from-blue-700 dark:via-blue-800 dark:to-blue-900 text-white`}>
@@ -324,6 +330,7 @@ export const Fees = () => {
                   {t('fees.filterByClass') || 'Filtrer par classe'}
                 </label>
                 <select
+                  title="Sélectionner une classe"
                   value={classFilter || ''}
                   onChange={(e) => setClassFilter(e.target.value ? parseInt(e.target.value) : null)}
                   className="form-control dark:bg-gray-700 dark:text-white dark:border-gray-600"
@@ -444,16 +451,18 @@ export const Fees = () => {
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleOpenPaymentModal(payment)}
-                              className="border-yellow-400 dark:border-yellow-600 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/30 hover:border-yellow-500"
-                            >
-                              {payment.status === 'PAID' 
-                                ? (t('fees.update') || 'Modifier')
-                                : (t('fees.record') || 'Enregistrer')}
-                            </Button>
+                            <ProtectedContent permission="fees.manage">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleOpenPaymentModal(payment)}
+                                className="border-yellow-400 dark:border-yellow-600 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/30 hover:border-yellow-500"
+                              >
+                                {payment.status === 'PAID' 
+                                  ? (t('fees.update') || 'Modifier')
+                                  : (t('fees.record') || 'Enregistrer')}
+                              </Button>
+                            </ProtectedContent>
                           </td>
                         </tr>
                       ))}
@@ -462,19 +471,23 @@ export const Fees = () => {
                 </div>
                 
                 <div className="flex flex-wrap gap-3 justify-end pt-4">
-                  <Button 
-                    className="bg-linear-to-r from-yellow-400 via-yellow-500 to-yellow-400 text-blue-900 hover:from-yellow-500 hover:to-yellow-500"
-                    onClick={() => alert(t('fees.exportFeature') || 'Fonctionnalité d\'export à implémenter')}
-                  >
-                    {t('fees.export') || 'Exporter les relevés'}
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    className="border-blue-300 dark:border-gray-600 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-gray-700 hover:border-blue-400"
-                    onClick={() => alert(t('fees.reminderFeature') || 'Fonctionnalité de rappel à implémenter')}
-                  >
-                    {t('fees.sendReminder') || 'Envoyer un rappel'}
-                  </Button>
+                  <ProtectedContent permission="fees.manage">
+                    <Button 
+                      className="bg-linear-to-r from-yellow-400 via-yellow-500 to-yellow-400 text-blue-900 hover:from-yellow-500 hover:to-yellow-500"
+                      onClick={() => alert(t('fees.exportFeature') || 'Fonctionnalité d\'export à implémenter')}
+                    >
+                      {t('fees.export') || 'Exporter les relevés'}
+                    </Button>
+                  </ProtectedContent>
+                  <ProtectedContent permission="fees.manage">
+                    <Button 
+                      variant="outline" 
+                      className="border-blue-300 dark:border-gray-600 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-gray-700 hover:border-blue-400"
+                      onClick={() => alert(t('fees.reminderFeature') || 'Fonctionnalité de rappel à implémenter')}
+                    >
+                      {t('fees.sendReminder') || 'Envoyer un rappel'}
+                    </Button>
+                  </ProtectedContent>
                 </div>
               </>
             ) : activeView === 'student' ? (
@@ -565,16 +578,18 @@ export const Fees = () => {
                           </span>
                         </td>
                                   <td className="px-4 py-2 text-right">
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => handleOpenPaymentModal(payment)}
-                                      className="border-yellow-400 dark:border-yellow-600 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/30"
-                                    >
-                                      {payment.status === 'PAID' 
-                                        ? (t('fees.update') || 'Modifier')
-                                        : (t('fees.record') || 'Enregistrer')}
-                                    </Button>
+                                    <ProtectedContent permission="fees.manage">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleOpenPaymentModal(payment)}
+                                        className="border-yellow-400 dark:border-yellow-600 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/30"
+                                      >
+                                        {payment.status === 'PAID' 
+                                          ? (t('fees.update') || 'Modifier')
+                                          : (t('fees.record') || 'Enregistrer')}
+                                      </Button>
+                                    </ProtectedContent>
                                   </td>
                       </tr>
                     ))}
@@ -813,19 +828,22 @@ export const Fees = () => {
               >
                 {t('common.cancel') || 'Annuler'}
               </Button>
-              <Button
-                type="submit"
-                isLoading={savingPayment}
-                className="bg-linear-to-r from-yellow-400 via-yellow-500 to-yellow-400 text-blue-900 hover:from-yellow-500 hover:to-yellow-500"
-              >
-                {savingPayment 
-                  ? (t('common.saving') || 'Enregistrement...')
-                  : (t('common.save') || 'Enregistrer')}
-              </Button>
-    </div>
+              <ProtectedContent permission="fees.manage">
+                <Button
+                  type="submit"
+                  isLoading={savingPayment}
+                  className="bg-linear-to-r from-yellow-400 via-yellow-500 to-yellow-400 text-blue-900 hover:from-yellow-500 hover:to-yellow-500"
+                >
+                  {savingPayment 
+                    ? (t('common.saving') || 'Enregistrement...')
+                    : (t('common.save') || 'Enregistrer')}
+                </Button>
+              </ProtectedContent>
+            </div>
           </form>
         )}
       </Modal>
+      </ProtectedContent>
     </AdminLayout>
   );
 };

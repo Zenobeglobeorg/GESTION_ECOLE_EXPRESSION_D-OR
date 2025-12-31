@@ -4,6 +4,7 @@ import { AdminLayout } from '../../components/admin/AdminLayout';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import { ProtectedContent } from '../../components/permissions/ProtectedContent';
 import * as studentService from '../../services/studentService';
 import * as classService from '../../services/classService';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -153,21 +154,26 @@ export const EditStudentPage = () => {
       title={t('students.editTitle') || 'Modifier un Élève'}
       subtitle={t('students.editSubtitle') || 'Modifier les informations de l\'élève'}
     >
-      <div className="space-y-6">
-        {error && (
-          <div className="p-4 rounded-xl border border-red-200 bg-red-50 text-red-700">
-            {error}
-          </div>
-        )}
+      <ProtectedContent permission="students.update" fallback={
+        <div className="p-4 rounded-xl border border-yellow-200 bg-yellow-50 text-yellow-700">
+          Vous n'avez pas la permission de modifier les élèves.
+        </div>
+      }>
+        <div className="space-y-6">
+          {error && (
+            <div className="p-4 rounded-xl border border-red-200 bg-red-50 text-red-700">
+              {error}
+            </div>
+          )}
 
-        {success && (
-          <div className="p-4 rounded-xl border border-green-200 bg-green-50 text-green-700">
-            {success}
-          </div>
-        )}
+          {success && (
+            <div className="p-4 rounded-xl border border-green-200 bg-green-50 text-green-700">
+              {success}
+            </div>
+          )}
 
-        <Card title={t('students.studentInfo') || 'Informations de l\'Élève'} className="border-0 shadow-lg">
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <Card title={t('students.studentInfo') || 'Informations de l\'Élève'} className="border-0 shadow-lg">
+            <form onSubmit={handleSubmit} className="space-y-6">
             {/* Informations de base */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="flex flex-col gap-2">
@@ -286,29 +292,32 @@ export const EditStudentPage = () => {
               </div>
             </div>
 
-            {/* Boutons d'action */}
-            <div className="flex items-center justify-end gap-4 pt-6 border-t border-blue-200">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleCancel}
-                className="border-blue-400 text-blue-700 hover:bg-blue-50"
-              >
-                {t('common.cancel') || 'Annuler'}
-              </Button>
-              <Button
-                type="submit"
-                isLoading={saving}
-                className="bg-linear-to-r from-blue-600 via-blue-700 to-blue-700 hover:from-blue-700 hover:to-blue-800"
-              >
-                {saving
-                  ? t('common.saving') || 'Enregistrement...'
-                  : t('common.save') || 'Enregistrer les modifications'}
-              </Button>
-            </div>
-          </form>
-        </Card>
-      </div>
+              {/* Boutons d'action */}
+              <div className="flex items-center justify-end gap-4 pt-6 border-t border-blue-200">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCancel}
+                  className="border-blue-400 text-blue-700 hover:bg-blue-50"
+                >
+                  {t('common.cancel') || 'Annuler'}
+                </Button>
+                <ProtectedContent permission="students.update">
+                  <Button
+                    type="submit"
+                    isLoading={saving}
+                    className="bg-linear-to-r from-blue-600 via-blue-700 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                  >
+                    {saving
+                      ? t('common.saving') || 'Enregistrement...'
+                      : t('common.save') || 'Enregistrer les modifications'}
+                  </Button>
+                </ProtectedContent>
+              </div>
+            </form>
+          </Card>
+        </div>
+      </ProtectedContent>
     </AdminLayout>
   );
 };

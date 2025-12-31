@@ -2,6 +2,7 @@
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { AdminLayout } from "../../components/admin/AdminLayout";
+import { ProtectedContent } from "../../components/permissions/ProtectedContent";
 
 export const Reports = () => {
   const [reportType, setReportType] = useState("attendance");
@@ -49,10 +50,15 @@ export const Reports = () => {
       title="Générateur de Rapports"
       subtitle="Sélectionnez un périmètre et exportez vos rapports personnalisés."
     >
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2">
-          <Card className="border-0 shadow-lg">
-            <form onSubmit={handleGenerateReport} className="p-6 space-y-6">
+      <ProtectedContent permission="reports.generate" fallback={
+        <div className="p-4 rounded-xl border border-yellow-200 bg-yellow-50 text-yellow-700">
+          Vous n'avez pas la permission de générer des rapports.
+        </div>
+      }>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2">
+            <Card className="border-0 shadow-lg">
+              <form onSubmit={handleGenerateReport} className="p-6 space-y-6">
               <div className="space-y-3">
                 <label className="text-sm font-medium text-blue-900">Type de rapport</label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -149,12 +155,14 @@ export const Reports = () => {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full text-lg py-3 bg-linear-to-r from-yellow-400 via-yellow-500 to-yellow-400 text-blue-900 hover:from-yellow-500 hover:to-yellow-500">
-                Générer le rapport
-              </Button>
-            </form>
-          </Card>
-        </div>
+                <ProtectedContent permission="reports.generate">
+                  <Button type="submit" className="w-full text-lg py-3 bg-linear-to-r from-yellow-400 via-yellow-500 to-yellow-400 text-blue-900 hover:from-yellow-500 hover:to-yellow-500">
+                    Générer le rapport
+                  </Button>
+                </ProtectedContent>
+              </form>
+            </Card>
+          </div>
         <div>
           <Card className="border-0 shadow-lg">
             <div className="p-4 space-y-3">
@@ -172,7 +180,8 @@ export const Reports = () => {
             </div>
           </Card>
         </div>
-      </div>
+        </div>
+      </ProtectedContent>
     </AdminLayout>
   );
 };

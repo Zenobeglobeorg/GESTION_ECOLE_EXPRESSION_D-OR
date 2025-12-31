@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Card } from '../../components/ui/Card';
 import { AdminLayout } from '../../components/admin/AdminLayout';
+import { ProtectedContent } from '../../components/permissions/ProtectedContent';
 import * as dashboardService from '../../services/dashboardService';
 
 export const DashboardAdmin = () => {
@@ -75,11 +76,16 @@ export const DashboardAdmin = () => {
       title="Tableau de Bord"
       subtitle="Bienvenue dans votre espace d'administration"
     >
-      {error && (
-        <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
-          {error}
+      <ProtectedContent permission="users.read" fallback={
+        <div className="p-4 rounded-xl border border-yellow-200 bg-yellow-50 text-yellow-700">
+          Vous n'avez pas la permission d'accéder au tableau de bord.
         </div>
-      )}
+      }>
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
+            {error}
+          </div>
+        )}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {statsDisplay.map((stat, index) => (
           <Card
@@ -138,6 +144,7 @@ export const DashboardAdmin = () => {
           </div>
         </div>
       </Card>
+      </ProtectedContent>
     </AdminLayout>
   );
 };

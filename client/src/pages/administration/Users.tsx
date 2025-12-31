@@ -2,6 +2,7 @@
 import { Link } from 'react-router-dom';
 import { Card } from '../../components/ui/Card';
 import { AdminLayout } from '../../components/admin/AdminLayout';
+import { ProtectedContent } from '../../components/permissions/ProtectedContent';
 import * as userService from '../../services/userService';
 
 interface UserStats {
@@ -82,7 +83,12 @@ export const Users = () => {
       title="Gestion des Utilisateurs"
       subtitle="Synthèse des comptes et accès aux différentes catégories."
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <ProtectedContent permission="users.read" fallback={
+        <div className="p-4 rounded-xl border border-yellow-200 bg-yellow-50 text-yellow-700">
+          Vous n'avez pas la permission de consulter les utilisateurs.
+        </div>
+      }>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {statCards.map((card) => (
           <Card
             key={card.label}
@@ -181,6 +187,7 @@ export const Users = () => {
           </table>
         )}
       </Card>
+      </ProtectedContent>
     </AdminLayout>
   );
 };

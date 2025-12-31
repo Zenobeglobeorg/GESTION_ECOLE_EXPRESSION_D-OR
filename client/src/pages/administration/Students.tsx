@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { AdminLayout } from '../../components/admin/AdminLayout';
+import { ProtectedContent } from '../../components/permissions/ProtectedContent';
 import * as studentService from '../../services/studentService';
 import * as userService from '../../services/userService';
 import * as classService from '../../services/classService';
@@ -149,14 +150,16 @@ export const Students = () => {
   };
 
   const actionButton = (
-    <Link to="/admin/students/new">
-      <Button
-        size="md"
-        className="bg-linear-to-r from-yellow-400 via-yellow-500 to-yellow-400 text-blue-900 border-none hover:from-yellow-500 hover:to-yellow-500 shadow-lg shadow-yellow-200"
-      >
-        Inscrire un élève
-      </Button>
-    </Link>
+    <ProtectedContent permission="students.create">
+      <Link to="/admin/students/new">
+        <Button
+          size="md"
+          className="bg-linear-to-r from-yellow-400 via-yellow-500 to-yellow-400 text-blue-900 border-none hover:from-yellow-500 hover:to-yellow-500 shadow-lg shadow-yellow-200"
+        >
+          Inscrire un élève
+        </Button>
+      </Link>
+    </ProtectedContent>
   );
 
   return (
@@ -165,11 +168,16 @@ export const Students = () => {
       subtitle="Liste, association et gestion des élèves"
       actions={actionButton}
     >
-      {error && (
-        <div className="p-4 rounded-xl border border-red-200 bg-red-50 text-red-700">
-          {error}
+      <ProtectedContent permission="students.read" fallback={
+        <div className="p-4 rounded-xl border border-yellow-200 bg-yellow-50 text-yellow-700">
+          Vous n'avez pas la permission de consulter les élèves.
         </div>
-      )}
+      }>
+        {error && (
+          <div className="p-4 rounded-xl border border-red-200 bg-red-50 text-red-700">
+            {error}
+          </div>
+        )}
 
       <Card title="Liste des Élèves" className="border-0 shadow-lg">
         {/* Filtres et recherche */}
@@ -309,23 +317,27 @@ export const Students = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                         <div className="flex items-center justify-end gap-2">
-                          <Link to={`/admin/students/${student.id}/edit`}>
+                          <ProtectedContent permission="students.update">
+                            <Link to={`/admin/students/${student.id}/edit`}>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="border-yellow-400 text-yellow-700 hover:bg-yellow-50 hover:border-yellow-500"
+                              >
+                                Modifier
+                              </Button>
+                            </Link>
+                          </ProtectedContent>
+                          <ProtectedContent permission="students.delete">
                             <Button
                               variant="outline"
                               size="sm"
-                              className="border-yellow-400 text-yellow-700 hover:bg-yellow-50 hover:border-yellow-500"
+                              className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
+                              onClick={() => handleDelete(student.id)}
                             >
-                              Modifier
+                              Archiver
                             </Button>
-                          </Link>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
-                            onClick={() => handleDelete(student.id)}
-                          >
-                            Archiver
-                          </Button>
+                          </ProtectedContent>
                         </div>
                       </td>
                     </tr>
@@ -398,16 +410,19 @@ export const Students = () => {
           </div>
 
           <div className="flex items-center justify-end">
-            <Button
-              type="submit"
-              isLoading={assocLoading}
-              className="bg-linear-to-r from-blue-600 via-blue-700 to-blue-700 hover:from-blue-700 hover:to-blue-800"
-            >
-              {assocLoading ? 'Association...' : 'Associer'}
-            </Button>
+            <ProtectedContent permission="students.update">
+              <Button
+                type="submit"
+                isLoading={assocLoading}
+                className="bg-linear-to-r from-blue-600 via-blue-700 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+              >
+                {assocLoading ? 'Association...' : 'Associer'}
+              </Button>
+            </ProtectedContent>
           </div>
         </form>
       </Card>
+      </ProtectedContent>
     </AdminLayout>
   );
 };

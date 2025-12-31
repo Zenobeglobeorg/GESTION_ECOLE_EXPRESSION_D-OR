@@ -1,5 +1,6 @@
 ﻿import React, { useState, useMemo, useEffect } from 'react';
 import { AdminLayout } from '../../components/admin/AdminLayout';
+import { ProtectedContent } from '../../components/permissions/ProtectedContent';
 import * as notificationService from '../../services/notificationService';
 import { useSocket } from '../../hooks/useSocket';
 
@@ -106,7 +107,12 @@ export const Notifications = () => {
       title="Centre de Notifications"
       subtitle="Consultez toutes vos notifications importantes."
     >
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg w-full overflow-hidden border border-gray-200 dark:border-gray-700 transition-colors">
+      <ProtectedContent permission="users.read" fallback={
+        <div className="p-4 rounded-xl border border-yellow-200 bg-yellow-50 text-yellow-700">
+          Vous n'avez pas la permission d'accéder aux notifications.
+        </div>
+      }>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg w-full overflow-hidden border border-gray-200 dark:border-gray-700 transition-colors">
         <div className="border-b border-gray-200 dark:border-gray-700 px-6 py-4">
           <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4">
             <h2 className="text-xl font-bold text-blue-900 dark:text-blue-400">
@@ -189,6 +195,7 @@ export const Notifications = () => {
           )}
         </div>
       </div>
+      </ProtectedContent>
     </AdminLayout>
   );
 };

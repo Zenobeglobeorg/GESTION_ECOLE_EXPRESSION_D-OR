@@ -12,6 +12,7 @@ export interface User {
   lastName: string;
   phone?: string;
   role: UserRole;
+  function?: string | null; // Fonction de l'administrateur
 }
 
 export interface AuthContextType {

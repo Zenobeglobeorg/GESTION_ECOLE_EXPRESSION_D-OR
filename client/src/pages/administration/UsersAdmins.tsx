@@ -4,6 +4,7 @@ import { Button } from "../../components/ui/Button";
 import { AdminLayout } from "../../components/admin/AdminLayout";
 import { Input } from "../../components/ui/Input";
 import { Modal } from "../../components/ui/Modal";
+import { ProtectedContent } from "../../components/permissions/ProtectedContent";
 import * as userService from "../../services/userService";
 
 export const UsersAdmins = () => {
@@ -23,6 +24,7 @@ export const UsersAdmins = () => {
     email: "",
     password: "",
     phone: "",
+    function: "",
   });
 
   useEffect(() => {
@@ -52,6 +54,7 @@ export const UsersAdmins = () => {
       await userService.createUser({
         ...form,
         role: 'ADMINISTRATION',
+        function: form.function || undefined,
       });
       setIsCreateModalOpen(false);
       setForm({
@@ -60,6 +63,7 @@ export const UsersAdmins = () => {
         email: "",
         password: "",
         phone: "",
+        function: "",
       });
       // Recharger la liste
       const users = await userService.getUsers();
@@ -95,6 +99,7 @@ export const UsersAdmins = () => {
     firstName: "",
     lastName: "",
     phone: "",
+    function: "",
   });
 
   const handleUpdate = async (e: React.FormEvent) => {
@@ -107,6 +112,7 @@ export const UsersAdmins = () => {
         firstName: editForm.firstName,
         lastName: editForm.lastName,
         phone: editForm.phone || undefined,
+        function: editForm.function || undefined,
       });
       setIsEditModalOpen(false);
       setEditingAdmin(null);
@@ -144,20 +150,27 @@ export const UsersAdmins = () => {
         </div>
       )}
 
-      <div className="mb-6 flex justify-end">
-        <Button
-          onClick={() => setIsCreateModalOpen(true)}
-          style={{ backgroundColor: '#fbbf24' }}
-          className="flex items-center gap-2"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Nouvel Administrateur
-        </Button>
-      </div>
+      <ProtectedContent permission="users.read" fallback={
+        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 text-yellow-700 rounded-lg">
+          Vous n'avez pas la permission de consulter les administrateurs.
+        </div>
+      }>
+        <div className="mb-6 flex justify-end">
+          <ProtectedContent permission="users.create">
+            <Button
+              onClick={() => setIsCreateModalOpen(true)}
+              style={{ backgroundColor: '#fbbf24' }}
+              className="flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Nouvel Administrateur
+            </Button>
+          </ProtectedContent>
+        </div>
 
-      <Card className="border-0 shadow-lg">
+        <Card className="border-0 shadow-lg">
         <div className="space-y-4">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <h2 className="font-semibold text-lg text-blue-900">Liste des administrateurs</h2>
@@ -198,37 +211,47 @@ export const UsersAdmins = () => {
                       className="cursor-pointer hover:bg-blue-50 transition-colors"
                       onClick={() => handleRowClick(admin)}
                     >
-                      <td className="font-semibold">{admin.firstName} {admin.lastName}</td>
+                      <td className="font-semibold">
+                        <div>{admin.firstName} {admin.lastName}</div>
+                        {admin.function && (
+                          <div className="text-xs text-blue-600 font-medium mt-0.5">{admin.function}</div>
+                        )}
+                      </td>
                       <td className="text-xs">{admin.email}</td>
                       <td className="text-xs">{admin.phone || '-'}</td>
                       <td className="text-xs">{new Date(admin.createdAt).toLocaleDateString('fr-FR')}</td>
                       <td className="text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex gap-2 justify-end">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="border-blue-300 text-blue-600 hover:bg-blue-50 hover:border-blue-400"
-                            onClick={() => {
-                              setEditForm({
-                                firstName: admin.firstName,
-                                lastName: admin.lastName,
-                                phone: admin.phone || "",
-                              });
-                              handleEdit(admin);
-                            }}
-                          >
-                            Modifier
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
-                            onClick={() => handleDelete(admin.id)}
-                          >
-                            Supprimer
-                          </Button>
+                          <ProtectedContent permission="users.update">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="border-blue-300 text-blue-600 hover:bg-blue-50 hover:border-blue-400"
+                              onClick={() => {
+                                setEditForm({
+                                  firstName: admin.firstName,
+                                  lastName: admin.lastName,
+                                  phone: admin.phone || "",
+                                  function: admin.function || "",
+                                });
+                                handleEdit(admin);
+                              }}
+                            >
+                              Modifier
+                            </Button>
+                          </ProtectedContent>
+                          <ProtectedContent permission="users.delete">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
+                              onClick={() => handleDelete(admin.id)}
+                            >
+                              Supprimer
+                            </Button>
+                          </ProtectedContent>
                         </div>
                       </td>
                     </tr>
@@ -278,6 +301,12 @@ export const UsersAdmins = () => {
                     </span>
                   </p>
                 </div>
+                {selectedAdmin.function && (
+                  <div>
+                    <p className="text-sm text-blue-600 font-medium mb-1">Fonction</p>
+                    <p className="text-blue-900 font-semibold">{selectedAdmin.function}</p>
+                  </div>
+                )}
                 <div>
                   <p className="text-sm text-blue-600 font-medium mb-1">Date de création</p>
                   <p className="text-blue-900 font-semibold">
@@ -310,7 +339,7 @@ export const UsersAdmins = () => {
         onClose={() => {
           setIsEditModalOpen(false);
           setEditingAdmin(null);
-          setEditForm({ firstName: "", lastName: "", phone: "" });
+          setEditForm({ firstName: "", lastName: "", phone: "", function: "" });
         }}
         title={`Modifier - ${editingAdmin?.firstName} ${editingAdmin?.lastName}`}
         size="lg"
@@ -347,6 +376,14 @@ export const UsersAdmins = () => {
               onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
             />
 
+            <Input
+              label="Fonction"
+              value={editForm.function}
+              onChange={(e) => setEditForm({ ...editForm, function: e.target.value })}
+              placeholder="Ex: Directeur, Fondateur, Secrétaire, etc."
+              helperText="Fonction de l'administrateur dans l'établissement"
+            />
+
             <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
               <Button
                 type="button"
@@ -354,7 +391,7 @@ export const UsersAdmins = () => {
                 onClick={() => {
                   setIsEditModalOpen(false);
                   setEditingAdmin(null);
-                  setEditForm({ firstName: "", lastName: "", phone: "" });
+                  setEditForm({ firstName: "", lastName: "", phone: "", function: "" });
                 }}
               >
                 Annuler
@@ -409,6 +446,14 @@ export const UsersAdmins = () => {
           />
 
           <Input
+            label="Fonction"
+            value={form.function}
+            onChange={(e) => setForm({ ...form, function: e.target.value })}
+            placeholder="Ex: Directeur, Fondateur, Secrétaire, etc."
+            helperText="Fonction de l'administrateur dans l'établissement"
+          />
+
+          <Input
             label="Mot de passe"
             type="password"
             value={form.password}
@@ -435,6 +480,7 @@ export const UsersAdmins = () => {
           </div>
         </form>
       </Modal>
+      </ProtectedContent>
     </AdminLayout>
   );
 };

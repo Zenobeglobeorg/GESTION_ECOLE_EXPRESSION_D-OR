@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { AdminLayout } from '../../components/admin/AdminLayout';
+import { ProtectedContent } from '../../components/permissions/ProtectedContent';
 import * as userService from '../../services/userService';
 import * as permissionService from '../../services/permissionService';
 import type { Permission } from '../../services/roleService';
@@ -30,23 +31,20 @@ export const UsersPermissions = () => {
   }, []);
 
   const loadUserPermissions = async (userId: number) => {
-    // Try to fetch user (and its permissions) if API supports it
     setSelectedPerms([]);
     try {
-      const user = await userService.getUserById(userId as number);
-      // adapt to possible shapes: user.permissions is array of keys or objects
-      const maybe = user as unknown as { permissions?: unknown[] };
-      const perms = maybe.permissions ?? [];
-      if (Array.isArray(perms)) {
-        const keys = perms.map((p) => {
-          if (typeof p === 'string') return p;
-          if (p && typeof p === 'object') {
-            const obj = p as { key?: string; name?: string; id?: number };
-            return obj.key ?? obj.name ?? (obj.id ? String(obj.id) : '');
-          }
-          return '';
-        });
-        setSelectedPerms(keys.filter(Boolean));
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/users/${userId}/permissions`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const permissionKeys = (data.permissions || []).map((p: { key: string }) => p.key);
+        setSelectedPerms(permissionKeys);
       }
     } catch (err) {
       console.warn('Could not load user permissions', err);
@@ -81,7 +79,12 @@ export const UsersPermissions = () => {
       title="Gestion des Permissions Utilisateurs"
       subtitle="Sélectionnez un utilisateur puis attribuez-lui les permissions nécessaires."
     >
-      <Card className="border-0 shadow-lg max-w-5xl">
+      <ProtectedContent permission="users.update" fallback={
+        <div className="p-4 rounded-xl border border-yellow-200 bg-yellow-50 text-yellow-700">
+          Vous n'avez pas la permission de gérer les permissions des utilisateurs.
+        </div>
+      }>
+        <Card className="border-0 shadow-lg max-w-5xl">
         <div className="space-y-6">
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium text-blue-900" htmlFor="permissions-user">
@@ -134,6 +137,7 @@ export const UsersPermissions = () => {
           </div>
         </div>
       </Card>
+      </ProtectedContent>
     </AdminLayout>
   );
 };
