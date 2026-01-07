@@ -56,7 +56,6 @@ export const Fees = () => {
       payments: feesService.Payment[];
     }>;
   }>>([]);
-  const [loadingBlocked, setLoadingBlocked] = useState(false);
   const [showBlockedAccounts, setShowBlockedAccounts] = useState(false);
 
   // Charger les données
@@ -106,6 +105,31 @@ export const Fees = () => {
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       setError(errorMessage);
+    }
+  };
+
+  const loadBlockedAccounts = async () => {
+    try {
+      const accounts = await feesService.getBlockedAccounts();
+      setBlockedAccounts(accounts);
+    } catch (err: unknown) {
+      console.error('Erreur lors du chargement des comptes bloqués:', err);
+    }
+  };
+
+  const handleUnblockAccount = async (userId: number, parentName: string) => {
+    if (!confirm(`Débloquer le compte de ${parentName} ?`)) return;
+    
+    try {
+      setError(null);
+      await feesService.unblockAccount(userId);
+      setSuccess(`Compte de ${parentName} débloqué avec succès`);
+      await loadBlockedAccounts();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      setError(errorMessage);
+      setTimeout(() => setError(null), 5000);
     }
   };
 
@@ -386,7 +410,7 @@ export const Fees = () => {
               {/* Boutons de vue */}
               <div className="flex gap-2">
                 <Button
-                  variant={activeView === 'table' ? 'default' : 'outline'}
+                  variant={activeView === 'table' ? undefined : 'outline'}
                   size="sm"
                   onClick={() => setActiveView('table')}
                   className={activeView === 'table' 
@@ -396,7 +420,7 @@ export const Fees = () => {
                   📋 {t('fees.viewTable') || 'Tableau'}
                 </Button>
                 <Button
-                  variant={activeView === 'student' ? 'default' : 'outline'}
+                  variant={activeView === 'student' ? undefined : 'outline'}
                   size="sm"
                   onClick={() => setActiveView('student')}
                   className={activeView === 'student' 
@@ -406,7 +430,7 @@ export const Fees = () => {
                   👤 {t('fees.viewByStudent') || 'Par élève'}
                 </Button>
                 <Button
-                  variant={activeView === 'calendar' ? 'default' : 'outline'}
+                  variant={activeView === 'calendar' ? undefined : 'outline'}
                   size="sm"
                   onClick={() => setActiveView('calendar')}
                   className={activeView === 'calendar' 
@@ -457,6 +481,7 @@ export const Fees = () => {
                   {t('fees.filterByStatus') || 'Filtrer par statut'}
                 </label>
                 <select
+                  title="Filtrer par statut"
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                   className="form-control dark:bg-gray-700 dark:text-white dark:border-gray-600"
@@ -929,6 +954,7 @@ export const Fees = () => {
                 {t('fees.paymentMethod') || 'Méthode de paiement'}
               </label>
               <select
+                title="Méthode de paiement"
                 value={paymentForm.paymentMethod}
                 onChange={(e) => setPaymentForm({ ...paymentForm, paymentMethod: e.target.value })}
                 className="form-control dark:bg-gray-700 dark:text-white dark:border-gray-600"
