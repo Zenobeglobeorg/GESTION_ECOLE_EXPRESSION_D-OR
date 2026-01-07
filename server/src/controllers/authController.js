@@ -37,6 +37,13 @@ export const login = async (req, res) => {
       });
     }
 
+    // Vérifier si le compte est bloqué
+    if (user.isBlocked) {
+      return res.status(403).json({ 
+        error: 'Votre compte a été bloqué. Veuillez contacter l\'administration pour régulariser votre situation de paiement.' 
+      });
+    }
+
     // Vérifier le mot de passe
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
 

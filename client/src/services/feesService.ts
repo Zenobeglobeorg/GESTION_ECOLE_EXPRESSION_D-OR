@@ -175,6 +175,127 @@ export const generatePaymentsForStudent = async (studentId: number): Promise<Pay
   return response.json();
 };
 
+/**
+ * Envoie un rappel de paiement pour une échéance
+ */
+export const sendPaymentReminder = async (paymentId: number): Promise<{ success: boolean; message: string }> => {
+  const token = getToken();
+  if (!token) throw new Error('Non authentifié');
+
+  const response = await fetch(`${API_BASE_URL}/api/payments/${paymentId}/send-reminder`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors de l\'envoi du rappel');
+  }
+
+  return response.json();
+};
+
+/**
+ * Récupère les comptes parents bloqués
+ */
+export const getBlockedAccounts = async (): Promise<Array<{
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  isBlocked: boolean;
+  students: Array<{
+    id: number;
+    firstName: string;
+    lastName: string;
+    payments: Payment[];
+  }>;
+}>> => {
+  const token = getToken();
+  if (!token) throw new Error('Non authentifié');
+
+  const response = await fetch(`${API_BASE_URL}/api/payment-reminders/blocked-accounts`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors de la récupération des comptes bloqués');
+  }
+
+  return response.json();
+};
+
+/**
+ * Débloque un compte parent
+ */
+export const unblockAccount = async (userId: number): Promise<{ success: boolean; message: string }> => {
+  const token = getToken();
+  if (!token) throw new Error('Non authentifié');
+
+  const response = await fetch(`${API_BASE_URL}/api/payment-reminders/unblock-account/${userId}`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors du déblocage du compte');
+  }
+
+  return response.json();
+};
+
+/**
+ * Récupère l'historique des rappels de paiement
+ */
+export const getReminderHistory = async (paymentId?: number): Promise<Array<{
+  id: number;
+  paymentId: number;
+  userId: number;
+  sentBy: number | null;
+  sentVia: string;
+  emailSent: boolean;
+  createdAt: string;
+  payment: {
+    student: {
+      id: number;
+      firstName: string;
+      lastName: string;
+    };
+  };
+}>> => {
+  const token = getToken();
+  if (!token) throw new Error('Non authentifié');
+
+  const url = paymentId 
+    ? `${API_BASE_URL}/api/payment-reminders/reminder-history/${paymentId}`
+    : `${API_BASE_URL}/api/payment-reminders/reminder-history`;
+
+  const response = await fetch(url, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors de la récupération de l\'historique');
+  }
+
+  return response.json();
+};
+
 
 
 

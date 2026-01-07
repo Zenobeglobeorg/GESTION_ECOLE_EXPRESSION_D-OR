@@ -37,6 +37,13 @@ export const ParentDashboardHome = () => {
     averageGrade: null as number | null,
     attendanceRate: null as number | null,
     feesStatus: '--' as string,
+    feesDetails: {
+      total: 0,
+      paid: 0,
+      pending: 0,
+      nextDueDate: null as string | null,
+      nextAmount: 0,
+    },
   });
 
   // Charger les statistiques pour l'enfant sélectionné
@@ -124,10 +131,33 @@ export const ParentDashboardHome = () => {
 
         // Calculer le statut des frais
         let feesStatus = '--';
+        let feesDetails = {
+          total: 0,
+          paid: 0,
+          pending: 0,
+          nextDueDate: null as string | null,
+          nextAmount: 0,
+        };
+        
         if (payments.length > 0) {
           const total = payments.reduce((sum, p) => sum + p.amount, 0);
           const paid = payments.filter(p => p.status === 'PAID').reduce((sum, p) => sum + p.amount, 0);
           const pending = total - paid;
+          
+          // Trouver la prochaine échéance
+          const pendingPayments = payments
+            .filter(p => p.status !== 'PAID')
+            .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+          
+          if (pendingPayments.length > 0) {
+            feesDetails.nextDueDate = pendingPayments[0].dueDate;
+            feesDetails.nextAmount = pendingPayments[0].amount;
+          }
+          
+          feesDetails.total = total;
+          feesDetails.paid = paid;
+          feesDetails.pending = pending;
+          
           if (pending === 0) {
             feesStatus = 'Payé';
           } else {
@@ -140,6 +170,7 @@ export const ParentDashboardHome = () => {
           averageGrade,
           attendanceRate,
           feesStatus,
+          feesDetails,
         });
       } catch (err) {
         console.error('ParentDashboardHome: Erreur générale lors du chargement des statistiques:', err);
@@ -231,9 +262,72 @@ export const ParentDashboardHome = () => {
                    <p className="text-sm text-white text-opacity-90 mb-1">Frais de scolarité</p>
                    <p className="text-3xl font-bold">{loading ? '--' : stats.feesStatus}</p>
                    <p className="text-xs text-white text-opacity-75 mt-1">Statut</p>
+                   {!loading && stats.feesDetails.pending > 0 && stats.feesDetails.nextDueDate && (
+                     <div className="mt-3 pt-3 border-t border-white/20">
+                       <p className="text-xs text-white text-opacity-90">
+                         Prochaine échéance : {new Date(stats.feesDetails.nextDueDate).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+                       </p>
+                       <p className="text-xs text-white text-opacity-90 font-semibold">
+                         {stats.feesDetails.nextAmount.toLocaleString('fr-FR')} FCFA
+                       </p>
+                     </div>
+                   )}
                  </div>
                </Card>
              </div>
+             
+             {/* Résumé détaillé des paiements */}
+             {!loading && stats.feesDetails.total > 0 && (
+               <Card title="Résumé des Paiements" className="mb-6 border-0 shadow-lg dark:bg-gray-800 dark:border-gray-700">
+                 <div className="space-y-4">
+                   <div className="grid grid-cols-3 gap-4">
+                     <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                       <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total</p>
+                       <p className="text-xl font-bold text-blue-900 dark:text-blue-300">
+                         {stats.feesDetails.total.toLocaleString('fr-FR')} F
+                       </p>
+                     </div>
+                     <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                       <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Payé</p>
+                       <p className="text-xl font-bold text-green-900 dark:text-green-300">
+                         {stats.feesDetails.paid.toLocaleString('fr-FR')} F
+                       </p>
+                     </div>
+                     <div className="text-center p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                       <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">En attente</p>
+                       <p className="text-xl font-bold text-yellow-900 dark:text-yellow-300">
+                         {stats.feesDetails.pending.toLocaleString('fr-FR')} F
+                       </p>
+                     </div>
+                   </div>
+                   
+                   {stats.feesDetails.nextDueDate && (
+                     <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border-l-4 border-yellow-400">
+                       <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
+                         📅 Prochaine échéance
+                       </p>
+                       <p className="text-sm text-gray-700 dark:text-gray-300">
+                         {new Date(stats.feesDetails.nextDueDate).toLocaleDateString('fr-FR', {
+                           day: '2-digit',
+                           month: 'long',
+                           year: 'numeric',
+                         })}
+                       </p>
+                       <p className="text-lg font-bold text-yellow-700 dark:text-yellow-400 mt-1">
+                         {stats.feesDetails.nextAmount.toLocaleString('fr-FR')} FCFA
+                       </p>
+                     </div>
+                   )}
+                   
+                   <Link
+                     to="/parent/fees"
+                     className="block text-center p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+                   >
+                     Voir le détail des paiements →
+                   </Link>
+                 </div>
+               </Card>
+             )}
              
              {/* --- Actions rapides (CORRIGÉ) --- */}
              <Card title="Accès Rapide" className="mb-6 border-0 shadow-lg dark:bg-gray-800 dark:border-gray-700">

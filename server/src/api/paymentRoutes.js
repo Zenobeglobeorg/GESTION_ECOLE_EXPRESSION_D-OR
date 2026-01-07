@@ -22,6 +22,9 @@ router.post('/student/:studentId/generate', requireRole('ADMINISTRATION', 'SUPER
 // Enregistrer ou mettre à jour un paiement
 router.put('/:paymentId', requireRole('ADMINISTRATION', 'SUPER_ADMIN'), paymentController.recordPayment);
 
+// Envoyer un rappel de paiement
+router.post('/:paymentId/send-reminder', requireRole('ADMINISTRATION', 'SUPER_ADMIN'), paymentController.sendPaymentReminder);
+
 export default router;
 
 

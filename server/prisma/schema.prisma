@@ -42,6 +42,9 @@ model User {
   // Double authentification (2FA) par email
   twoFactorEnabled Boolean @default(false) // 2FA activée ou non
 
+  // Blocage de compte (pour parents avec paiements en retard après le 5 mars)
+  isBlocked Boolean @default(false) // Compte bloqué ou non
+
   // Relations
   students                 Student[] // Un parent peut avoir plusieurs enfants
   classes                  Class[] // Classes assignées (pour enseignants)
@@ -544,6 +547,8 @@ model Payment {
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 
+  reminders         PaymentReminder[] // Historique des rappels envoyés
+
   @@map("payments")
 }
 
@@ -611,6 +616,23 @@ model Notification {
   @@index([userId, isRead])
   @@index([userId, createdAt])
   @@map("notifications")
+}
+
+// Modèle Historique des Rappels de Paiement
+model PaymentReminder {
+  id        Int      @id @default(autoincrement())
+  paymentId Int
+  payment   Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  userId    Int      // ID du parent
+  sentBy    Int?     // ID de l'admin qui a envoyé (null si automatique)
+  sentVia   String   @default("notification") // "notification", "email", "both"
+  emailSent Boolean  @default(false) // Si l'email a été envoyé avec succès
+  createdAt DateTime @default(now())
+
+  @@index([paymentId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("payment_reminders")
 }
 
 enum NotificationType {

@@ -41,10 +41,28 @@ export const Fees = () => {
     notes: '',
   });
   const [savingPayment, setSavingPayment] = useState(false);
+  
+  // Comptes bloqués
+  const [blockedAccounts, setBlockedAccounts] = useState<Array<{
+    id: number;
+    firstName: string;
+    lastName: string;
+    email: string;
+    isBlocked: boolean;
+    students: Array<{
+      id: number;
+      firstName: string;
+      lastName: string;
+      payments: feesService.Payment[];
+    }>;
+  }>>([]);
+  const [loadingBlocked, setLoadingBlocked] = useState(false);
+  const [showBlockedAccounts, setShowBlockedAccounts] = useState(false);
 
   // Charger les données
   useEffect(() => {
     loadData();
+    loadBlockedAccounts();
   }, []);
 
   // Recharger les paiements quand les filtres changent
@@ -258,6 +276,83 @@ export const Fees = () => {
         )}
 
         <div className="max-w-7xl space-y-8">
+        {/* Comptes bloqués */}
+        {blockedAccounts.length > 0 && (
+          <Card className="border-0 shadow-lg dark:bg-gray-800 border-l-4 border-l-red-500">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-lg font-semibold text-red-700 dark:text-red-400 flex items-center gap-2">
+                    <span>🔒</span>
+                    Comptes Bloqués ({blockedAccounts.length})
+                  </h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    Comptes parents bloqués en raison de paiements en retard
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowBlockedAccounts(!showBlockedAccounts)}
+                  className="border-red-300 dark:border-red-700 text-red-700 dark:text-red-400"
+                >
+                  {showBlockedAccounts ? 'Masquer' : 'Afficher'}
+                </Button>
+              </div>
+              
+              {showBlockedAccounts && (
+                <div className="space-y-3 mt-4">
+                  {blockedAccounts.map((parent) => {
+                    const totalPending = parent.students.reduce((sum, student) => {
+                      return sum + student.payments.reduce((pSum, p) => pSum + p.amount, 0);
+                    }, 0);
+                    
+                    return (
+                      <div
+                        key={parent.id}
+                        className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-red-900 dark:text-red-300">
+                              {parent.firstName} {parent.lastName}
+                            </h3>
+                            <p className="text-sm text-red-700 dark:text-red-400">{parent.email}</p>
+                            <div className="mt-2 space-y-1">
+                              {parent.students.map((student) => (
+                                <div key={student.id} className="text-sm text-gray-700 dark:text-gray-300">
+                                  <span className="font-medium">{student.firstName} {student.lastName}</span>
+                                  {' - '}
+                                  <span className="text-red-600 dark:text-red-400">
+                                    {student.payments.length} échéance{student.payments.length > 1 ? 's' : ''} en attente
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                            <p className="text-sm font-semibold text-red-800 dark:text-red-300 mt-2">
+                              Total en attente : {formatCurrency(totalPending)}
+                            </p>
+                          </div>
+                          <ProtectedContent permission="fees.manage">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleUnblockAccount(parent.id, `${parent.firstName} ${parent.lastName}`)}
+                              className="border-green-400 dark:border-green-600 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30"
+                            >
+                              Débloquer
+                            </Button>
+                          </ProtectedContent>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </Card>
+        )}
+
         {/* Statistiques */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className={`border-0 shadow-lg bg-linear-to-br from-blue-500 via-blue-600 to-blue-700 dark:from-blue-700 dark:via-blue-800 dark:to-blue-900 text-white`}>
@@ -451,18 +546,44 @@ export const Fees = () => {
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                            <ProtectedContent permission="fees.manage">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleOpenPaymentModal(payment)}
-                                className="border-yellow-400 dark:border-yellow-600 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/30 hover:border-yellow-500"
-                              >
-                                {payment.status === 'PAID' 
-                                  ? (t('fees.update') || 'Modifier')
-                                  : (t('fees.record') || 'Enregistrer')}
-                              </Button>
-                            </ProtectedContent>
+                            <div className="flex items-center justify-end gap-2">
+                              {payment.status !== 'PAID' && (
+                                <ProtectedContent permission="fees.manage">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={async () => {
+                                      if (confirm(`Envoyer un rappel de paiement pour ${payment.student.firstName} ${payment.student.lastName} ?`)) {
+                                        try {
+                                          await feesService.sendPaymentReminder(payment.id);
+                                          setSuccess('Rappel de paiement envoyé avec succès');
+                                          setTimeout(() => setSuccess(null), 3000);
+                                        } catch (err) {
+                                          setError(err instanceof Error ? err.message : 'Erreur lors de l\'envoi du rappel');
+                                          setTimeout(() => setError(null), 5000);
+                                        }
+                                      }
+                                    }}
+                                    className="border-blue-400 dark:border-blue-600 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                                    title="Envoyer un rappel au parent"
+                                  >
+                                    📧 Rappel
+                                  </Button>
+                                </ProtectedContent>
+                              )}
+                              <ProtectedContent permission="fees.manage">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleOpenPaymentModal(payment)}
+                                  className="border-yellow-400 dark:border-yellow-600 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/30 hover:border-yellow-500"
+                                >
+                                  {payment.status === 'PAID' 
+                                    ? (t('fees.update') || 'Modifier')
+                                    : (t('fees.record') || 'Enregistrer')}
+                                </Button>
+                              </ProtectedContent>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -578,18 +699,45 @@ export const Fees = () => {
                           </span>
                         </td>
                                   <td className="px-4 py-2 text-right">
-                                    <ProtectedContent permission="fees.manage">
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => handleOpenPaymentModal(payment)}
-                                        className="border-yellow-400 dark:border-yellow-600 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/30"
-                                      >
-                                        {payment.status === 'PAID' 
-                                          ? (t('fees.update') || 'Modifier')
-                                          : (t('fees.record') || 'Enregistrer')}
-                                      </Button>
-                                    </ProtectedContent>
+                                    <div className="flex items-center justify-end gap-2">
+                                      {payment.status !== 'PAID' && (
+                                        <ProtectedContent permission="fees.manage">
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={async () => {
+                                              if (confirm(`Envoyer un rappel de paiement pour ${payment.student.firstName} ${payment.student.lastName} ?`)) {
+                                                try {
+                                                  await feesService.sendPaymentReminder(payment.id);
+                                                  setSuccess('Rappel de paiement envoyé avec succès');
+                                                  setTimeout(() => setSuccess(null), 3000);
+                                                  await loadData();
+                                                } catch (err) {
+                                                  setError(err instanceof Error ? err.message : 'Erreur lors de l\'envoi du rappel');
+                                                  setTimeout(() => setError(null), 5000);
+                                                }
+                                              }
+                                            }}
+                                            className="border-blue-400 dark:border-blue-600 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                                            title="Envoyer un rappel au parent"
+                                          >
+                                            📧 Rappel
+                                          </Button>
+                                        </ProtectedContent>
+                                      )}
+                                      <ProtectedContent permission="fees.manage">
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => handleOpenPaymentModal(payment)}
+                                          className="border-yellow-400 dark:border-yellow-600 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/30"
+                                        >
+                                          {payment.status === 'PAID' 
+                                            ? (t('fees.update') || 'Modifier')
+                                            : (t('fees.record') || 'Enregistrer')}
+                                        </Button>
+                                      </ProtectedContent>
+                                    </div>
                                   </td>
                       </tr>
                     ))}

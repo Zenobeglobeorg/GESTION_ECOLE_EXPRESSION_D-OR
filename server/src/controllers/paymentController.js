@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { getPrisma } from '../utils/prisma.js';
+import { getFinalPaymentDueDate } from '../utils/paymentUtils.js';
 
 const prisma = getPrisma();
 
@@ -53,18 +54,18 @@ const getFirstPaymentAmount = (level) => {
 
 /**
  * Calcule les dates et montants des paiements selon l'option choisie
- * Date limite finale : 05 MARS 2026
+ * Date limite finale : 05 MARS de l'année en cours (ou suivante si déjà passé)
  * 
  * Logique :
  * - Premier paiement : 25 000 F (ou 30 000 F pour CM2) payé à l'inscription
- * - Reste : réparti sur les échéances restantes jusqu'au 5 mars 2026
+ * - Reste : réparti sur les échéances restantes jusqu'au 5 mars
  */
 const calculatePaymentSchedule = (paymentOption, enrollmentDate, level) => {
   const annualAmount = getAnnualAmount(level);
   const firstPaymentAmount = getFirstPaymentAmount(level);
   const remainingAmount = annualAmount - firstPaymentAmount; // Montant restant à payer
   
-  const finalDueDate = new Date('2026-03-05');
+  const finalDueDate = getFinalPaymentDueDate();
   const enrollment = new Date(enrollmentDate);
   
   // Date de début pour les échéances : le 5 du mois suivant l'inscription
@@ -474,6 +475,148 @@ export const generatePaymentsForStudent = async (req, res) => {
   } catch (err) {
     console.error('generatePaymentsForStudent error:', err);
     res.status(500).json({ error: 'Erreur lors de la génération des paiements' });
+  }
+};
+
+/**
+ * Envoie un rappel de paiement au parent pour une échéance
+ */
+export const sendPaymentReminder = async (req, res) => {
+  try {
+    const { paymentId } = req.params;
+    
+    // Récupérer le paiement avec les informations de l'élève et du parent
+    const payment = await prisma.payment.findUnique({
+      where: { id: parseInt(paymentId) },
+      include: {
+        student: {
+          include: {
+            parent: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            },
+            class: {
+              select: {
+                name: true,
+                level: true,
+              },
+            },
+          },
+        },
+      },
+    });
+    
+    if (!payment) {
+      return res.status(404).json({ error: 'Paiement non trouvé' });
+    }
+    
+    // Vérifier que le paiement est en attente
+    const status = calculatePaymentStatus(payment.dueDate, payment.paidDate);
+    if (status === 'PAID') {
+      return res.status(400).json({ error: 'Ce paiement est déjà payé' });
+    }
+    
+    // Calculer le montant restant total pour cet élève
+    const allPayments = await prisma.payment.findMany({
+      where: {
+        studentId: payment.studentId,
+        status: { not: 'PAID' },
+      },
+      orderBy: { dueDate: 'asc' },
+    });
+    
+    const totalRemaining = allPayments.reduce((sum, p) => sum + p.amount, 0);
+    
+    // Calculer les jours jusqu'à la date limite
+    const { getFinalPaymentDueDate } = await import('../utils/paymentUtils.js');
+    const finalDate = getFinalPaymentDueDate();
+    const today = new Date();
+    const daysUntilFinal = Math.ceil((finalDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    
+    // Créer la notification pour le parent
+    const { createNotification } = await import('./notificationController.js');
+    
+    const dueDateFormatted = new Date(payment.dueDate).toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    });
+    
+    const studentName = `${payment.student.firstName} ${payment.student.lastName}`;
+    const title = `Rappel de paiement - ${studentName}`;
+    const content = `Bonjour ${payment.student.parent.firstName},\n\n` +
+      `Nous vous rappelons qu'une échéance de paiement est en attente pour ${studentName}.\n\n` +
+      `📅 Date limite : ${dueDateFormatted}\n` +
+      `💰 Montant de cette échéance : ${payment.amount.toLocaleString('fr-FR')} FCFA\n` +
+      `📊 Montant total restant : ${totalRemaining.toLocaleString('fr-FR')} FCFA\n\n` +
+      `Merci de régulariser votre situation au plus vite.\n\n` +
+      `Cordialement,\nL'équipe Expression d'Or`;
+    
+    // Envoyer la notification
+    await createNotification(
+      payment.student.parent.id,
+      'PAYMENT',
+      title,
+      content,
+      payment.id,
+      {
+        studentId: payment.student.id,
+        studentName,
+        amount: payment.amount,
+        dueDate: payment.dueDate,
+        totalRemaining,
+      }
+    );
+    
+    // Envoyer l'email via EmailJS
+    let emailSent = false;
+    try {
+      const { emailjsService } = await import('../services/emailjsService.js');
+      const emailResult = await emailjsService.sendPaymentReminderEmail(
+        payment.student.parent.email,
+        payment.student.parent.firstName,
+        studentName,
+        payment.amount,
+        payment.dueDate,
+        totalRemaining,
+        daysUntilFinal
+      );
+      emailSent = emailResult.success || false;
+    } catch (emailError) {
+      console.warn('⚠️ Erreur lors de l\'envoi de l\'email de rappel (notification envoyée quand même):', emailError);
+      // On continue même si l'email échoue, la notification est déjà envoyée
+    }
+    
+    // Enregistrer l'historique du rappel
+    try {
+      await prisma.paymentReminder.create({
+        data: {
+          paymentId: payment.id,
+          userId: payment.student.parent.id,
+          sentBy: req.user?.id || null,
+          sentVia: emailSent ? 'both' : 'notification',
+          emailSent,
+        },
+      });
+    } catch (reminderError) {
+      console.warn('⚠️ Erreur lors de l\'enregistrement de l\'historique du rappel:', reminderError);
+      // On continue même si l'historique n'est pas enregistré
+    }
+    
+    res.json({ 
+      success: true, 
+      message: emailSent 
+        ? 'Rappel de paiement envoyé avec succès (notification + email)'
+        : 'Rappel de paiement envoyé avec succès (notification)',
+      emailSent,
+    });
+  } catch (err) {
+    console.error('sendPaymentReminder error:', err);
+    res.status(500).json({ error: 'Erreur lors de l\'envoi du rappel de paiement' });
   }
 };
 

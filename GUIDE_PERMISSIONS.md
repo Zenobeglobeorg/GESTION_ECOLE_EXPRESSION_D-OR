@@ -142,3 +142,4 @@ La page `/admin/users/permissions` permet de :
 4. **Migration** : Après avoir ajouté la table `UserToPermission`, exécutez `npx prisma migrate dev`
 
 
+

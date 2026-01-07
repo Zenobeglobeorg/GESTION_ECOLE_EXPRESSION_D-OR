@@ -20,11 +20,14 @@ import calendarRoutes from './api/calendarRoutes.js';
 import settingsRoutes from './api/settingsRoutes.js';
 import announcementRoutes from './api/announcementRoutes.js';
 import paymentRoutes from './api/paymentRoutes.js';
+import paymentReminderRoutes from './api/paymentReminderRoutes.js';
 import messageRoutes from './api/messageRoutes.js';
 import notificationRoutes from './api/notificationRoutes.js';
 import assignmentRoutes from './api/assignmentRoutes.js';
 import dashboardRoutes from './api/dashboardRoutes.js';
 import { initializeSocket } from './websocket/socketHandler.js';
+import cron from 'node-cron';
+import * as paymentReminderService from './services/paymentReminderService.js';
 
 dotenv.config();
 
@@ -85,6 +88,7 @@ app.use('/api/calendar', calendarRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/announcements', announcementRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/payment-reminders', paymentReminderRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/assignments', assignmentRoutes);
@@ -178,6 +182,37 @@ if (process.env.EMAILJS_SERVICE_ID && process.env.EMAILJS_TEMPLATE_ID && (proces
   console.warn('   📖 Voir GUIDE_EMAILJS.md pour la configuration EmailJS (le plus rapide)');
 }
 console.log('');
+
+// Configuration des cron jobs pour les rappels de paiement
+// Envoyer les rappels automatiques chaque lundi à 9h
+cron.schedule('0 9 * * 1', async () => {
+  try {
+    console.log('📧 [CRON] Démarrage de l\'envoi des rappels automatiques de paiement...');
+    const result = await paymentReminderService.sendAutomaticPaymentReminders();
+    console.log(`✅ [CRON] Rappels automatiques envoyés: ${result.sent} notification(s) sur ${result.checked} paiement(s) vérifié(s)`);
+  } catch (error) {
+    console.error('❌ [CRON] Erreur lors de l\'envoi des rappels automatiques:', error);
+  }
+});
+
+// Vérifier et bloquer les comptes chaque jour à 8h (après le 5 mars)
+cron.schedule('0 8 * * *', async () => {
+  try {
+    console.log('🔒 [CRON] Démarrage de la vérification et blocage des comptes en retard...');
+    const result = await paymentReminderService.checkAndBlockOverdueAccounts();
+    if (result.blocked > 0) {
+      console.log(`⚠️ [CRON] Comptes bloqués: ${result.blocked} compte(s) sur ${result.checked} vérifié(s)`);
+    } else {
+      console.log(`✅ [CRON] Aucun compte à bloquer (${result.checked} compte(s) vérifié(s))`);
+    }
+  } catch (error) {
+    console.error('❌ [CRON] Erreur lors de la vérification des comptes:', error);
+  }
+});
+
+console.log('⏰ Cron jobs configurés :');
+console.log('   - Rappels automatiques : Chaque lundi à 9h');
+console.log('   - Vérification des comptes : Chaque jour à 8h');
 
 // Démarrage du serveur
 server.listen(PORT, () => {

@@ -5,6 +5,7 @@ import { useNotificationCount } from '../../hooks/useNotificationCount';
 import { useMessageCount } from '../../hooks/useMessageCount';
 import { useNavigate } from 'react-router-dom';
 import * as studentService from '../../services/studentService';
+import * as feesService from '../../services/feesService';
 
 interface ParentHeaderProps {
   isSidebarCollapsed: boolean;
@@ -18,6 +19,8 @@ export const ParentHeader = ({ isSidebarCollapsed, onMobileMenuToggle }: ParentH
   const [isChildDropdownOpen, setIsChildDropdownOpen] = useState(false);
   const { unreadCount: notificationCount } = useNotificationCount();
   const { unreadCount: messageCount } = useMessageCount();
+  const [upcomingPayments, setUpcomingPayments] = useState<feesService.Payment[]>([]);
+  const [paymentWarning, setPaymentWarning] = useState<{ color: string; message: string } | null>(null);
   
   // Charger les enfants du parent connecté
   useEffect(() => {
@@ -42,6 +45,91 @@ export const ParentHeader = ({ isSidebarCollapsed, onMobileMenuToggle }: ParentH
     
     loadChildren();
   }, [user, setChildren, setSelectedChild, setLoading, selectedChild]);
+
+  // Charger les échéances de paiement pour tous les enfants
+  useEffect(() => {
+    const loadPayments = async () => {
+      if (!user || user.role !== 'PARENT' || children.length === 0) return;
+      
+      try {
+        const allPayments: feesService.Payment[] = [];
+        for (const child of children) {
+          try {
+            const payments = await feesService.getStudentPayments(child.id);
+            allPayments.push(...payments.filter(p => p.status !== 'PAID'));
+          } catch (err) {
+            console.error(`Erreur lors du chargement des paiements pour ${child.firstName}:`, err);
+          }
+        }
+        
+        // Trier par date d'échéance (plus proche en premier)
+        allPayments.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+        
+        // Prendre les 3 prochaines échéances
+        setUpcomingPayments(allPayments.slice(0, 3));
+        
+        // Calculer le statut de paiement pour l'avertissement
+        if (allPayments.length > 0) {
+          const nextPayment = allPayments[0];
+          const dueDate = new Date(nextPayment.dueDate);
+          const today = new Date();
+          // Date limite : 5 mars de l'année en cours (ou suivante si déjà passé)
+          const currentYear = today.getFullYear();
+          let finalDate = new Date(currentYear, 2, 5); // 5 mars (mois 2 = mars)
+          if (today > finalDate) {
+            finalDate = new Date(currentYear + 1, 2, 5);
+          }
+          
+          // Calculer les jours jusqu'à l'échéance
+          const daysUntilDue = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+          const daysUntilFinal = Math.ceil((finalDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+          
+          // Si on est en février ou après, et qu'on approche du 5 mars
+          const currentMonth = today.getMonth() + 1; // 1-12
+          
+          if (daysUntilFinal < 0) {
+            // Après le 5 mars - ROUGE
+            setPaymentWarning({
+              color: 'red',
+              message: '⚠️ Date limite dépassée - Compte bloqué',
+            });
+          } else if (currentMonth >= 2 && daysUntilFinal <= 30) {
+            // Février ou mars, moins de 30 jours - ROUGE
+            setPaymentWarning({
+              color: 'red',
+              message: `⚠️ ${daysUntilFinal} jour${daysUntilFinal > 1 ? 's' : ''} avant la date limite`,
+            });
+          } else if (currentMonth >= 2 && daysUntilFinal <= 60) {
+            // Février, moins de 60 jours - JAUNE
+            setPaymentWarning({
+              color: 'yellow',
+              message: `⏰ ${daysUntilFinal} jour${daysUntilFinal > 1 ? 's' : ''} avant la date limite`,
+            });
+          } else if (daysUntilDue <= 7) {
+            // Moins de 7 jours jusqu'à la prochaine échéance - JAUNE
+            setPaymentWarning({
+              color: 'yellow',
+              message: `⏰ Échéance dans ${daysUntilDue} jour${daysUntilDue > 1 ? 's' : ''}`,
+            });
+          } else {
+            // Tout va bien - VERT
+            setPaymentWarning({
+              color: 'green',
+              message: `✓ Prochaine échéance: ${dueDate.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}`,
+            });
+          }
+        } else {
+          setPaymentWarning(null);
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des paiements:', error);
+      }
+    };
+    
+    if (children.length > 0) {
+      loadPayments();
+    }
+  }, [user, children]);
   
   const handleSelectChild = (child: studentService.Student) => {
     setSelectedChild(child);
@@ -85,6 +173,19 @@ export const ParentHeader = ({ isSidebarCollapsed, onMobileMenuToggle }: ParentH
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Avertissement de paiement */}
+          {paymentWarning && (
+            <div className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium ${
+              paymentWarning.color === 'red' 
+                ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-700'
+                : paymentWarning.color === 'yellow'
+                ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border border-yellow-300 dark:border-yellow-700'
+                : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-300 dark:border-green-700'
+            }`}>
+              {paymentWarning.message}
+            </div>
+          )}
+          
           {/* Cloche de notification */}
           <button
             onClick={() => navigate('/parent/notification')}

@@ -619,6 +619,145 @@ Expression d'Or - Plateforme de gestion scolaire
       customTemplateId: templateIdToUse, // Utiliser le template de réinitialisation si disponible
     });
   }
+
+  /**
+   * Envoie un email de rappel de paiement
+   * Utilise un compte EmailJS séparé pour les paiements (comme pour la 2FA)
+   */
+  async sendPaymentReminderEmail(email, userName, studentName, amount, dueDate, totalRemaining, daysUntilFinal) {
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Utiliser le compte EmailJS pour paiements si configuré, sinon le compte principal
+    const serviceIdToUse = process.env.EMAILJS_SERVICE_ID_PAYMENT || this.serviceId;
+    const templateIdToUse = process.env.EMAILJS_TEMPLATE_ID_PAYMENT || this.templateId;
+    const privateKeyToUse = process.env.EMAILJS_PRIVATE_KEY_PAYMENT || this.privateKey;
+    const publicKeyToUse = process.env.EMAILJS_PUBLIC_KEY_PAYMENT || this.publicKey;
+    
+    if (!serviceIdToUse || !templateIdToUse || !privateKeyToUse) {
+      return {
+        success: false,
+        error: 'EmailJS non configuré pour les paiements. EMAILJS_SERVICE_ID_PAYMENT, EMAILJS_TEMPLATE_ID_PAYMENT et EMAILJS_PRIVATE_KEY_PAYMENT requis (ou utilisez le compte principal).',
+      };
+    }
+
+    const dueDateFormatted = new Date(dueDate).toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    });
+
+    let subject, html, text;
+    
+    if (daysUntilFinal !== undefined && daysUntilFinal <= 7) {
+      // Dernière semaine - message urgent
+      subject = `⚠️ URGENT - Paiement en retard - ${studentName}`;
+      html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
+            .warning { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 4px; }
+            .info-box { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2563eb; }
+            .footer { text-align: center; margin-top: 30px; color: #6b7280; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>⚠️ URGENT - Paiement en Retard</h1>
+            </div>
+            <div class="content">
+              <p>Bonjour ${userName},</p>
+              <div class="warning">
+                <p><strong>⚠️ URGENT :</strong> Il ne reste que ${daysUntilFinal} jour${daysUntilFinal > 1 ? 's' : ''} avant la date limite du 5 mars.</p>
+              </div>
+              <p>Une échéance de paiement est en attente pour <strong>${studentName}</strong>.</p>
+              <div class="info-box">
+                <p><strong>📅 Date limite :</strong> ${dueDateFormatted}</p>
+                <p><strong>💰 Montant de cette échéance :</strong> ${amount.toLocaleString('fr-FR')} FCFA</p>
+                <p><strong>📊 Montant total restant :</strong> ${totalRemaining.toLocaleString('fr-FR')} FCFA</p>
+              </div>
+              <div class="warning">
+                <p><strong>⚠️ ATTENTION :</strong> Si le paiement n'est pas effectué avant le 5 mars, votre compte sera bloqué.</p>
+              </div>
+              <p>Merci de régulariser votre situation au plus vite.</p>
+              <p>Cordialement,<br>L'équipe Expression d'Or</p>
+              <div class="footer">
+                <p>Cet email a été envoyé automatiquement. Merci de ne pas y répondre.</p>
+              </div>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+      text = `URGENT - Paiement en retard - ${studentName}\n\nBonjour ${userName},\n\n⚠️ URGENT : Il ne reste que ${daysUntilFinal} jour${daysUntilFinal > 1 ? 's' : ''} avant la date limite du 5 mars.\n\nUne échéance de paiement est en attente pour ${studentName}.\n\n📅 Date limite : ${dueDateFormatted}\n💰 Montant de cette échéance : ${amount.toLocaleString('fr-FR')} FCFA\n📊 Montant total restant : ${totalRemaining.toLocaleString('fr-FR')} FCFA\n\n⚠️ ATTENTION : Si le paiement n'est pas effectué avant le 5 mars, votre compte sera bloqué.\n\nMerci de régulariser votre situation au plus vite.\n\nCordialement,\nL'équipe Expression d'Or`;
+    } else {
+      // Message normal
+      subject = `Rappel de paiement - ${studentName}`;
+      html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #2563eb 0%, #fbbf24 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
+            .info-box { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2563eb; }
+            .footer { text-align: center; margin-top: 30px; color: #6b7280; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Rappel de Paiement</h1>
+            </div>
+            <div class="content">
+              <p>Bonjour ${userName},</p>
+              <p>Nous vous rappelons qu'une échéance de paiement est en attente pour <strong>${studentName}</strong>.</p>
+              <div class="info-box">
+                <p><strong>📅 Date limite :</strong> ${dueDateFormatted}</p>
+                <p><strong>💰 Montant de cette échéance :</strong> ${amount.toLocaleString('fr-FR')} FCFA</p>
+                <p><strong>📊 Montant total restant :</strong> ${totalRemaining.toLocaleString('fr-FR')} FCFA</p>
+              </div>
+              <p>Merci de régulariser votre situation au plus vite.</p>
+              <p>Cordialement,<br>L'équipe Expression d'Or</p>
+              <div class="footer">
+                <p>Cet email a été envoyé automatiquement. Merci de ne pas y répondre.</p>
+              </div>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+      text = `Rappel de paiement - ${studentName}\n\nBonjour ${userName},\n\nNous vous rappelons qu'une échéance de paiement est en attente pour ${studentName}.\n\n📅 Date limite : ${dueDateFormatted}\n💰 Montant de cette échéance : ${amount.toLocaleString('fr-FR')} FCFA\n📊 Montant total restant : ${totalRemaining.toLocaleString('fr-FR')} FCFA\n\nMerci de régulariser votre situation au plus vite.\n\nCordialement,\nL'équipe Expression d'Or`;
+    }
+
+    return await this.sendEmail({
+      to: normalizedEmail,
+      subject,
+      html,
+      text,
+      templateParams: {
+        toName: userName,
+        studentName: studentName,
+        amount: amount.toLocaleString('fr-FR'),
+        dueDate: dueDateFormatted,
+        totalRemaining: totalRemaining.toLocaleString('fr-FR'),
+        daysUntilFinal: daysUntilFinal !== undefined ? daysUntilFinal.toString() : '',
+      },
+      customTemplateId: templateIdToUse,
+      customServiceId: serviceIdToUse,
+      customPrivateKey: privateKeyToUse,
+      customPublicKey: publicKeyToUse,
+    });
+  }
 }
 
 // Export une instance singleton
