@@ -107,7 +107,7 @@ export const MobileSidebarParent = ({ isOpen, onClose }: MobileSidebarParentProp
         {/* Header - Gradient Bleu + Bordure sombre */}
         {/* AJOUT: dark:border-gray-700 */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200 dark:border-gray-700 bg-linear-to-r from-blue-600 to-blue-700">
-          <h2 className="text-white font-bold text-lg">E</h2>
+          <h2 className="text-white font-bold text-lg">Expression d'Or</h2>
           <button
             title="Fermer la sidebar"
             onClick={onClose}

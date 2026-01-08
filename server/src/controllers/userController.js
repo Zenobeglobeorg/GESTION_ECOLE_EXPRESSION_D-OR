@@ -197,11 +197,95 @@ export const updateUser = async (req, res) => {
 export const deleteUser = async (req, res) => {
   try {
     const id = Number(req.params.id);
-    await prisma.user.delete({ where: { id } });
-    res.json({ success: true });
+    const { deleteWithChildren } = req.body; // Option: true pour supprimer avec les enfants, false pour désassocier seulement
+    
+    // Vérifier que l'utilisateur existe
+    const user = await prisma.user.findUnique({
+      where: { id },
+      include: {
+        students: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'Utilisateur non trouvé' });
+    }
+
+    // Si c'est un parent avec des enfants
+    if (user.role === 'PARENT' && user.students && user.students.length > 0) {
+      if (deleteWithChildren === true) {
+        // Supprimer le parent et tous ses enfants
+        await prisma.$transaction(async (tx) => {
+          // Supprimer d'abord tous les enfants (cela supprimera aussi leurs paiements, notes, etc. via cascade)
+          for (const student of user.students) {
+            await tx.student.delete({ where: { id: student.id } });
+          }
+          // Ensuite supprimer le parent
+          await tx.user.delete({ where: { id } });
+        });
+        res.json({ 
+          success: true, 
+          message: `Parent et ${user.students.length} enfant(s) supprimé(s) avec succès`,
+          deletedChildren: user.students.length
+        });
+      } else {
+        // Désassocier les enfants en les réassignant à un parent système
+        // Chercher ou créer un parent système pour les orphelins
+        await prisma.$transaction(async (tx) => {
+          let systemParent = await tx.user.findFirst({
+            where: {
+              email: 'system@orphan.expression-or.com',
+              role: 'PARENT',
+            },
+          });
+
+          if (!systemParent) {
+            // Créer un parent système avec un hash de mot de passe valide mais inutilisable
+            const bcrypt = await import('bcrypt');
+            const dummyHash = await bcrypt.hash('SYSTEM_ACCOUNT_DISABLED', 10);
+            systemParent = await tx.user.create({
+              data: {
+                email: 'system@orphan.expression-or.com',
+                passwordHash: dummyHash,
+                firstName: 'Système',
+                lastName: 'Orphelins',
+                role: 'PARENT',
+              },
+            });
+          }
+
+          // Réassocier tous les enfants au parent système
+          for (const student of user.students) {
+            await tx.student.update({
+              where: { id: student.id },
+              data: { parentId: systemParent.id },
+            });
+          }
+          
+          // Ensuite supprimer le parent
+          await tx.user.delete({ where: { id } });
+        });
+
+        res.json({ 
+          success: true, 
+          message: `Parent supprimé avec succès. ${user.students.length} enfant(s) désassocié(s) et réassigné(s) au parent système. Vous pouvez les réassocier à un nouveau parent depuis la page d'association.`,
+          disassociatedChildren: user.students.length
+        });
+      }
+    } else {
+      // Pour les autres types d'utilisateurs ou parents sans enfants, suppression simple
+      await prisma.user.delete({ where: { id } });
+      res.json({ success: true, message: 'Utilisateur supprimé avec succès' });
+    }
   } catch (err) {
     console.error('deleteUser error:', err);
-    res.status(500).json({ error: 'Erreur lors de la suppression de l\'utilisateur' });
+    if (err.code === 'P2003') {
+      res.status(400).json({ 
+        error: 'Impossible de supprimer cet utilisateur car il est lié à d\'autres données. Veuillez d\'abord supprimer les données associées ou utiliser l\'option "Supprimer avec les enfants".' 
+      });
+    } else {
+      res.status(500).json({ error: err.message || 'Erreur lors de la suppression de l\'utilisateur' });
+    }
   }
 };
 

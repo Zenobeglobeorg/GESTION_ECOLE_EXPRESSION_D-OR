@@ -141,8 +141,10 @@ export const updateUser = async (userId: number, userData: UpdateUserData): Prom
 
 /**
  * Supprime un utilisateur
+ * @param userId - ID de l'utilisateur à supprimer
+ * @param deleteWithChildren - Si true, supprime aussi les enfants associés (pour les parents). Si false, désassocie les enfants.
  */
-export const deleteUser = async (userId: number): Promise<void> => {
+export const deleteUser = async (userId: number, deleteWithChildren?: boolean): Promise<{ success: boolean; message: string; deletedChildren?: number; disassociatedChildren?: number }> => {
   const token = getToken();
   if (!token) throw new Error('Non authentifié');
 
@@ -152,12 +154,15 @@ export const deleteUser = async (userId: number): Promise<void> => {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
+    body: JSON.stringify({ deleteWithChildren }),
   });
 
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Erreur lors de la suppression de l\'utilisateur');
   }
+
+  return response.json();
 };
 
 /**

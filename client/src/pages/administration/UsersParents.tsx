@@ -102,16 +102,89 @@ export const UsersParents = () => {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer ce parent ?')) {
-      try {
-        setError(null);
-        await userService.deleteUser(id);
-        setParents(parents.filter(p => p.id !== id));
-      } catch (err: unknown) {
-        const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la suppression';
-        setError(errorMessage);
-        console.error('Erreur:', err);
+  const handleDelete = async (parent: ParentWithStudents) => {
+    const childrenCount = parent.students?.length || 0;
+    
+    // Si le parent a des enfants, proposer le choix
+    if (childrenCount > 0) {
+      const choice = window.confirm(
+        `Ce parent a ${childrenCount} enfant(s) associé(s).\n\n` +
+        `Cliquez sur "OK" pour supprimer le parent ET ses enfants.\n` +
+        `Cliquez sur "Annuler" pour supprimer seulement le parent (les enfants seront réassignés au parent système et pourront être réassociés plus tard).`
+      );
+      
+      if (choice) {
+        // Supprimer avec les enfants
+        if (window.confirm(`⚠️ ATTENTION : Cette action est irréversible !\n\nVous allez supprimer le parent "${parent.firstName} ${parent.lastName}" et ses ${childrenCount} enfant(s).\n\nÊtes-vous absolument sûr ?`)) {
+          try {
+            setError(null);
+            const result = await userService.deleteUser(parent.id, true);
+            setParents(parents.filter(p => p.id !== parent.id));
+            alert(result.message || `Parent et ${childrenCount} enfant(s) supprimé(s) avec succès`);
+            // Recharger la liste
+            const users = await userService.getUsers();
+            const parentsData = users.filter(u => u.role === 'PARENT');
+            const parentsWithStudents = await Promise.all(
+              parentsData.map(async (p) => {
+                try {
+                  const students = await studentService.getStudents();
+                  const parentStudents = students.filter(s => s.parentId === p.id);
+                  return { ...p, students: parentStudents };
+                } catch {
+                  return { ...p, students: [] };
+                }
+              })
+            );
+            setParents(parentsWithStudents);
+          } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la suppression';
+            setError(errorMessage);
+            console.error('Erreur:', err);
+          }
+        }
+      } else {
+        // Supprimer seulement le parent (désassocier les enfants)
+        if (window.confirm(`Supprimer le parent "${parent.firstName} ${parent.lastName}" ?\n\nLes ${childrenCount} enfant(s) seront réassignés au parent système et pourront être réassociés à un nouveau parent depuis la page d'association.`)) {
+          try {
+            setError(null);
+            const result = await userService.deleteUser(parent.id, false);
+            setParents(parents.filter(p => p.id !== parent.id));
+            alert(result.message || `Parent supprimé avec succès. ${childrenCount} enfant(s) désassocié(s).`);
+            // Recharger la liste
+            const users = await userService.getUsers();
+            const parentsData = users.filter(u => u.role === 'PARENT');
+            const parentsWithStudents = await Promise.all(
+              parentsData.map(async (p) => {
+                try {
+                  const students = await studentService.getStudents();
+                  const parentStudents = students.filter(s => s.parentId === p.id);
+                  return { ...p, students: parentStudents };
+                } catch {
+                  return { ...p, students: [] };
+                }
+              })
+            );
+            setParents(parentsWithStudents);
+          } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la suppression';
+            setError(errorMessage);
+            console.error('Erreur:', err);
+          }
+        }
+      }
+    } else {
+      // Pas d'enfants, suppression simple
+      if (window.confirm(`Êtes-vous sûr de vouloir supprimer le parent "${parent.firstName} ${parent.lastName}" ?`)) {
+        try {
+          setError(null);
+          await userService.deleteUser(parent.id);
+          setParents(parents.filter(p => p.id !== parent.id));
+          alert('Parent supprimé avec succès');
+        } catch (err: unknown) {
+          const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la suppression';
+          setError(errorMessage);
+          console.error('Erreur:', err);
+        }
       }
     }
   };
@@ -280,7 +353,7 @@ export const UsersParents = () => {
                                 variant="outline"
                                 size="sm"
                                 className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
-                                onClick={() => handleDelete(parent.id)}
+                                onClick={() => handleDelete(parent)}
                               >
                                 Supprimer
                               </Button>

@@ -254,7 +254,8 @@ Le service `emailjsService.sendPaymentReminderEmail()` envoie les variables suiv
 2. **Service** : Sélectionnez votre service EmailJS (ou créez-en un nouveau)
 3. **From Name** : `Expression d'Or`
 4. **From Email** : Utilisez l'email configuré dans votre service EmailJS
-5. **Subject** : `Rappel de paiement - {{studentName}}`
+5. **To Email** : `{{to_email}}` ⚠️ **IMPORTANT** : Utilisez cette variable pour l'adresse de destination
+6. **Subject** : `Rappel de paiement - {{studentName}}`
 
 ### Étape 3 : Ajouter le Contenu HTML
 

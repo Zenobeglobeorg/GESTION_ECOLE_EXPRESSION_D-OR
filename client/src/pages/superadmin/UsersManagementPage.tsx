@@ -116,16 +116,93 @@ export const UsersManagementPage = () => {
     }
   };
 
-  const handleDelete = async (userId: number) => {
-    if (window.confirm(t('users.deleteConfirm'))) {
+  const handleDelete = async (user: UserWithDate) => {
+    // Vérifier si c'est un parent et charger ses enfants
+    if (user.role === 'PARENT') {
       try {
-        setError(null);
-        await userService.deleteUser(userId);
-        await loadUsers(); // Recharger la liste
+        // Charger les enfants de ce parent
+        const allStudents = await studentService.getStudents();
+        const parentStudents = allStudents.filter(s => s.parentId === user.id);
+        const childrenCount = parentStudents.length;
+        
+        if (childrenCount > 0) {
+          // Proposer le choix
+          const choice = window.confirm(
+            `Ce parent a ${childrenCount} enfant(s) associé(s).\n\n` +
+            `Cliquez sur "OK" pour supprimer le parent ET ses enfants.\n` +
+            `Cliquez sur "Annuler" pour supprimer seulement le parent (les enfants seront réassignés au parent système et pourront être réassociés plus tard).`
+          );
+          
+          if (choice) {
+            // Supprimer avec les enfants
+            if (window.confirm(`⚠️ ATTENTION : Cette action est irréversible !\n\nVous allez supprimer le parent "${user.firstName} ${user.lastName}" et ses ${childrenCount} enfant(s).\n\nÊtes-vous absolument sûr ?`)) {
+              try {
+                setError(null);
+                const result = await userService.deleteUser(user.id, true);
+                await loadUsers(); // Recharger la liste
+                alert(result.message || `Parent et ${childrenCount} enfant(s) supprimé(s) avec succès`);
+              } catch (err) {
+                const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la suppression';
+                setError(errorMessage);
+                console.error('Erreur:', err);
+              }
+            }
+          } else {
+            // Supprimer seulement le parent (désassocier les enfants)
+            if (window.confirm(`Supprimer le parent "${user.firstName} ${user.lastName}" ?\n\nLes ${childrenCount} enfant(s) seront réassignés au parent système et pourront être réassociés à un nouveau parent depuis la page d'association.`)) {
+              try {
+                setError(null);
+                const result = await userService.deleteUser(user.id, false);
+                await loadUsers(); // Recharger la liste
+                alert(result.message || `Parent supprimé avec succès. ${childrenCount} enfant(s) désassocié(s).`);
+              } catch (err) {
+                const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la suppression';
+                setError(errorMessage);
+                console.error('Erreur:', err);
+              }
+            }
+          }
+        } else {
+          // Pas d'enfants, suppression simple
+          if (window.confirm(t('users.deleteConfirm'))) {
+            try {
+              setError(null);
+              await userService.deleteUser(user.id);
+              await loadUsers(); // Recharger la liste
+            } catch (err) {
+              const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la suppression';
+              setError(errorMessage);
+              console.error('Erreur:', err);
+            }
+          }
+        }
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la suppression';
-        setError(errorMessage);
-        console.error('Erreur:', err);
+        console.error('Erreur lors du chargement des enfants:', err);
+        // En cas d'erreur, proposer la suppression simple
+        if (window.confirm(t('users.deleteConfirm'))) {
+          try {
+            setError(null);
+            await userService.deleteUser(user.id);
+            await loadUsers(); // Recharger la liste
+          } catch (deleteErr) {
+            const errorMessage = deleteErr instanceof Error ? deleteErr.message : 'Erreur lors de la suppression';
+            setError(errorMessage);
+            console.error('Erreur:', deleteErr);
+          }
+        }
+      }
+    } else {
+      // Pour les autres types d'utilisateurs, suppression simple
+      if (window.confirm(t('users.deleteConfirm'))) {
+        try {
+          setError(null);
+          await userService.deleteUser(user.id);
+          await loadUsers(); // Recharger la liste
+        } catch (err) {
+          const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la suppression';
+          setError(errorMessage);
+          console.error('Erreur:', err);
+        }
       }
     }
   };
@@ -430,7 +507,7 @@ export const UsersManagementPage = () => {
                               </svg>
                             </button>
                             <button
-                              onClick={() => handleDelete(user.id)}
+                              onClick={() => handleDelete(user)}
                               className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
                               title={t('users.delete')}
                             >
