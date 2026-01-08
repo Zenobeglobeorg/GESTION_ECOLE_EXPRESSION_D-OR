@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useSelectedChild } from '../../contexts/SelectedChildContext';
 import { useNotificationCount } from '../../hooks/useNotificationCount';
@@ -21,6 +21,9 @@ export const ParentHeader = ({ isSidebarCollapsed, onMobileMenuToggle }: ParentH
   const { unreadCount: messageCount } = useMessageCount();
   const [upcomingPayments, setUpcomingPayments] = useState<feesService.Payment[]>([]);
   const [paymentWarning, setPaymentWarning] = useState<{ color: string; message: string } | null>(null);
+  const [isPaymentDropdownOpen, setIsPaymentDropdownOpen] = useState(false);
+  const [allPendingPayments, setAllPendingPayments] = useState<feesService.Payment[]>([]);
+  const paymentDropdownRef = useRef<HTMLDivElement>(null);
   
   // Charger les enfants du parent connecté
   useEffect(() => {
@@ -46,31 +49,28 @@ export const ParentHeader = ({ isSidebarCollapsed, onMobileMenuToggle }: ParentH
     loadChildren();
   }, [user, setChildren, setSelectedChild, setLoading, selectedChild]);
 
-  // Charger les échéances de paiement pour tous les enfants
+  // Charger les échéances de paiement pour l'enfant sélectionné
   useEffect(() => {
     const loadPayments = async () => {
-      if (!user || user.role !== 'PARENT' || children.length === 0) return;
+      if (!user || user.role !== 'PARENT' || !selectedChild) return;
       
       try {
-        const allPayments: feesService.Payment[] = [];
-        for (const child of children) {
-          try {
-            const payments = await feesService.getStudentPayments(child.id);
-            allPayments.push(...payments.filter(p => p.status !== 'PAID'));
-          } catch (err) {
-            console.error(`Erreur lors du chargement des paiements pour ${child.firstName}:`, err);
-          }
-        }
+        // Charger les paiements uniquement pour l'enfant sélectionné
+        const payments = await feesService.getStudentPayments(selectedChild.id);
+        const pendingPayments = payments.filter(p => p.status !== 'PAID');
         
         // Trier par date d'échéance (plus proche en premier)
-        allPayments.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+        pendingPayments.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
         
-        // Prendre les 3 prochaines échéances
-        setUpcomingPayments(allPayments.slice(0, 3));
+        // Stocker tous les paiements en attente
+        setAllPendingPayments(pendingPayments);
+        
+        // Prendre les 3 prochaines échéances pour l'affichage compact
+        setUpcomingPayments(pendingPayments.slice(0, 3));
         
         // Calculer le statut de paiement pour l'avertissement
-        if (allPayments.length > 0) {
-          const nextPayment = allPayments[0];
+        if (pendingPayments.length > 0) {
+          const nextPayment = pendingPayments[0];
           const dueDate = new Date(nextPayment.dueDate);
           const today = new Date();
           // Date limite : 5 mars de l'année en cours (ou suivante si déjà passé)
@@ -84,6 +84,9 @@ export const ParentHeader = ({ isSidebarCollapsed, onMobileMenuToggle }: ParentH
           const daysUntilDue = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
           const daysUntilFinal = Math.ceil((finalDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
           
+          // Calculer le total en attente
+          //const totalPending = pendingPayments.reduce((sum, p) => sum + p.amount, 0);
+          
           // Si on est en février ou après, et qu'on approche du 5 mars
           const currentMonth = today.getMonth() + 1; // 1-12
           
@@ -91,31 +94,31 @@ export const ParentHeader = ({ isSidebarCollapsed, onMobileMenuToggle }: ParentH
             // Après le 5 mars - ROUGE
             setPaymentWarning({
               color: 'red',
-              message: '⚠️ Date limite dépassée - Compte bloqué',
+              message: '⚠️ Date limite dépassée',
             });
           } else if (currentMonth >= 2 && daysUntilFinal <= 30) {
             // Février ou mars, moins de 30 jours - ROUGE
             setPaymentWarning({
               color: 'red',
-              message: `⚠️ ${daysUntilFinal} jour${daysUntilFinal > 1 ? 's' : ''} avant la date limite`,
+              message: `⚠️ ${daysUntilFinal}j`,
             });
           } else if (currentMonth >= 2 && daysUntilFinal <= 60) {
             // Février, moins de 60 jours - JAUNE
             setPaymentWarning({
               color: 'yellow',
-              message: `⏰ ${daysUntilFinal} jour${daysUntilFinal > 1 ? 's' : ''} avant la date limite`,
+              message: `⏰ ${daysUntilFinal}j`,
             });
           } else if (daysUntilDue <= 7) {
             // Moins de 7 jours jusqu'à la prochaine échéance - JAUNE
             setPaymentWarning({
               color: 'yellow',
-              message: `⏰ Échéance dans ${daysUntilDue} jour${daysUntilDue > 1 ? 's' : ''}`,
+              message: `⏰ ${daysUntilDue}j`,
             });
           } else {
             // Tout va bien - VERT
             setPaymentWarning({
               color: 'green',
-              message: `✓ Prochaine échéance: ${dueDate.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}`,
+              message: `✓ ${pendingPayments.length}`,
             });
           }
         } else {
@@ -126,10 +129,14 @@ export const ParentHeader = ({ isSidebarCollapsed, onMobileMenuToggle }: ParentH
       }
     };
     
-    if (children.length > 0) {
+    if (selectedChild) {
       loadPayments();
+    } else {
+      setUpcomingPayments([]);
+      setAllPendingPayments([]);
+      setPaymentWarning(null);
     }
-  }, [user, children]);
+  }, [user, selectedChild]);
   
   const handleSelectChild = (child: studentService.Student) => {
     setSelectedChild(child);
@@ -139,6 +146,23 @@ export const ParentHeader = ({ isSidebarCollapsed, onMobileMenuToggle }: ParentH
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   };
+
+  // Fermer le menu déroulant des paiements quand on clique en dehors
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (paymentDropdownRef.current && !paymentDropdownRef.current.contains(event.target as Node)) {
+        setIsPaymentDropdownOpen(false);
+      }
+    };
+
+    if (isPaymentDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isPaymentDropdownOpen]);
 
   return (
     // AJOUT: dark:bg-gray-800 dark:border-gray-700
@@ -173,16 +197,119 @@ export const ParentHeader = ({ isSidebarCollapsed, onMobileMenuToggle }: ParentH
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Avertissement de paiement */}
-          {paymentWarning && (
-            <div className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium ${
-              paymentWarning.color === 'red' 
-                ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-700'
-                : paymentWarning.color === 'yellow'
-                ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border border-yellow-300 dark:border-yellow-700'
-                : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-300 dark:border-green-700'
-            }`}>
-              {paymentWarning.message}
+          {/* Avertissement de paiement avec menu déroulant */}
+          {paymentWarning && selectedChild && (
+            <div className="relative" ref={paymentDropdownRef}>
+              <button
+                onClick={() => setIsPaymentDropdownOpen(!isPaymentDropdownOpen)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  paymentWarning.color === 'red' 
+                    ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-700 hover:bg-red-200 dark:hover:bg-red-900/50'
+                    : paymentWarning.color === 'yellow'
+                    ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border border-yellow-300 dark:border-yellow-700 hover:bg-yellow-200 dark:hover:bg-yellow-900/50'
+                    : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-300 dark:border-green-700 hover:bg-green-200 dark:hover:bg-green-900/50'
+                }`}
+                title="Voir les détails des paiements"
+              >
+                <span className="text-base">{paymentWarning.color === 'red' ? '⚠️' : paymentWarning.color === 'yellow' ? '⏰' : '✓'}</span>
+                <span className="hidden md:inline">{paymentWarning.message}</span>
+                <svg className={`w-4 h-4 transition-transform ${isPaymentDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              
+              {/* Menu déroulant avec détails */}
+              {isPaymentDropdownOpen && allPendingPayments.length > 0 && (
+                <div className="absolute top-full right-0 mt-2 w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto">
+                  <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                    <h3 className="font-semibold text-gray-900 dark:text-white text-sm mb-1">
+                      Échéances de paiement - {selectedChild.firstName} {selectedChild.lastName}
+                    </h3>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                      {allPendingPayments.length} échéance{allPendingPayments.length > 1 ? 's' : ''} en attente
+                    </p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">somme totale en attente: {allPendingPayments.reduce((sum, p) => sum + p.amount, 0).toLocaleString('fr-FR')} FCFA</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">prochaine échéance: {new Date(upcomingPayments[0]?.dueDate || '').toLocaleDateString('fr-FR', {
+                      day: '2-digit',
+                      month: 'long',
+                      year: 'numeric',
+                    })}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">prochaine échéance: {upcomingPayments[0]?.amount.toLocaleString('fr-FR')} FCFA</p>
+                  </div>
+                  <div className="p-2 space-y-2">
+                    {allPendingPayments.map((payment) => {
+                      const dueDate = new Date(payment.dueDate);
+                      const today = new Date();
+                      const daysUntilDue = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                      const isOverdue = daysUntilDue < 0;
+                      
+                      return (
+                        <div
+                          key={payment.id}
+                          className={`p-3 rounded-lg border ${
+                            isOverdue
+                              ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                              : daysUntilDue <= 7
+                              ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
+                              : 'bg-gray-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                                  Tranche {payment.installmentNumber}
+                                </span>
+                                {isOverdue && (
+                                  <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300">
+                                    En retard
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                                {dueDate.toLocaleDateString('fr-FR', {
+                                  day: '2-digit',
+                                  month: 'long',
+                                  year: 'numeric',
+                                })}
+                              </p>
+                              <p className="text-sm font-bold text-gray-900 dark:text-white">
+                                {payment.amount.toLocaleString('fr-FR')} FCFA
+                              </p>
+                              {daysUntilDue >= 0 && (
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                  {daysUntilDue === 0 
+                                    ? 'Aujourd\'hui' 
+                                    : daysUntilDue === 1
+                                    ? 'Dans 1 jour'
+                                    : `Dans ${daysUntilDue} jours`}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="p-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-gray-900 dark:text-white">Total en attente :</span>
+                      <span className="text-sm font-bold text-gray-900 dark:text-white">
+                        {allPendingPayments.reduce((sum, p) => sum + p.amount, 0).toLocaleString('fr-FR')} FCFA
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setIsPaymentDropdownOpen(false);
+                        navigate('/parent/fees');
+                      }}
+                      className="w-full mt-2 px-3 py-2 text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+                    >
+                      Voir tous les paiements →
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
           

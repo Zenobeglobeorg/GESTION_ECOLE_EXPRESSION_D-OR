@@ -374,3 +374,4 @@ Si vous voulez un seul template qui s'adapte selon l'urgence, vous pouvez utilis
 - Testez le template avec des données réelles
 - Vérifiez que les styles CSS sont bien inclus dans le `<style>` tag
 
+

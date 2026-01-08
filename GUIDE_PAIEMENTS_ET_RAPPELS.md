@@ -151,3 +151,4 @@ npx prisma db push
 3. **Email en plus des notifications** : Envoyer aussi un email au parent
 4. **Dashboard parent** : Afficher un résumé des paiements sur la page d'accueil
 
+

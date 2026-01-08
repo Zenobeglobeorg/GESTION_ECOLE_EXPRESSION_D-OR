@@ -1,7 +1,23 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useNotificationCount } from '../../hooks/useNotificationCount';
 import { useMessageCount } from '../../hooks/useMessageCount';
+import { useSelectedChild } from '../../contexts/SelectedChildContext';
+import * as feesService from '../../services/feesService';
+
+// Fonction pour calculer la date limite (5 mars de l'année en cours)
+const getFinalPaymentDueDate = () => {
+  const now = new Date();
+  let year = now.getFullYear();
+  const march5th = new Date(year, 2, 5); // Month is 0-indexed, so 2 is March
+
+  // If current date is after March 5th, set for next year
+  if (now > march5th) {
+    year++;
+  }
+  return new Date(year, 2, 5);
+};
 
 interface MenuItem {
   label: string;
@@ -16,11 +32,45 @@ interface SidebarParentProps {
 }
 
 export const SidebarParent = ({ isCollapsed, onToggle }: SidebarParentProps) => {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { unreadCount: notificationCount } = useNotificationCount();
   const { unreadCount: messageCount } = useMessageCount();
+  const { children } = useSelectedChild();
+  const [hasPendingPayments, setHasPendingPayments] = useState(false);
+
+  // Vérifier s'il y a des paiements en attente
+  useEffect(() => {
+    const checkPendingPayments = async () => {
+      if (!user || user.role !== 'PARENT' || children.length === 0) {
+        setHasPendingPayments(false);
+        return;
+      }
+
+      try {
+        let hasPending = false;
+        for (const child of children) {
+          try {
+            const payments = await feesService.getStudentPayments(child.id);
+            const pending = payments.filter(p => p.status !== 'PAID');
+            if (pending.length > 0) {
+              hasPending = true;
+              break;
+            }
+          } catch (err) {
+            console.error(`Erreur lors de la vérification des paiements pour ${child.firstName}:`, err);
+          }
+        }
+        setHasPendingPayments(hasPending);
+      } catch (error) {
+        console.error('Erreur lors de la vérification des paiements:', error);
+        setHasPendingPayments(false);
+      }
+    };
+
+    checkPendingPayments();
+  }, [user, children]);
 
   const menuItems: MenuItem[] = [
     {
@@ -91,7 +141,7 @@ export const SidebarParent = ({ isCollapsed, onToggle }: SidebarParentProps) => 
       } hidden lg:flex lg:flex-col shadow-[2px_0_12px_rgba(30,64,175,0.08)]`}
     >
       {/* Header avec logo et bouton hamburger */}
-      <div className="relative h-16 flex items-center justify-between px-4 border-b border-blue-100 bg-gradient-to-r from-blue-700 via-blue-800 to-blue-900 shrink-0">
+      <div className="relative h-16 flex items-center justify-between px-4 border-b border-blue-100 bg-linear-to-r from-blue-700 via-blue-800 to-blue-900 shrink-0">
         {!isCollapsed && (
           <div className="flex items-center gap-2">
             <div className="w-10 h-10 rounded-full bg-yellow-400 flex items-center justify-center text-blue-900 font-bold shadow-inner">
@@ -113,7 +163,7 @@ export const SidebarParent = ({ isCollapsed, onToggle }: SidebarParentProps) => 
           </svg>
         </button>
         {!isCollapsed && (
-          <div className="absolute inset-x-0 -bottom-px h-1 bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500" />
+          <div className="absolute inset-x-0 -bottom-px h-1 bg-linear-to-r from-yellow-300 via-yellow-400 to-yellow-500" />
         )}
       </div>
 
@@ -125,7 +175,7 @@ export const SidebarParent = ({ isCollapsed, onToggle }: SidebarParentProps) => 
             to={item.path}
             className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all mb-2 border ${
               isActive(item.path)
-                ? 'bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 text-blue-900 shadow-lg border-yellow-300 dark:from-yellow-500 dark:via-yellow-400 dark:to-yellow-500 dark:text-blue-900'
+                ? 'bg-linear-to-r from-yellow-400 via-yellow-300 to-yellow-400 text-blue-900 shadow-lg border-yellow-300 dark:from-yellow-500 dark:via-yellow-400 dark:to-yellow-500 dark:text-blue-900'
                 : 'text-blue-900 dark:text-blue-300 border-transparent hover:border-blue-100 dark:hover:border-gray-600 hover:bg-blue-50 dark:hover:bg-gray-700'
             }`}
             title={isCollapsed ? item.label : undefined}
@@ -143,6 +193,23 @@ export const SidebarParent = ({ isCollapsed, onToggle }: SidebarParentProps) => 
             )}
           </Link>
         ))}
+        
+        {/* Date limite fixe - Affichage en rouge si paiements en attente */}
+        {hasPendingPayments && !isCollapsed && (
+          <div className="mt-4 mx-2 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border-l-4 border-red-500">
+            <p className="text-xs font-semibold text-red-700 dark:text-red-300 mb-1">
+              ⚠️ Date limite fixe
+            </p>
+            <p className="text-xs text-red-600 dark:text-red-400">
+              Le 5 mars {getFinalPaymentDueDate().getFullYear()}
+            </p>
+          </div>
+        )}
+        {hasPendingPayments && isCollapsed && (
+          <div className="mt-4 mx-2 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg border-l-4 border-red-500" title={`Date limite fixe: Le 5 mars ${getFinalPaymentDueDate().getFullYear()}`}>
+            <p className="text-xs text-red-600 dark:text-red-400 text-center">⚠️</p>
+          </div>
+        )}
       </nav>
 
       {/* Logout button */}

@@ -7,6 +7,19 @@ import * as attendanceService from '../../services/attendanceService';
 import * as feesService from '../../services/feesService';
 import * as gradeService from '../../services/gradeService';
 
+// Fonction pour calculer la date limite (5 mars de l'année en cours)
+const getFinalPaymentDueDate = () => {
+  const now = new Date();
+  let year = now.getFullYear();
+  const march5th = new Date(year, 2, 5); // Month is 0-indexed, so 2 is March
+
+  // If current date is after March 5th, set for next year
+  if (now > march5th) {
+    year++;
+  }
+  return new Date(year, 2, 5);
+};
+
 // --- DONNÉES FACTICES POUR L'ACTIVITÉ ---
 const mockActivities = [
   { 
@@ -131,7 +144,7 @@ export const ParentDashboardHome = () => {
 
         // Calculer le statut des frais
         let feesStatus = '--';
-        let feesDetails = {
+        const feesDetails = {
           total: 0,
           paid: 0,
           pending: 0,
@@ -280,6 +293,21 @@ export const ParentDashboardHome = () => {
              {!loading && stats.feesDetails.total > 0 && (
                <Card title="Résumé des Paiements" className="mb-6 border-0 shadow-lg dark:bg-gray-800 dark:border-gray-700">
                  <div className="space-y-4">
+                   {/* Date limite fixe - Affichage en rouge si paiements en attente */}
+                   {stats.feesDetails.pending > 0 && (
+                     <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border-l-4 border-red-500">
+                       <p className="text-sm font-semibold text-red-700 dark:text-red-300 mb-1">
+                         ⚠️ Date limite fixe
+                       </p>
+                       <p className="text-sm text-red-600 dark:text-red-400">
+                         Le 5 mars {getFinalPaymentDueDate().getFullYear()}
+                       </p>
+                       <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                         Tous les paiements doivent être effectués avant cette date
+                       </p>
+                     </div>
+                   )}
+                   
                    <div className="grid grid-cols-3 gap-4">
                      <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total</p>
