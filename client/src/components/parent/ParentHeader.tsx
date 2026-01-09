@@ -220,7 +220,7 @@ export const ParentHeader = ({ isSidebarCollapsed, onMobileMenuToggle }: ParentH
               
               {/* Menu déroulant avec détails */}
               {isPaymentDropdownOpen && allPendingPayments.length > 0 && (
-                <div className="absolute top-full right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto">
+                <div className="absolute top-full right-2 md:right-0 mt-2 w-80 max-w-[calc(100vw-1rem)] md:max-w-none bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto">
                   <div className="p-4 border-b border-gray-200 dark:border-gray-700">
                     <h3 className="font-semibold text-gray-900 dark:text-white text-sm mb-1">
                       Échéances de paiement - {selectedChild.firstName} {selectedChild.lastName}

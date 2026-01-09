@@ -745,6 +745,7 @@ Expression d'Or - Plateforme de gestion scolaire
       html,
       text,
       templateParams: {
+        to_email: normalizedEmail,
         toName: userName,
         studentName: studentName,
         amount: amount.toLocaleString('fr-FR'),

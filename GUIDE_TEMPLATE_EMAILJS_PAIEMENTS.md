@@ -6,6 +6,7 @@ Le service `emailjsService.sendPaymentReminderEmail()` envoie les variables suiv
 
 | Variable | Description | Exemple |
 |----------|-------------|---------|
+| `{{to_email}}` | Email du destinataire (parent) | "marie.doe@example.com" |
 | `{{toName}}` | Prénom du parent | "Marie" |
 | `{{studentName}}` | Nom complet de l'élève | "Ibrahima Diallo" |
 | `{{amount}}` | Montant de l'échéance (formaté) | "25 000" |

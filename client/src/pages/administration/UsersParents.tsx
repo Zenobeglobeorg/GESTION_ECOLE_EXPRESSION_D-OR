@@ -21,6 +21,9 @@ export const UsersParents = () => {
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingParent, setEditingParent] = useState<ParentWithStudents | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [parentToDelete, setParentToDelete] = useState<ParentWithStudents | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -102,90 +105,80 @@ export const UsersParents = () => {
     }
   };
 
-  const handleDelete = async (parent: ParentWithStudents) => {
-    const childrenCount = parent.students?.length || 0;
+  const handleDeleteClick = (parent: ParentWithStudents) => {
+    setParentToDelete(parent);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleDeleteWithChildren = async () => {
+    if (!parentToDelete) return;
     
-    // Si le parent a des enfants, proposer le choix
-    if (childrenCount > 0) {
-      const choice = window.confirm(
-        `Ce parent a ${childrenCount} enfant(s) associé(s).\n\n` +
-        `Cliquez sur "OK" pour supprimer le parent ET ses enfants.\n` +
-        `Cliquez sur "Annuler" pour supprimer seulement le parent (les enfants seront réassignés au parent système et pourront être réassociés plus tard).`
+    setIsDeleting(true);
+    try {
+      setError(null);
+      const childrenCount = parentToDelete.students?.length || 0;
+      const result = await userService.deleteUser(parentToDelete.id, true);
+      setParents(parents.filter(p => p.id !== parentToDelete.id));
+      setIsDeleteModalOpen(false);
+      setParentToDelete(null);
+      alert(result.message || `Parent et ${childrenCount} enfant(s) supprimé(s) avec succès`);
+      // Recharger la liste
+      const users = await userService.getUsers();
+      const parentsData = users.filter(u => u.role === 'PARENT');
+      const parentsWithStudents = await Promise.all(
+        parentsData.map(async (p) => {
+          try {
+            const students = await studentService.getStudents();
+            const parentStudents = students.filter(s => s.parentId === p.id);
+            return { ...p, students: parentStudents };
+          } catch {
+            return { ...p, students: [] };
+          }
+        })
       );
-      
-      if (choice) {
-        // Supprimer avec les enfants
-        if (window.confirm(`⚠️ ATTENTION : Cette action est irréversible !\n\nVous allez supprimer le parent "${parent.firstName} ${parent.lastName}" et ses ${childrenCount} enfant(s).\n\nÊtes-vous absolument sûr ?`)) {
+      setParents(parentsWithStudents);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la suppression';
+      setError(errorMessage);
+      console.error('Erreur:', err);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteParentOnly = async () => {
+    if (!parentToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      setError(null);
+      const childrenCount = parentToDelete.students?.length || 0;
+      const result = await userService.deleteUser(parentToDelete.id, false);
+      setParents(parents.filter(p => p.id !== parentToDelete.id));
+      setIsDeleteModalOpen(false);
+      setParentToDelete(null);
+      alert(result.message || `Parent supprimé avec succès. ${childrenCount} enfant(s) désassocié(s).`);
+      // Recharger la liste
+      const users = await userService.getUsers();
+      const parentsData = users.filter(u => u.role === 'PARENT');
+      const parentsWithStudents = await Promise.all(
+        parentsData.map(async (p) => {
           try {
-            setError(null);
-            const result = await userService.deleteUser(parent.id, true);
-            setParents(parents.filter(p => p.id !== parent.id));
-            alert(result.message || `Parent et ${childrenCount} enfant(s) supprimé(s) avec succès`);
-            // Recharger la liste
-            const users = await userService.getUsers();
-            const parentsData = users.filter(u => u.role === 'PARENT');
-            const parentsWithStudents = await Promise.all(
-              parentsData.map(async (p) => {
-                try {
-                  const students = await studentService.getStudents();
-                  const parentStudents = students.filter(s => s.parentId === p.id);
-                  return { ...p, students: parentStudents };
-                } catch {
-                  return { ...p, students: [] };
-                }
-              })
-            );
-            setParents(parentsWithStudents);
-          } catch (err: unknown) {
-            const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la suppression';
-            setError(errorMessage);
-            console.error('Erreur:', err);
+            const students = await studentService.getStudents();
+            const parentStudents = students.filter(s => s.parentId === p.id);
+            return { ...p, students: parentStudents };
+          } catch {
+            return { ...p, students: [] };
           }
-        }
-      } else {
-        // Supprimer seulement le parent (désassocier les enfants)
-        if (window.confirm(`Supprimer le parent "${parent.firstName} ${parent.lastName}" ?\n\nLes ${childrenCount} enfant(s) seront réassignés au parent système et pourront être réassociés à un nouveau parent depuis la page d'association.`)) {
-          try {
-            setError(null);
-            const result = await userService.deleteUser(parent.id, false);
-            setParents(parents.filter(p => p.id !== parent.id));
-            alert(result.message || `Parent supprimé avec succès. ${childrenCount} enfant(s) désassocié(s).`);
-            // Recharger la liste
-            const users = await userService.getUsers();
-            const parentsData = users.filter(u => u.role === 'PARENT');
-            const parentsWithStudents = await Promise.all(
-              parentsData.map(async (p) => {
-                try {
-                  const students = await studentService.getStudents();
-                  const parentStudents = students.filter(s => s.parentId === p.id);
-                  return { ...p, students: parentStudents };
-                } catch {
-                  return { ...p, students: [] };
-                }
-              })
-            );
-            setParents(parentsWithStudents);
-          } catch (err: unknown) {
-            const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la suppression';
-            setError(errorMessage);
-            console.error('Erreur:', err);
-          }
-        }
-      }
-    } else {
-      // Pas d'enfants, suppression simple
-      if (window.confirm(`Êtes-vous sûr de vouloir supprimer le parent "${parent.firstName} ${parent.lastName}" ?`)) {
-        try {
-          setError(null);
-          await userService.deleteUser(parent.id);
-          setParents(parents.filter(p => p.id !== parent.id));
-          alert('Parent supprimé avec succès');
-        } catch (err: unknown) {
-          const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la suppression';
-          setError(errorMessage);
-          console.error('Erreur:', err);
-        }
-      }
+        })
+      );
+      setParents(parentsWithStudents);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la suppression';
+      setError(errorMessage);
+      console.error('Erreur:', err);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -353,7 +346,7 @@ export const UsersParents = () => {
                                 variant="outline"
                                 size="sm"
                                 className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
-                                onClick={() => handleDelete(parent)}
+                                onClick={() => handleDeleteClick(parent)}
                               >
                                 Supprimer
                               </Button>
@@ -665,6 +658,125 @@ export const UsersParents = () => {
         </form>
       </Modal>
       </ProtectedContent>
+
+      {/* Modal de suppression */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          if (!isDeleting) {
+            setIsDeleteModalOpen(false);
+            setParentToDelete(null);
+          }
+        }}
+        title={`Supprimer le parent - ${parentToDelete?.firstName} ${parentToDelete?.lastName}`}
+        size="md"
+      >
+        {parentToDelete && (
+          <div className="space-y-4">
+            {parentToDelete.students && parentToDelete.students.length > 0 ? (
+              <>
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 p-4 rounded">
+                  <p className="text-sm font-semibold text-yellow-800 dark:text-yellow-300 mb-2">
+                    ⚠️ Ce parent a {parentToDelete.students.length} enfant(s) associé(s)
+                  </p>
+                  <ul className="list-disc list-inside text-sm text-yellow-700 dark:text-yellow-400 space-y-1">
+                    {parentToDelete.students.map((student) => (
+                      <li key={student.id}>
+                        {student.firstName} {student.lastName}
+                        {student.class && ` - ${student.class.name}`}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                    Choisissez une option de suppression :
+                  </p>
+                  
+                  <button
+                    onClick={handleDeleteWithChildren}
+                    disabled={isDeleting}
+                    className="w-full p-4 bg-red-50 dark:bg-red-900/20 border-2 border-red-300 dark:border-red-700 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl">🗑️</span>
+                      <div className="flex-1">
+                        <p className="font-semibold text-red-900 dark:text-red-300">
+                          Supprimer le parent et ses enfants
+                        </p>
+                        <p className="text-sm text-red-700 dark:text-red-400 mt-1">
+                          Cette action est irréversible. Le parent et tous ses enfants seront définitivement supprimés.
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                  
+                  <button
+                    onClick={handleDeleteParentOnly}
+                    disabled={isDeleting}
+                    className="w-full p-4 bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-300 dark:border-yellow-700 rounded-lg hover:bg-yellow-100 dark:hover:bg-yellow-900/30 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl">👤</span>
+                      <div className="flex-1">
+                        <p className="font-semibold text-yellow-900 dark:text-yellow-300">
+                          Supprimer seulement le parent
+                        </p>
+                        <p className="text-sm text-yellow-700 dark:text-yellow-400 mt-1">
+                          Les enfants seront réassignés au parent système et pourront être réassociés à un nouveau parent depuis la page d'association.
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-400 p-4 rounded">
+                  <p className="text-sm text-blue-800 dark:text-blue-300">
+                    Ce parent n'a pas d'enfants associés.
+                  </p>
+                </div>
+                
+                <div className="space-y-3">
+                  <button
+                    onClick={handleDeleteParentOnly}
+                    disabled={isDeleting}
+                    className="w-full p-4 bg-red-50 dark:bg-red-900/20 border-2 border-red-300 dark:border-red-700 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl">🗑️</span>
+                      <div className="flex-1">
+                        <p className="font-semibold text-red-900 dark:text-red-300">
+                          Supprimer le parent
+                        </p>
+                        <p className="text-sm text-red-700 dark:text-red-400 mt-1">
+                          Cette action est irréversible.
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </>
+            )}
+            
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsDeleteModalOpen(false);
+                  setParentToDelete(null);
+                }}
+                disabled={isDeleting}
+              >
+                Annuler
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
       </ProtectedContent>
     </AdminLayout>
   );

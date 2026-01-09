@@ -40,6 +40,10 @@ export const UsersManagementPage = () => {
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserWithDate | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<UserWithDate | null>(null);
+  const [childrenToDelete, setChildrenToDelete] = useState<studentService.Student[]>([]);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [editFormData, setEditFormData] = useState({
     firstName: '',
     lastName: '',
@@ -116,94 +120,78 @@ export const UsersManagementPage = () => {
     }
   };
 
-  const handleDelete = async (user: UserWithDate) => {
+  const handleDeleteClick = async (user: UserWithDate) => {
     // Vérifier si c'est un parent et charger ses enfants
     if (user.role === 'PARENT') {
       try {
         // Charger les enfants de ce parent
         const allStudents = await studentService.getStudents();
         const parentStudents = allStudents.filter(s => s.parentId === user.id);
-        const childrenCount = parentStudents.length;
-        
-        if (childrenCount > 0) {
-          // Proposer le choix
-          const choice = window.confirm(
-            `Ce parent a ${childrenCount} enfant(s) associé(s).\n\n` +
-            `Cliquez sur "OK" pour supprimer le parent ET ses enfants.\n` +
-            `Cliquez sur "Annuler" pour supprimer seulement le parent (les enfants seront réassignés au parent système et pourront être réassociés plus tard).`
-          );
-          
-          if (choice) {
-            // Supprimer avec les enfants
-            if (window.confirm(`⚠️ ATTENTION : Cette action est irréversible !\n\nVous allez supprimer le parent "${user.firstName} ${user.lastName}" et ses ${childrenCount} enfant(s).\n\nÊtes-vous absolument sûr ?`)) {
-              try {
-                setError(null);
-                const result = await userService.deleteUser(user.id, true);
-                await loadUsers(); // Recharger la liste
-                alert(result.message || `Parent et ${childrenCount} enfant(s) supprimé(s) avec succès`);
-              } catch (err) {
-                const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la suppression';
-                setError(errorMessage);
-                console.error('Erreur:', err);
-              }
-            }
-          } else {
-            // Supprimer seulement le parent (désassocier les enfants)
-            if (window.confirm(`Supprimer le parent "${user.firstName} ${user.lastName}" ?\n\nLes ${childrenCount} enfant(s) seront réassignés au parent système et pourront être réassociés à un nouveau parent depuis la page d'association.`)) {
-              try {
-                setError(null);
-                const result = await userService.deleteUser(user.id, false);
-                await loadUsers(); // Recharger la liste
-                alert(result.message || `Parent supprimé avec succès. ${childrenCount} enfant(s) désassocié(s).`);
-              } catch (err) {
-                const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la suppression';
-                setError(errorMessage);
-                console.error('Erreur:', err);
-              }
-            }
-          }
-        } else {
-          // Pas d'enfants, suppression simple
-          if (window.confirm(t('users.deleteConfirm'))) {
-            try {
-              setError(null);
-              await userService.deleteUser(user.id);
-              await loadUsers(); // Recharger la liste
-            } catch (err) {
-              const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la suppression';
-              setError(errorMessage);
-              console.error('Erreur:', err);
-            }
-          }
-        }
+        setChildrenToDelete(parentStudents);
+        setUserToDelete(user);
+        setIsDeleteModalOpen(true);
       } catch (err) {
         console.error('Erreur lors du chargement des enfants:', err);
         // En cas d'erreur, proposer la suppression simple
-        if (window.confirm(t('users.deleteConfirm'))) {
-          try {
-            setError(null);
-            await userService.deleteUser(user.id);
-            await loadUsers(); // Recharger la liste
-          } catch (deleteErr) {
-            const errorMessage = deleteErr instanceof Error ? deleteErr.message : 'Erreur lors de la suppression';
-            setError(errorMessage);
-            console.error('Erreur:', deleteErr);
-          }
-        }
+        setChildrenToDelete([]);
+        setUserToDelete(user);
+        setIsDeleteModalOpen(true);
       }
     } else {
       // Pour les autres types d'utilisateurs, suppression simple
-      if (window.confirm(t('users.deleteConfirm'))) {
-        try {
-          setError(null);
-          await userService.deleteUser(user.id);
-          await loadUsers(); // Recharger la liste
-        } catch (err) {
-          const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la suppression';
-          setError(errorMessage);
-          console.error('Erreur:', err);
-        }
+      setChildrenToDelete([]);
+      setUserToDelete(user);
+      setIsDeleteModalOpen(true);
+    }
+  };
+
+  const handleDeleteWithChildren = async () => {
+    if (!userToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      setError(null);
+      const childrenCount = childrenToDelete.length;
+      const result = await userService.deleteUser(userToDelete.id, true);
+      setIsDeleteModalOpen(false);
+      setUserToDelete(null);
+      setChildrenToDelete([]);
+      await loadUsers(); // Recharger la liste
+      alert(result.message || `Parent et ${childrenCount} enfant(s) supprimé(s) avec succès`);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la suppression';
+      setError(errorMessage);
+      console.error('Erreur:', err);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteUserOnly = async () => {
+    if (!userToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      setError(null);
+      const childrenCount = childrenToDelete.length;
+      const result = childrenCount > 0 
+        ? await userService.deleteUser(userToDelete.id, false)
+        : await userService.deleteUser(userToDelete.id);
+      setIsDeleteModalOpen(false);
+      setUserToDelete(null);
+      setChildrenToDelete([]);
+      await loadUsers(); // Recharger la liste
+      if (childrenCount > 0) {
+        alert(result.message || `Parent supprimé avec succès. ${childrenCount} enfant(s) désassocié(s).`);
+      } else {
+        alert('Utilisateur supprimé avec succès');
       }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la suppression';
+      setError(errorMessage);
+      console.error('Erreur:', err);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -507,7 +495,7 @@ export const UsersManagementPage = () => {
                               </svg>
                             </button>
                             <button
-                              onClick={() => handleDelete(user)}
+                              onClick={() => handleDeleteClick(user)}
                               className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
                               title={t('users.delete')}
                             >
@@ -845,6 +833,158 @@ export const UsersManagementPage = () => {
               </Button>
             </div>
           </form>
+        )}
+      </Modal>
+
+      {/* Modal de suppression */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          if (!isDeleting) {
+            setIsDeleteModalOpen(false);
+            setUserToDelete(null);
+            setChildrenToDelete([]);
+          }
+        }}
+        title={`Supprimer l'utilisateur - ${userToDelete?.firstName} ${userToDelete?.lastName}`}
+        size="md"
+      >
+        {userToDelete && (
+          <div className="space-y-4">
+            {userToDelete.role === 'PARENT' && childrenToDelete.length > 0 ? (
+              <>
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 p-4 rounded">
+                  <p className="text-sm font-semibold text-yellow-800 dark:text-yellow-300 mb-2">
+                    ⚠️ Ce parent a {childrenToDelete.length} enfant(s) associé(s)
+                  </p>
+                  <ul className="list-disc list-inside text-sm text-yellow-700 dark:text-yellow-400 space-y-1">
+                    {childrenToDelete.map((student) => (
+                      <li key={student.id}>
+                        {student.firstName} {student.lastName}
+                        {student.class && ` - ${student.class.name}`}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                    Choisissez une option de suppression :
+                  </p>
+                  
+                  <button
+                    onClick={handleDeleteWithChildren}
+                    disabled={isDeleting}
+                    className="w-full p-4 bg-red-50 dark:bg-red-900/20 border-2 border-red-300 dark:border-red-700 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl">🗑️</span>
+                      <div className="flex-1">
+                        <p className="font-semibold text-red-900 dark:text-red-300">
+                          Supprimer le parent et ses enfants
+                        </p>
+                        <p className="text-sm text-red-700 dark:text-red-400 mt-1">
+                          Cette action est irréversible. Le parent et tous ses enfants seront définitivement supprimés.
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                  
+                  <button
+                    onClick={handleDeleteUserOnly}
+                    disabled={isDeleting}
+                    className="w-full p-4 bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-300 dark:border-yellow-700 rounded-lg hover:bg-yellow-100 dark:hover:bg-yellow-900/30 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl">👤</span>
+                      <div className="flex-1">
+                        <p className="font-semibold text-yellow-900 dark:text-yellow-300">
+                          Supprimer seulement le parent
+                        </p>
+                        <p className="text-sm text-yellow-700 dark:text-yellow-400 mt-1">
+                          Les enfants seront réassignés au parent système et pourront être réassociés à un nouveau parent depuis la page d'association.
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </>
+            ) : userToDelete.role === 'PARENT' ? (
+              <>
+                <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-400 p-4 rounded">
+                  <p className="text-sm text-blue-800 dark:text-blue-300">
+                    Ce parent n'a pas d'enfants associés.
+                  </p>
+                </div>
+                
+                <div className="space-y-3">
+                  <button
+                    onClick={handleDeleteUserOnly}
+                    disabled={isDeleting}
+                    className="w-full p-4 bg-red-50 dark:bg-red-900/20 border-2 border-red-300 dark:border-red-700 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl">🗑️</span>
+                      <div className="flex-1">
+                        <p className="font-semibold text-red-900 dark:text-red-300">
+                          Supprimer le parent
+                        </p>
+                        <p className="text-sm text-red-700 dark:text-red-400 mt-1">
+                          Cette action est irréversible.
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-400 p-4 rounded">
+                  <p className="text-sm font-semibold text-red-800 dark:text-red-300 mb-2">
+                    ⚠️ Attention
+                  </p>
+                  <p className="text-sm text-red-700 dark:text-red-400">
+                    Vous allez supprimer l'utilisateur "{userToDelete.firstName} {userToDelete.lastName}" ({userToDelete.role}).
+                  </p>
+                </div>
+                
+                <div className="space-y-3">
+                  <button
+                    onClick={handleDeleteUserOnly}
+                    disabled={isDeleting}
+                    className="w-full p-4 bg-red-50 dark:bg-red-900/20 border-2 border-red-300 dark:border-red-700 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl">🗑️</span>
+                      <div className="flex-1">
+                        <p className="font-semibold text-red-900 dark:text-red-300">
+                          Supprimer l'utilisateur
+                        </p>
+                        <p className="text-sm text-red-700 dark:text-red-400 mt-1">
+                          Cette action est irréversible.
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </>
+            )}
+            
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsDeleteModalOpen(false);
+                  setUserToDelete(null);
+                  setChildrenToDelete([]);
+                }}
+                disabled={isDeleting}
+              >
+                Annuler
+              </Button>
+            </div>
+          </div>
         )}
       </Modal>
     </div>
