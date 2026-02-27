@@ -15,6 +15,7 @@ export const listUsers = async (req, res) => {
         phone: true, 
         role: true, 
         createdAt: true,
+        isBlocked: true,
         customRole: { select: { id: true, name: true } },
         teacherLevel: true,
         teacherStatus: true,
@@ -56,7 +57,8 @@ export const createUser = async (req, res) => {
       teacherStatus,
       employmentStartDate,
       employmentEndDate,
-      function: adminFunction
+      function: adminFunction,
+      twoFactorEnabled
     } = req.body;
     
     if (!email || !password || !firstName || !lastName || !role) {
@@ -87,6 +89,7 @@ export const createUser = async (req, res) => {
         employmentStartDate: employmentStartDate ? new Date(employmentStartDate) : null,
         employmentEndDate: employmentEndDate ? new Date(employmentEndDate) : null,
         function: adminFunction || null,
+        twoFactorEnabled: twoFactorEnabled === true,
       },
       select: { 
         id: true, 
@@ -155,22 +158,27 @@ export const updateUser = async (req, res) => {
       teacherStatus,
       employmentStartDate,
       employmentEndDate,
-      function: adminFunction
+      function: adminFunction,
+      isBlocked
     } = req.body;
+    const updateData = { 
+      firstName, 
+      lastName, 
+      phone, 
+      role, 
+      customRoleId: customRoleId ?? null,
+      teacherLevel: teacherLevel ?? null,
+      teacherStatus: teacherStatus ?? null,
+      employmentStartDate: employmentStartDate ? new Date(employmentStartDate) : null,
+      employmentEndDate: employmentEndDate ? new Date(employmentEndDate) : null,
+      function: adminFunction !== undefined ? (adminFunction || null) : undefined,
+    };
+    if (typeof isBlocked === 'boolean') {
+      updateData.isBlocked = isBlocked;
+    }
     const user = await prisma.user.update({
       where: { id },
-      data: { 
-        firstName, 
-        lastName, 
-        phone, 
-        role, 
-        customRoleId: customRoleId ?? null,
-        teacherLevel: teacherLevel ?? null,
-        teacherStatus: teacherStatus ?? null,
-        employmentStartDate: employmentStartDate ? new Date(employmentStartDate) : null,
-        employmentEndDate: employmentEndDate ? new Date(employmentEndDate) : null,
-        function: adminFunction !== undefined ? (adminFunction || null) : undefined,
-      },
+      data: updateData,
       select: { 
         id: true, 
         email: true, 
@@ -178,6 +186,7 @@ export const updateUser = async (req, res) => {
         lastName: true, 
         phone: true, 
         role: true, 
+        isBlocked: true,
         customRoleId: true,
         teacherLevel: true,
         teacherStatus: true,

@@ -206,6 +206,8 @@ const translations: Record<Language, Record<string, string>> = {
     'dashboard.recentActivities': 'Activités Récentes',
     'dashboard.noRecentActivity': 'Aucune activité récente',
     'dashboard.systemReady': 'Le système est prêt',
+    'dashboard.adminView': 'Vue Administration',
+    'dashboard.teacherView': 'Vue Enseignant',
     
     // Overview
     'overview.title': 'Vue Globale du Système',

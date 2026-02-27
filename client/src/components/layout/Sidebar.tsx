@@ -155,7 +155,7 @@ export const Sidebar = ({ isCollapsed, onToggle }: SidebarProps) => {
   // Utilise le hook logout puis redirige vers la page de login
   const handleLogout = async () => {
     await logout();
-    navigate('/login');
+    navigate('/');
   };
 
   // Permet de savoir si le menu (par son chemin) doit être affiché comme actif (surbrillance)

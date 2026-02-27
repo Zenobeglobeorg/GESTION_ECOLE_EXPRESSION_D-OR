@@ -180,7 +180,7 @@ export const SidebarAdmin = ({ isCollapsed, onToggle }: SidebarAdminProps) => {
 
   const handleLogout = async () => {
     await logout();
-    navigate('/login');
+    navigate('/');
   };
 
   const isActive = (path: string) => {

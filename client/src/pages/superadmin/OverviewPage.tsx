@@ -5,10 +5,8 @@ import { Navbar } from '../../components/layout/Navbar';
 import { Card } from '../../components/ui/Card';
 //import { Button } from '../../components/ui/Button';
 import { Link } from 'react-router-dom';
-import * as userService from '../../services/userService';
-import * as studentService from '../../services/studentService';
+import * as dashboardService from '../../services/dashboardService';
 import { useLanguage } from '../../contexts/LanguageContext';
-//import type { UserWithDate } from '../../services/userService';
 
 export const OverviewPage = () => {
   const { t } = useLanguage();
@@ -30,21 +28,14 @@ export const OverviewPage = () => {
   const loadStats = async () => {
     try {
       setIsLoading(true);
-      const [users, students] = await Promise.all([
-        userService.getUsers(),
-        studentService.getStudents(),
-      ]);
-
-      const adminUsers = users.filter(u => u.role === 'ADMINISTRATION');
-      const teacherUsers = users.filter(u => u.role === 'TEACHER');
-      const parentUsers = users.filter(u => u.role === 'PARENT');
-
+      const data = await dashboardService.getSuperAdminStats();
+      const totalUsers = data.admins + data.teachers + data.parents;
       setStats({
-        totalUsers: users.length,
-        totalStudents: students.length,
-        totalAdmins: adminUsers.length,
-        totalTeachers: teacherUsers.length,
-        totalParents: parentUsers.length,
+        totalUsers,
+        totalStudents: data.students,
+        totalAdmins: data.admins,
+        totalTeachers: data.teachers,
+        totalParents: data.parents,
       });
     } catch (err) {
       console.error('Erreur lors du chargement des statistiques:', err);
@@ -54,44 +45,11 @@ export const OverviewPage = () => {
   };
 
   const statCards = [
-    {
-      title: t('overview.totalUsers'),
-      value: stats.totalUsers,
-      icon: '👥',
-      color: 'bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700',
-      path: '/superadmin/users',
-      description: t('overview.allAccounts'),
-    },
-    {
-      title: t('overview.adminAccounts'),
-      value: stats.totalAdmins,
-      icon: '👔',
-      color: 'bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600',
-      path: '/superadmin/admins',
-      description: t('overview.adminMembers'),
-    },
-    {
-      title: t('overview.teachers'),
-      value: stats.totalTeachers,
-      icon: '👨‍🏫',
-      color: 'bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600',
-      description: t('overview.activeTeachers'),
-    },
-    {
-      title: t('overview.parents'),
-      value: stats.totalParents,
-      icon: '👨‍👩‍👧',
-      color: 'bg-gradient-to-br from-yellow-500 via-yellow-600 to-yellow-700',
-      description: t('overview.registeredFamilies'),
-    },
-    {
-      title: t('overview.students'),
-      value: stats.totalStudents,
-      icon: '🎓',
-      color: 'bg-gradient-to-br from-blue-500 via-blue-500 to-blue-600',
-      path: '/superadmin/users',
-      description: t('overview.registeredStudents'),
-    },
+    { title: t('overview.totalUsers'), value: stats.totalUsers, icon: '👥', path: '/superadmin/users', description: t('overview.allAccounts') },
+    { title: t('overview.adminAccounts'), value: stats.totalAdmins, icon: '👔', path: '/superadmin/admins', description: t('overview.adminMembers') },
+    { title: t('overview.teachers'), value: stats.totalTeachers, icon: '👨‍🏫', path: '/superadmin/users', description: t('overview.activeTeachers') },
+    { title: t('overview.parents'), value: stats.totalParents, icon: '👨‍👩‍👧', path: '/superadmin/users', description: t('overview.registeredFamilies') },
+    { title: t('overview.students'), value: stats.totalStudents, icon: '🎓', path: '/superadmin/users', description: t('overview.registeredStudents') },
   ];
 
   const quickLinks = [
@@ -164,29 +122,27 @@ export const OverviewPage = () => {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-8">
                 {statCards.map((stat, index) => (
                   <Link key={index} to={stat.path || '#'} className="block">
-                    <Card
-                      className={`overflow-hidden hover:shadow-xl transition-all duration-300 border-0 ${stat.color} transform hover:scale-105`}
-                    >
-                      <div className="p-6 text-white">
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="w-12 h-12 rounded-lg bg-white bg-opacity-20 backdrop-blur-sm flex items-center justify-center text-2xl">
-                            {stat.icon}
-                          </div>
+                    <div className="rounded-xl bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 p-4 text-white shadow-md hover:shadow-lg transition-shadow border border-yellow-500/20">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-white/25 flex items-center justify-center text-lg shrink-0">
+                          {stat.icon}
                         </div>
-                        <p className="text-white text-opacity-90 text-sm mb-1 font-medium">{stat.title}</p>
-                        <p className="text-3xl font-bold mb-1">{stat.value}</p>
-                        <p className="text-xs text-white text-opacity-75">{stat.description}</p>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-2xl font-bold leading-tight">{stat.value}</p>
+                          <p className="text-xs font-medium text-white/95 truncate" title={stat.title}>{stat.title}</p>
+                          <p className="text-[11px] text-white/80 truncate" title={stat.description}>{stat.description}</p>
+                        </div>
                       </div>
-                    </Card>
+                    </div>
                   </Link>
                 ))}
               </div>
 
               {/* Accès rapides */}
-              <Card
+              {/*<Card
                 title={t('overview.quickAccess')}
                 className="mb-8 border-0 shadow-lg dark:bg-gray-800"
                 headerActions={
@@ -207,7 +163,7 @@ export const OverviewPage = () => {
                     </Link>
                   ))}
                 </div>
-              </Card>
+              </Card>*/}
 
               {/* Informations système */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

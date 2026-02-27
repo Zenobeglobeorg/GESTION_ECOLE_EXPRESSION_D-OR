@@ -3,6 +3,7 @@ import type { User, UserRole } from '../contexts/AuthContext';
 // Type étendu pour inclure createdAt et les champs enseignants (retournés par l'API)
 export interface UserWithDate extends User {
   createdAt: string;
+  isBlocked?: boolean;
   teacherLevel?: 'MATERNELLE' | 'PRE_PRIMAIRE' | 'PRIMAIRE' | null;
   teacherStatus?: 'PERMANENT' | 'CONSULTANT' | 'VACATAIRE' | null;
   employmentStartDate?: string | null;
@@ -25,6 +26,7 @@ export interface CreateUserData {
   employmentStartDate?: string;
   employmentEndDate?: string;
   function?: string; // Fonction de l'administrateur (Directeur, Fondateur, etc.)
+  twoFactorEnabled?: boolean; // Activer la 2FA à la création (défaut: false, true pour Administrateur)
 }
 
 export interface UpdateUserData {
@@ -38,6 +40,7 @@ export interface UpdateUserData {
   employmentStartDate?: string | null;
   employmentEndDate?: string | null;
   function?: string | null; // Fonction de l'administrateur
+  isBlocked?: boolean; // Bloquer / débloquer le compte (empêche la connexion)
 }
 
 /**

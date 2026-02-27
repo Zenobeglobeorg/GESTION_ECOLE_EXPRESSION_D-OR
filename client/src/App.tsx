@@ -93,7 +93,7 @@ const DashboardRoute = () => {
     case 'PARENT':
       return <Navigate to="/parent" replace />;
     default:
-      return <Navigate to="/login" replace />;
+      return <Navigate to="/" replace />;
   }
 };
 

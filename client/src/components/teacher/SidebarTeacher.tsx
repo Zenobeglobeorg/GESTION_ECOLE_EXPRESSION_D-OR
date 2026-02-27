@@ -144,7 +144,7 @@ export const SidebarTeacher = ({ isCollapsed, onToggle }: SidebarTeacherProps) =
 
   const handleLogout = async () => {
     await logout();
-    navigate('/login');
+    navigate('/');
   };
 
   const isActive = (path: string) => {

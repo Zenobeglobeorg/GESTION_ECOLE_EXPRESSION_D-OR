@@ -124,7 +124,7 @@ export const SidebarParent = ({ isCollapsed, onToggle }: SidebarParentProps) => 
 
   const handleLogout = async () => {
     await logout();
-    navigate('/login');
+    navigate('/');
   };
 
   const isActive = (path: string) => {

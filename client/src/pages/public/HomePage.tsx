@@ -6,17 +6,17 @@ export const HomePage = () => {
 
   const slides = [
     {
-      title: "Bienvenue sur Ecole de pilote",
-      description: "La plateforme de gestion complète pour votre établissement scolaire. Gérez les élèves, les enseignants, les parents et l'administration en toute simplicité.",
+      title: "Bienvenue sur Connect School",
+      description: "La plateforme de gestion complète pour gerer votre établissement scolaire.",
       buttonText: "Continuer",
       buttonAction: () => setCurrentSlide(1),
     },
-    {
-      title: "Gestion simplifiée de votre école",
-      description: "Suivez les présences, les notes, les évaluations et les bulletins. Communiquez efficacement avec les parents et coordonnez les équipes pédagogiques.",
-      buttonText: "Commencer",
-      buttonAction: () => setCurrentSlide(2),
-    },
+    // {
+    //   title: "Gestion simplifiée de votre école",
+    //   description: "Suivez les présences, les notes, les évaluations et les bulletins. Communiquez efficacement avec les parents et coordonnez les équipes pédagogiques.",
+    //   buttonText: "Commencer",
+    //   buttonAction: () => setCurrentSlide(2),
+    // },
     {
       title: "Connectez-vous à votre compte",
       description: "Accédez à votre tableau de bord personnalisé selon votre rôle : administrateur, enseignant ou parent.",
@@ -81,14 +81,26 @@ export const HomePage = () => {
         </div>
 
         {/* Action Button */}
-        {currentSlide === 2 ? (
+        {currentSlide === 1 ? (
           <div className="w-full max-w-md space-y-4 animate-fade-in">
-            {/* Direct Login Link */}
-            <Link to="/login" className="block">
-              <button className="w-full bg-yellow-400 hover:bg-yellow-500 text-blue-900 font-bold py-4 rounded-xl shadow-lg hover:shadow-2xl transition-all transform hover:scale-105 uppercase tracking-wide">
-                {currentSlideData.buttonText}
-              </button>
-            </Link>
+            {/* Boutons par profil : Parent, Enseignant, Administrateur */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <Link to="/login" state={{ roleHint: 'PARENT' }} className="block">
+                <button type="button" className="w-full bg-white/20 hover:bg-white/30 backdrop-blur-md text-white font-bold py-4 rounded-xl shadow-lg transition-all transform hover:scale-105 border border-white/30">
+                  👨‍👩‍👧 Parent
+                </button>
+              </Link>
+              <Link to="/login" state={{ roleHint: 'TEACHER' }} className="block">
+                <button type="button" className="w-full bg-white/20 hover:bg-white/30 backdrop-blur-md text-white font-bold py-4 rounded-xl shadow-lg transition-all transform hover:scale-105 border border-white/30">
+                  📚 Enseignant
+                </button>
+              </Link>
+              <Link to="/login" state={{ roleHint: 'ADMINISTRATION' }} className="block">
+                <button type="button" className="w-full bg-white/20 hover:bg-white/30 backdrop-blur-md text-white font-bold py-4 rounded-xl shadow-lg transition-all transform hover:scale-105 border border-white/30">
+                  ⚙️ Admin
+                </button>
+              </Link>
+            </div>
 
             {/* Terms */}
             <div className="backdrop-blur-md bg-white/10 rounded-2xl p-4 border border-white/20">

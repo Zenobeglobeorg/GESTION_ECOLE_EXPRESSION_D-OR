@@ -79,7 +79,7 @@ export const MobileSidebarParent = ({ isOpen, onClose }: MobileSidebarParentProp
 
   const handleLogout = async () => {
     await logout();
-    navigate('/login');
+    navigate('/');
     onClose();
   };
 

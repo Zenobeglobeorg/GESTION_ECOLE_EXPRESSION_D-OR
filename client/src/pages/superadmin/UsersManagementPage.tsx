@@ -36,14 +36,19 @@ export const UsersManagementPage = () => {
     phone: '',
     role: 'ADMINISTRATION' as UserRole,
     function: '',
+    twoFactorEnabled: true, // Par défaut true pour Administrateur
   });
 
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [viewingUser, setViewingUser] = useState<UserWithDate | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserWithDate | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserWithDate | null>(null);
   const [childrenToDelete, setChildrenToDelete] = useState<studentService.Student[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isViewStudentModalOpen, setIsViewStudentModalOpen] = useState(false);
+  const [viewingStudent, setViewingStudent] = useState<studentService.Student | null>(null);
   const [editFormData, setEditFormData] = useState({
     firstName: '',
     lastName: '',
@@ -52,14 +57,28 @@ export const UsersManagementPage = () => {
     function: '',
   });
 
-  // Charger les données au montage et quand la vue change
+  // Charger les deux listes au montage pour afficher les bons compteurs (Utilisateurs / Élèves) dès l'arrivée sur la page
   useEffect(() => {
-    if (viewType === 'users') {
-      loadUsers();
-    } else {
-      loadStudents();
-    }
-  }, [viewType]);
+    const load = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const [usersData, studentsData] = await Promise.all([
+          userService.getUsers(),
+          studentService.getStudents(),
+        ]);
+        setUsers(usersData as UserWithDate[]);
+        setStudents(studentsData);
+      } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : 'Erreur lors du chargement';
+        setError(errorMessage);
+        console.error('Erreur:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
+  }, []);
 
   const loadUsers = async () => {
     try {
@@ -92,10 +111,12 @@ export const UsersManagementPage = () => {
     }
   };
 
-  // Filtrer les utilisateurs par rôle
-  const filteredUsers = selectedRole === 'ALL' 
-    ? users 
-    : users.filter(user => user.role === selectedRole);
+  // Filtrer les utilisateurs par rôle (Administration = ADMINISTRATION + SUPER_ADMIN, comme le dashboard)
+  const filteredUsers = selectedRole === 'ALL'
+    ? users
+    : selectedRole === 'ADMINISTRATION'
+      ? users.filter(user => user.role === 'ADMINISTRATION' || user.role === 'SUPER_ADMIN')
+      : users.filter(user => user.role === selectedRole);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,6 +132,7 @@ export const UsersManagementPage = () => {
         phone: '',
         role: 'ADMINISTRATION',
         function: '',
+        twoFactorEnabled: true,
       });
       await loadUsers(); // Recharger la liste
     } catch (err) {
@@ -195,11 +217,26 @@ export const UsersManagementPage = () => {
     }
   };
 
-  const handleSuspend = async (userId: number) => {
-    if (window.confirm(t('users.suspendConfirm'))) {
-      // TODO: Implémenter la suspension (nécessite un champ isActive dans le modèle User)
-      console.log('Suspendre utilisateur:', userId);
+  const handleSuspend = async (user: UserWithDate) => {
+    const isBlocked = !!user.isBlocked;
+    const message = isBlocked
+      ? (t('users.unblockConfirm') as string) || 'Débloquer ce compte ? L\'utilisateur pourra à nouveau se connecter.'
+      : (t('users.suspendConfirm') as string) || 'Bloquer ce compte ? L\'utilisateur ne pourra plus se connecter.';
+    if (!window.confirm(message)) return;
+    try {
+      setError(null);
+      await userService.updateUser(user.id, { isBlocked: !isBlocked });
+      await loadUsers();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la mise à jour';
+      setError(errorMessage);
+      console.error('Erreur:', err);
     }
+  };
+
+  const handleView = (user: UserWithDate) => {
+    setViewingUser(user);
+    setIsViewModalOpen(true);
   };
 
   const handleEdit = (user: UserWithDate) => {
@@ -229,6 +266,11 @@ export const UsersManagementPage = () => {
       setError(errorMessage);
       console.error('Erreur:', err);
     }
+  };
+
+  const handleViewStudent = (student: studentService.Student) => {
+    setViewingStudent(student);
+    setIsViewStudentModalOpen(true);
   };
 
   const handleDeleteStudent = async (studentId: number) => {
@@ -262,7 +304,7 @@ export const UsersManagementPage = () => {
 
   const roleStats: Record<UserRole | 'ALL', number> = {
     ALL: users.length,
-    ADMINISTRATION: users.filter(u => u.role === 'ADMINISTRATION').length,
+    ADMINISTRATION: users.filter(u => u.role === 'ADMINISTRATION' || u.role === 'SUPER_ADMIN').length,
     TEACHER: users.filter(u => u.role === 'TEACHER').length,
     PARENT: users.filter(u => u.role === 'PARENT').length,
     SUPER_ADMIN: users.filter(u => u.role === 'SUPER_ADMIN').length,
@@ -469,7 +511,14 @@ export const UsersManagementPage = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{user.email}</td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {getRoleBadge(user.role)}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {getRoleBadge(user.role)}
+                            {user.isBlocked && (
+                              <span className="px-2 py-0.5 text-xs font-medium rounded bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+                                Bloqué
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                           {new Date(user.createdAt).toLocaleString('fr-FR')}
@@ -477,6 +526,18 @@ export const UsersManagementPage = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex items-center justify-end gap-2">
                             <button
+                              type="button"
+                              onClick={() => handleView(user)}
+                              className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
+                              title={t('users.view') || 'Voir'}
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => handleEdit(user)}
                               className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
                               title={t('users.edit')}
@@ -486,15 +547,17 @@ export const UsersManagementPage = () => {
                               </svg>
                             </button>
                             <button
-                              onClick={() => handleSuspend(user.id)}
+                              type="button"
+                              onClick={() => handleSuspend(user)}
                               className="text-yellow-600 dark:text-yellow-400 hover:text-yellow-900 dark:hover:text-yellow-300"
-                              title={t('users.suspend')}
+                              title={user.isBlocked ? (t('users.unblock') || 'Débloquer') : t('users.suspend')}
                             >
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
                               </svg>
                             </button>
                             <button
+                              type="button"
                               onClick={() => handleDeleteClick(user)}
                               className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
                               title={t('users.delete')}
@@ -595,8 +658,10 @@ export const UsersManagementPage = () => {
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <div className="flex items-center justify-end gap-2">
                               <button
+                                type="button"
+                                onClick={() => handleViewStudent(student)}
                                 className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
-                                title={t('users.viewDetails')}
+                                title={t('users.view') || 'Voir'}
                               >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -604,6 +669,8 @@ export const UsersManagementPage = () => {
                                 </svg>
                               </button>
                               <button
+                                type="button"
+                                onClick={() => navigate(`/admin/students/${student.id}/edit`)}
                                 className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
                                 title={t('users.edit')}
                               >
@@ -612,6 +679,7 @@ export const UsersManagementPage = () => {
                                 </svg>
                               </button>
                               <button
+                                type="button"
                                 onClick={() => handleDeleteStudent(student.id)}
                                 className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
                                 title={t('users.delete')}
@@ -676,7 +744,14 @@ export const UsersManagementPage = () => {
             <select
               title="Type de Compte"
               value={formData.role}
-              onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })}
+              onChange={(e) => {
+                const newRole = e.target.value as UserRole;
+                setFormData({
+                  ...formData,
+                  role: newRole,
+                  twoFactorEnabled: newRole === 'ADMINISTRATION' ? true : formData.twoFactorEnabled,
+                });
+              }}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
             >
@@ -713,6 +788,22 @@ export const UsersManagementPage = () => {
             helperText={t('users.passwordHelper')}
           />
 
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="create-twoFactorEnabled"
+              checked={formData.twoFactorEnabled}
+              onChange={(e) => setFormData({ ...formData, twoFactorEnabled: e.target.checked })}
+              className="w-4 h-4 rounded border-gray-300 text-amber-500 focus:ring-amber-500"
+            />
+            <label htmlFor="create-twoFactorEnabled" className="text-sm font-medium text-gray-700">
+              Activer la double authentification (2FA) à la création
+            </label>
+          </div>
+          <p className="text-xs text-gray-500 -mt-2">
+            L&apos;utilisateur pourra modifier ce réglage plus tard dans Paramètres.
+          </p>
+
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
             <Button
               type="button"
@@ -729,6 +820,102 @@ export const UsersManagementPage = () => {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Modal Voir (détails utilisateur) */}
+      <Modal
+        isOpen={isViewModalOpen}
+        onClose={() => { setIsViewModalOpen(false); setViewingUser(null); }}
+        title={viewingUser ? `${viewingUser.firstName} ${viewingUser.lastName}` : ''}
+        size="md"
+      >
+        {viewingUser && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-white text-xl font-semibold">
+                {viewingUser.firstName.charAt(0)}{viewingUser.lastName.charAt(0)}
+              </div>
+              <div>
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {viewingUser.firstName} {viewingUser.lastName}
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{viewingUser.email}</p>
+                {viewingUser.isBlocked && (
+                  <span className="inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+                    Compte bloqué
+                  </span>
+                )}
+              </div>
+            </div>
+            <dl className="grid grid-cols-1 gap-2 text-sm">
+              <div><dt className="text-gray-500 dark:text-gray-400">Téléphone</dt><dd className="font-medium">{viewingUser.phone || '—'}</dd></div>
+              <div><dt className="text-gray-500 dark:text-gray-400">Rôle</dt><dd>{getRoleBadge(viewingUser.role)}</dd></div>
+              {viewingUser.role === 'ADMINISTRATION' && viewingUser.function && (
+                <div><dt className="text-gray-500 dark:text-gray-400">Fonction</dt><dd className="font-medium">{viewingUser.function}</dd></div>
+              )}
+              <div><dt className="text-gray-500 dark:text-gray-400">Date de création</dt><dd>{new Date(viewingUser.createdAt).toLocaleString('fr-FR')}</dd></div>
+            </dl>
+            <div className="flex justify-end gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <Button type="button" variant="outline" onClick={() => { setIsViewModalOpen(false); setViewingUser(null); }}>
+                Fermer
+              </Button>
+              <Button type="button" style={{ backgroundColor: '#fbbf24' }} onClick={() => { handleEdit(viewingUser); setIsViewModalOpen(false); setViewingUser(null); }}>
+                Modifier
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Modal Voir élève (détails) */}
+      <Modal
+        isOpen={isViewStudentModalOpen}
+        onClose={() => { setIsViewStudentModalOpen(false); setViewingStudent(null); }}
+        title={viewingStudent ? `${viewingStudent.firstName} ${viewingStudent.lastName}` : ''}
+        size="md"
+      >
+        {viewingStudent && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center text-white text-xl font-semibold">
+                {viewingStudent.firstName.charAt(0)}{viewingStudent.lastName.charAt(0)}
+              </div>
+              <div>
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {viewingStudent.firstName} {viewingStudent.lastName}
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Né(e) le {new Date(viewingStudent.dateOfBirth).toLocaleDateString('fr-FR')}
+                </p>
+                <div className="flex gap-2 mt-1">
+                  {viewingStudent.hasDisability && (
+                    <span className="text-xs px-2 py-0.5 rounded bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300">Handicap</span>
+                  )}
+                  {viewingStudent.isOrphan && (
+                    <span className="text-xs px-2 py-0.5 rounded bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300">Orphelin</span>
+                  )}
+                </div>
+              </div>
+            </div>
+            <dl className="grid grid-cols-1 gap-2 text-sm">
+              <div><dt className="text-gray-500 dark:text-gray-400">Classe</dt><dd className="font-medium">{viewingStudent.class ? viewingStudent.class.name : (t('users.notAssigned') || 'Non assignée')}</dd></div>
+              <div><dt className="text-gray-500 dark:text-gray-400">Parent / Tuteur</dt><dd className="font-medium">{viewingStudent.parent.firstName} {viewingStudent.parent.lastName}</dd></div>
+              <div><dt className="text-gray-500 dark:text-gray-400">Email parent</dt><dd className="text-gray-700 dark:text-gray-300">{viewingStudent.parent.email}</dd></div>
+              <div><dt className="text-gray-500 dark:text-gray-400">Date d&apos;inscription</dt><dd>{new Date(viewingStudent.enrollmentDate).toLocaleDateString('fr-FR')}</dd></div>
+              {viewingStudent.schoolOfOrigin && (
+                <div><dt className="text-gray-500 dark:text-gray-400">École d&apos;origine</dt><dd>{viewingStudent.schoolOfOrigin}</dd></div>
+              )}
+            </dl>
+            <div className="flex justify-end gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <Button type="button" variant="outline" onClick={() => { setIsViewStudentModalOpen(false); setViewingStudent(null); }}>
+                Fermer
+              </Button>
+              <Button type="button" style={{ backgroundColor: '#fbbf24' }} onClick={() => { navigate(`/admin/students/${viewingStudent.id}/edit`); setIsViewStudentModalOpen(false); setViewingStudent(null); }}>
+                Modifier
+              </Button>
+            </div>
+          </div>
+        )}
       </Modal>
 
       {/* Modal de modification */}

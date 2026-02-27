@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { AdminLayout } from "../../components/admin/AdminLayout";
@@ -32,6 +32,7 @@ export const UsersParents = () => {
     phone: "",
   });
   const [filterName, setFilterName] = useState("");
+  const [sortBy, setSortBy] = useState<'alphabetical' | 'creation'>('creation');
 
   useEffect(() => {
     const loadParents = async () => {
@@ -236,6 +237,15 @@ export const UsersParents = () => {
       p.email.toLowerCase().includes(filterName.toLowerCase())
   );
 
+  const sortedParents = [...filteredParents].sort((a, b) => {
+    if (sortBy === 'alphabetical') {
+      const nameA = `${a.firstName} ${a.lastName}`.toLowerCase();
+      const nameB = `${b.firstName} ${b.lastName}`.toLowerCase();
+      return nameA.localeCompare(nameB);
+    }
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+
   const handleRowClick = (parent: ParentWithStudents) => {
     setSelectedParent(parent);
     setIsDetailsModalOpen(true);
@@ -278,13 +288,23 @@ export const UsersParents = () => {
           <div className="space-y-4">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
               <h2 className="font-semibold text-lg text-blue-900">Liste des parents</h2>
-              <input
-                type="text"
-                placeholder="Filtrer par nom ou email..."
-                className="form-control md:w-64"
-                value={filterName}
-                onChange={e => setFilterName(e.target.value)}
-              />
+              <div className="flex flex-wrap items-center gap-3">
+                <select
+                  value={sortBy}
+                  onChange={e => setSortBy(e.target.value as 'alphabetical' | 'creation')}
+                  className="form-control md:w-48"
+                >
+                  <option value="alphabetical">Trier par ordre alphabétique</option>
+                  <option value="creation">Trier par date de création</option>
+                </select>
+                <input
+                  type="text"
+                  placeholder="Filtrer par nom ou email..."
+                  className="form-control md:w-64"
+                  value={filterName}
+                  onChange={e => setFilterName(e.target.value)}
+                />
+              </div>
             </div>
 
             {isLoading ? (
@@ -292,7 +312,7 @@ export const UsersParents = () => {
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
                 <p className="text-gray-600">Chargement des parents...</p>
               </div>
-            ) : filteredParents.length === 0 ? (
+            ) : sortedParents.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-gray-500">Aucun parent trouvé</p>
               </div>
@@ -309,7 +329,7 @@ export const UsersParents = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredParents.map(parent => (
+                    {sortedParents.map(parent => (
                       <tr 
                         key={parent.id}
                         className="cursor-pointer hover:bg-blue-50 transition-colors"

@@ -24,9 +24,9 @@ export const ProtectedRoute = ({
   const { user, isAuthenticated } = useAuth();
   const { hasPermission, hasAnyPermission, hasAllPermissions, loading } = usePermissions();
 
-  // Si l'utilisateur n'est pas authentifié, rediriger vers la page de connexion
+  // Si l'utilisateur n'est pas authentifié, rediriger vers la page d'accueil
   if (!isAuthenticated || !user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   // Si les permissions sont en cours de chargement, afficher un loader

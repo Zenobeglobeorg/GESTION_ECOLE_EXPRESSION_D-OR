@@ -39,7 +39,7 @@ export const MobileSidebarTeacher = ({ isOpen, onClose }: MobileSidebarTeacherPr
 
   const handleLogout = async () => {
     await logout();
-    navigate('/login');
+    navigate('/');
     onClose();
   };
 

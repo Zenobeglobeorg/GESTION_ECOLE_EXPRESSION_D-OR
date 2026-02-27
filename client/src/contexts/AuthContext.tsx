@@ -18,8 +18,8 @@ export interface User {
 export interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void | { requiresTwoFactor: true; emailSent: boolean; devCode?: string }>;
-  verifyTwoFactor: (email: string, code: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void | LoginResponse | { requiresTwoFactor: true; emailSent: boolean; devCode?: string }>;
+  verifyTwoFactor: (email: string, code: string) => Promise<LoginResponse>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -34,7 +34,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<void | { requiresTwoFactor: true; emailSent: boolean; devCode?: string } | LoginResponse> => {
     setIsLoading(true);
     try {
       const { login: loginService } = await import('../services/authService');
@@ -51,6 +51,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setUser(user);
       localStorage.setItem('user', JSON.stringify(user));
       localStorage.setItem('token', token);
+      setIsLoading(false);
+      return result as LoginResponse;
     } catch (error) {
       console.error('Login error:', error);
       throw error;
@@ -59,7 +61,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
-  const verifyTwoFactor = async (email: string, code: string) => {
+  const verifyTwoFactor = async (email: string, code: string): Promise<LoginResponse> => {
     setIsLoading(true);
     try {
       const { verifyTwoFactor: verifyTwoFactorService } = await import('../services/authService');
@@ -68,6 +70,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setUser(user);
       localStorage.setItem('user', JSON.stringify(user));
       localStorage.setItem('token', token);
+      return { user, token };
     } catch (error) {
       console.error('Verify 2FA error:', error);
       throw error;

@@ -1,12 +1,30 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 
+const ROLE_HINT_MESSAGES: Record<string, string> = {
+  PARENT: 'Accédez à votre espace Parent',
+  TEACHER: 'Accédez à votre espace Enseignant',
+  ADMINISTRATION: 'Accédez à votre espace Admin',
+};
+
+/** Vérifie que le rôle de l'utilisateur correspond au bouton (Parent / Enseignant / Admin) cliqué sur la home. */
+function isRoleAllowed(userRole: string, roleHint: string): boolean {
+  if (!roleHint) return true;
+  if (roleHint === 'ADMINISTRATION') return userRole === 'ADMINISTRATION' || userRole === 'SUPER_ADMIN';
+  return userRole === roleHint;
+}
+
 export const LoginPage = () => {
-  const { login, verifyTwoFactor, isLoading } = useAuth();
+  const { login, verifyTwoFactor, logout, isLoading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const roleHint = (location.state as { roleHint?: string } | null)?.roleHint;
+  const welcomeMessage = roleHint && ROLE_HINT_MESSAGES[roleHint]
+    ? ROLE_HINT_MESSAGES[roleHint]
+    : 'Accédez à votre espace personnel';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -88,14 +106,17 @@ export const LoginPage = () => {
       if (result && 'requiresTwoFactor' in result && result.requiresTwoFactor) {
         setRequiresTwoFactor(true);
         setTwoFactorEmailSent(result.emailSent || false);
-        // En mode développement, afficher le code dans la console
-        if (result.devCode) {
-          console.log('📧 [DEV] Code 2FA:', result.devCode);
-        }
+        if (result.devCode) console.log('📧 [DEV] Code 2FA:', result.devCode);
         return;
       }
 
-      // Si pas de 2FA, connexion normale - la redirection sera gérée par ProtectedRoute
+      // Connexion réussie sans 2FA : vérifier le rôle si l'utilisateur a cliqué sur Parent / Enseignant / Admin
+      if (result && 'user' in result && roleHint && !isRoleAllowed(result.user.role, roleHint)) {
+        await logout();
+        setError('Accès refusé');
+        return;
+      }
+
       navigate('/dashboard');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la connexion. Veuillez réessayer.';
@@ -115,8 +136,12 @@ export const LoginPage = () => {
     }
 
     try {
-      await verifyTwoFactor(email, twoFactorCode);
-      // Connexion réussie - la redirection sera gérée par ProtectedRoute
+      const result = await verifyTwoFactor(email, twoFactorCode);
+      if (roleHint && result?.user && !isRoleAllowed(result.user.role, roleHint)) {
+        await logout();
+        setError('Accès refusé');
+        return;
+      }
       navigate('/dashboard');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la vérification du code';
@@ -146,7 +171,7 @@ export const LoginPage = () => {
           <h2 className="text-3xl font-bold mb-2 text-blue-800 drop-shadow-sm">
             Connect School
           </h2>
-          <p className="text-gray-600 text-sm">Accédez à votre espace personnel</p>
+          <p className="text-gray-600 text-sm">{welcomeMessage}</p>
         </div>
 
         {!requiresTwoFactor ? (

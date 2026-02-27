@@ -176,7 +176,7 @@ export const MobileSidebarAdmin = ({ isOpen, onClose }: MobileSidebarAdminProps)
 
   const handleLogout = async () => {
     await logout();
-    navigate('/login');
+    navigate('/');
     onClose();
   };
 
