@@ -10,10 +10,10 @@ import { BulletinGenerator } from '../../components/bulletins/BulletinGenerator'
 
 const getGradeColor = (grade: number | null): string => {
   if (!grade) return 'bg-gray-100 text-gray-800';
-  if (grade >= 16) return 'bg-green-100 text-green-800';
-  if (grade >= 14) return 'bg-blue-100 text-blue-800';
-  if (grade >= 12) return 'bg-yellow-100 text-yellow-800';
-  if (grade >= 10) return 'bg-orange-100 text-orange-800';
+  if (grade >= 8) return 'bg-green-100 text-green-800';
+  if (grade >= 7) return 'bg-blue-100 text-blue-800';
+  if (grade >= 6) return 'bg-yellow-100 text-yellow-800';
+  if (grade >= 5) return 'bg-orange-100 text-orange-800';
   return 'bg-red-100 text-red-800';
 };
 
@@ -147,34 +147,51 @@ export const Grades = () => {
   });
 
   const handleValidateGrade = async (gradeId: number) => {
+    setError(null);
     try {
       await gradeService.validateGrade(gradeId);
-      setSuccess('Note validée avec succès');
+      setSuccess('Note validée avec succès.');
       await loadData();
-      setTimeout(() => setSuccess(null), 3000);
+      setTimeout(() => setSuccess(null), 4000);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erreur lors de la validation');
-      setTimeout(() => setError(null), 5000);
+      setSuccess(null);
+      setError(err instanceof Error ? err.message : 'Erreur lors de la validation.');
+      setTimeout(() => setError(null), 6000);
     }
   };
 
   const handleRejectGrade = async (gradeId: number) => {
     if (!confirm('Rejeter cette note ?')) return;
+    setError(null);
     try {
       await gradeService.rejectGrade(gradeId);
-      setSuccess('Note rejetée');
+      setSuccess('Note rejetée.');
       await loadData();
-      setTimeout(() => setSuccess(null), 3000);
+      setTimeout(() => setSuccess(null), 4000);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erreur lors du rejet');
-      setTimeout(() => setError(null), 5000);
+      setSuccess(null);
+      setError(err instanceof Error ? err.message : 'Erreur lors du rejet.');
+      setTimeout(() => setError(null), 6000);
+    }
+  };
+
+  const handleNotifyTeacher = async (gradeId: number) => {
+    setError(null);
+    try {
+      await gradeService.notifyTeacherForGrade(gradeId);
+      setSuccess('Notification envoyée à l\'enseignant avec succès.');
+      setTimeout(() => setSuccess(null), 4000);
+    } catch (err: unknown) {
+      setSuccess(null);
+      setError(err instanceof Error ? err.message : 'Erreur lors de l\'envoi de la notification.');
+      setTimeout(() => setError(null), 6000);
     }
   };
 
   const handleEdit = (grade: gradeService.Grade) => {
     setEditingGrade(grade);
-    setEditGrade(grade.grade || 0);
-    setEditCoefficient(1); // Par défaut, peut être ajouté au modèle plus tard
+    setEditGrade(grade.grade ?? grade.score ?? 0);
+    setEditCoefficient(1);
     setEditComment(grade.teacherComments || '');
   };
 
@@ -183,10 +200,8 @@ export const Grades = () => {
     try {
       setSaving(true);
       setError(null);
-      // Convertir de /20 à /10 pour le backend
-      const scoreOn10 = editGrade / 2;
       await gradeService.updateGrade(editingGrade.id, {
-        score: scoreOn10,
+        score: editGrade,
         teacherComments: editComment,
         coefficient: editCoefficient,
       });
@@ -363,12 +378,12 @@ export const Grades = () => {
         </div>
       }>
         {error && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+          <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300" role="alert">
             {error}
           </div>
         )}
         {success && (
-          <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
+          <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-300" role="status">
             {success}
           </div>
         )}
@@ -446,7 +461,7 @@ export const Grades = () => {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              Vue Tableau
+              Vue en Tableau
             </button>
             <button
               type="button"
@@ -457,7 +472,7 @@ export const Grades = () => {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              Vue par Élève
+              Vue Simple
             </button>
           </div>
         </div>
@@ -486,9 +501,9 @@ export const Grades = () => {
                     <td>{grade.student?.class?.name || 'N/A'}</td>
                     <td>{getSubjectLabel(grade)}</td>
                     <td>
-                      {grade.grade !== null ? (
+                      {grade.grade !== null && grade.grade !== undefined ? (
                         <span className={`px-2 py-1 rounded font-semibold ${getGradeColor(grade.grade)}`}>
-                          {grade.grade.toFixed(1)}/20
+                          {grade.grade.toFixed(1)}/10
                         </span>
                       ) : (
                         <span className="px-2 py-1 rounded font-semibold bg-gray-100 text-gray-800">
@@ -539,6 +554,17 @@ export const Grades = () => {
                           onClick={() => handleEdit(grade)}
                         >
                           Modifier
+                        </Button>
+                      </ProtectedContent>
+                      <ProtectedContent permission="grades.validate">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-amber-400 text-amber-700 hover:bg-amber-50 hover:border-amber-500"
+                          onClick={() => handleNotifyTeacher(grade.id)}
+                          title="Demander à l'enseignant de corriger cette note"
+                        >
+                          Notifier l'enseignant
                         </Button>
                       </ProtectedContent>
                       {grade.student && (
@@ -611,12 +637,12 @@ export const Grades = () => {
                       ? validGrades.reduce((sum, g) => sum + g, 0) / validGrades.length
                       : 0;
                     return {
-                      subject,
-                      average,
-                      grades: subjectGrades.map(g => ({
+                        subject,
+                        average,
+                        grades: subjectGrades.map(g => ({
                         id: g.id,
                         title: g.evaluation?.name || 'Évaluation',
-                        grade: g.grade !== null ? `${g.grade.toFixed(1)}/20` : g.evaluationText || 'N/A',
+                        grade: g.grade !== null && g.grade !== undefined ? `${g.grade.toFixed(1)}/10` : g.evaluationText || 'N/A',
                         status: g.status,
                       })),
                     };
@@ -661,7 +687,7 @@ export const Grades = () => {
                                   <span className="text-xl font-bold text-blue-700">
                                     {subject.average.toFixed(2)}
                                   </span>
-                                  <span className="text-sm text-gray-500">/20</span>
+                                  <span className="text-sm text-gray-500">/10</span>
                                   <p className="text-xs text-gray-500">Moyenne</p>
                                 </div>
                               </div>
@@ -672,7 +698,7 @@ export const Grades = () => {
                                     className="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
                                   >
                                     <span className="text-sm text-gray-700">{grade.title}</span>
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex flex-wrap items-center gap-2">
                                       <span className={`text-sm font-bold px-2 py-1 rounded ${
                                         grade.grade.includes('/') 
                                           ? getGradeColor(parseFloat(grade.grade.split('/')[0]) || null)
@@ -689,6 +715,29 @@ export const Grades = () => {
                                          grade.status === 'validated' ? 'Validé' : 
                                          'Rejeté'}
                                       </span>
+                                      {grade.status === 'pending' && (
+                                        <>
+                                          <ProtectedContent permission="grades.validate">
+                                            <Button
+                                              size="sm"
+                                              className="bg-green-600 text-white hover:bg-green-700 text-xs"
+                                              onClick={() => handleValidateGrade(grade.id)}
+                                            >
+                                              Valider
+                                            </Button>
+                                          </ProtectedContent>
+                                          <ProtectedContent permission="grades.validate">
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              className="border-red-300 text-red-600 hover:bg-red-50 text-xs"
+                                              onClick={() => handleRejectGrade(grade.id)}
+                                            >
+                                              Rejeter
+                                            </Button>
+                                          </ProtectedContent>
+                                        </>
+                                      )}
                                       <ProtectedContent permission="grades.modify">
                                         <Button
                                           size="sm"
@@ -700,6 +749,17 @@ export const Grades = () => {
                                           }}
                                         >
                                           Modifier
+                                        </Button>
+                                      </ProtectedContent>
+                                      <ProtectedContent permission="grades.validate">
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="border-amber-400 text-amber-700 hover:bg-amber-50 text-xs"
+                                          onClick={() => handleNotifyTeacher(grade.id)}
+                                          title="Notifier l'enseignant"
+                                        >
+                                          Notifier
                                         </Button>
                                       </ProtectedContent>
                                     </div>
@@ -762,7 +822,7 @@ export const Grades = () => {
         <div className="p-4 grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-white border border-blue-100 rounded-xl p-4 shadow-sm">
             <h4 className="font-semibold text-blue-900">Moyenne Générale</h4>
-            <div className="text-2xl font-bold text-blue-900 my-2">{averageGrade}/20</div>
+            <div className="text-2xl font-bold text-blue-900 my-2">{averageGrade}/10</div>
             <p className="text-xs text-blue-700/70">Sur {grades.length} note(s)</p>
           </div>
           <div className="bg-white border border-blue-100 rounded-xl p-4 shadow-sm">
@@ -811,18 +871,18 @@ export const Grades = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="form-group">
-                <label className="text-sm font-medium text-blue-900" htmlFor="edit-grade-score">Note (/20)</label>
+                <label className="text-sm font-medium text-blue-900" htmlFor="edit-grade-score">Note (/10)</label>
                 <input 
                   id="edit-grade-score"
                   type="number" 
                   className="form-control" 
                   min="0" 
-                  max="20" 
+                  max="10" 
                   step="0.5" 
                   value={editGrade} 
                   onChange={(e) => setEditGrade(Number(e.target.value))} 
                   required
-                  title="Note sur 20"
+                  title="Note sur 10"
                 />
               </div>
               <div className="form-group">

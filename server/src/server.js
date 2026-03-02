@@ -25,6 +25,7 @@ import messageRoutes from './api/messageRoutes.js';
 import notificationRoutes from './api/notificationRoutes.js';
 import assignmentRoutes from './api/assignmentRoutes.js';
 import dashboardRoutes from './api/dashboardRoutes.js';
+import reportRoutes from './api/reportRoutes.js';
 import { initializeSocket } from './websocket/socketHandler.js';
 import cron from 'node-cron';
 import * as paymentReminderService from './services/paymentReminderService.js';
@@ -93,6 +94,7 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/assignments', assignmentRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/reports', reportRoutes);
 
 // Route 404
 app.use((req, res) => {

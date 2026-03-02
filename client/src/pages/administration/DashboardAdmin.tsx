@@ -39,29 +39,33 @@ export const DashboardAdmin = () => {
       value: loading ? '--' : stats.students.toString(),
       icon: '🎓',
       gradient: 'from-yellow-400 via-yellow-500 to-yellow-600',
-      description: 'Élèves inscrits'
+      description: 'Élèves inscrits',
+      path: '/admin/students',
     },
     {
       title: 'Classes',
       value: loading ? '--' : stats.classes.toString(),
       icon: '📚',
       gradient: 'from-yellow-400 via-yellow-500 to-yellow-600',
-      description: 'Classes actives'
+      description: 'Classes actives',
+      path: '/admin/classes',
     },
     {
       title: 'Enseignants',
       value: loading ? '--' : stats.teachers.toString(),
       icon: '👨‍🏫',
       gradient: 'from-yellow-400 via-yellow-500 to-yellow-600',
-      description: 'Enseignants actifs'
+      description: 'Enseignants actifs',
+      path: '/admin/users/teachers',
     },
     {
       title: 'Frais en attente',
       value: loading ? '--' : stats.pendingPayments.count.toString(),
       icon: '💰',
       gradient: 'from-yellow-400 via-yellow-500 to-yellow-600',
-      description: `${stats.pendingPayments.amount.toLocaleString('fr-FR')} FCFA`
-    }
+      description: loading ? '--' : `${stats.pendingPayments.amount.toLocaleString('fr-FR')} FCFA`,
+      path: '/admin/fees',
+    },
   ];
 
   const quickActions = [
@@ -86,23 +90,22 @@ export const DashboardAdmin = () => {
             {error}
           </div>
         )}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
         {statsDisplay.map((stat, index) => (
-          <Card
-            key={index}
-            className={`overflow-hidden hover:shadow-xl transition-all border-0 bg-gradient-to-br ${stat.gradient} text-white`}
-          >
-            <div className="p-6 text-white">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center text-2xl">
+          <Link key={index} to={stat.path || '#'} className="block">
+            <div className={`rounded-xl bg-gradient-to-br ${stat.gradient} p-4 text-white shadow-md hover:shadow-lg transition-shadow border border-yellow-500/20`}>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-white/25 flex items-center justify-center text-lg shrink-0">
                   {stat.icon}
                 </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-2xl font-bold leading-tight">{stat.value}</p>
+                  <p className="text-xs font-medium text-white/95 truncate" title={stat.title}>{stat.title}</p>
+                  <p className="text-[11px] text-white/80 truncate" title={stat.description}>{stat.description}</p>
+                </div>
               </div>
-              <p className="text-white text-opacity-90 text-sm mb-1 font-medium">{stat.title}</p>
-              <p className="text-3xl font-bold mb-1">{stat.value}</p>
-              <p className="text-xs text-white text-opacity-75">{stat.description}</p>
             </div>
-          </Card>
+          </Link>
         ))}
       </div>
 

@@ -40,7 +40,11 @@ export const AdminLayout = ({ title, subtitle, actions, children }: AdminLayoutP
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
               <div>
                 <div className="flex items-center gap-3 mb-3">
-                  <div className={`w-12 h-12 rounded-xl ${themeClasses.badgeGradient} ${themeClasses.badgeText} font-semibold flex items-center justify-center shadow-md`}>
+                  <div
+                    className={`w-12 h-12 rounded-xl ${themeClasses.badgeGradient} ${themeClasses.badgeText} font-semibold flex items-center justify-center shadow-md notranslate`}
+                    translate="no"
+                    title="Administration"
+                  >
                     Admin
                   </div>
                   <div>

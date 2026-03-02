@@ -61,7 +61,7 @@ export const Classes = () => {
   });
 
   const levels = [
-    { value: 'Maternelle', label: 'Maternelle' },
+    { value: 'creche', label: 'creche' },
     { value: 'Pré-primaire', label: 'Pré-primaire' },
     { value: 'Primaire', label: 'Primaire' },
     { value: 'CP', label: 'CP' },
@@ -69,6 +69,8 @@ export const Classes = () => {
     { value: 'CE2', label: 'CE2' },
     { value: 'CM1', label: 'CM1' },
     { value: 'CM2', label: 'CM2' },
+    { value: 'College', label: 'College' },
+    { value: 'lycee', label: 'lycee' },
   ];
 
   useEffect(() => {

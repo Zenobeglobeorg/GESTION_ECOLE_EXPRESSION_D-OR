@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Sidebar } from '../../components/layout/Sidebar';
 import { MobileSidebar } from '../../components/layout/MobileSidebar';
 import { Navbar } from '../../components/layout/Navbar';
@@ -18,11 +18,14 @@ type ViewType = 'users' | 'students';
 export const UsersManagementPage = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<UserRole | 'ALL'>('ALL');
-  const [viewType, setViewType] = useState<ViewType>('users');
+  const [viewType, setViewType] = useState<ViewType>(() =>
+    searchParams.get('view') === 'students' ? 'students' : 'users'
+  );
   const [users, setUsers] = useState<UserWithDate[]>([]);
   const [students, setStudents] = useState<studentService.Student[]>([]);
   const [isLoading, setIsLoading] = useState(true);

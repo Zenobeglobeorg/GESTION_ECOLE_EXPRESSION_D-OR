@@ -19,6 +19,7 @@ router.delete('/:id', requireRole('SUPER_ADMIN', 'ADMINISTRATION'), gradeControl
 // Routes pour la validation/rejet des notes
 router.post('/:id/validate', requireRole('SUPER_ADMIN', 'ADMINISTRATION'), gradeController.validateGrade);
 router.post('/:id/reject', requireRole('SUPER_ADMIN', 'ADMINISTRATION'), gradeController.rejectGrade);
+router.post('/:id/notify-teacher', requireRole('SUPER_ADMIN', 'ADMINISTRATION'), gradeController.notifyTeacherForGrade);
 router.post('/validate-all', requireRole('SUPER_ADMIN', 'ADMINISTRATION'), gradeController.validateAllPendingGrades);
 
 export default router;

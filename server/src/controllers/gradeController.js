@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { getPrisma } from '../utils/prisma.js';
+import { createNotification } from './notificationController.js';
 
 const prisma = getPrisma();
 
@@ -31,12 +32,13 @@ export const getMyChildrenGrades = async (req, res) => {
       return res.json([]);
     }
 
-    // Récupérer les notes de tous les enfants du parent
+    // Récupérer uniquement les notes validées (visibles par les parents)
     const grades = await prisma.grade.findMany({
       where: {
         studentId: {
           in: childrenIds,
         },
+        status: 'VALIDATED',
       },
       include: {
         student: {
@@ -72,17 +74,17 @@ export const getMyChildrenGrades = async (req, res) => {
       },
     });
 
-    // Transformer les données pour correspondre à l'interface frontend
+    // Transformer les données pour correspondre à l'interface frontend (notes sur 10)
     const transformed = grades.map(grade => ({
       id: grade.id,
       studentId: grade.studentId,
       subjectId: grade.evaluation?.competency?.subjectId || null,
       evaluationId: grade.evaluationId,
-      grade: grade.score ? grade.score * 2 : null, // Convertir de /10 à /20 pour l'affichage
-      score: grade.score, // Garder le score original sur 10
+      grade: grade.score,
+      score: grade.score,
       evaluationText: grade.evaluationText,
       teacherComments: grade.teacherComments,
-      status: 'pending', // Par défaut
+      status: grade.status?.toLowerCase() || 'pending',
       date: grade.evaluation?.date ? grade.evaluation.date.toISOString().split('T')[0] : grade.createdAt.toISOString().split('T')[0],
       student: {
         id: grade.student.id,
@@ -180,17 +182,17 @@ export const listGrades = async (req, res) => {
       },
     });
 
-    // Transformer les données pour correspondre à l'interface frontend
-    const transformed = grades.map(grade => ({
+    // Transformer les données pour correspondre à l'interface frontend (notes sur 10)
+    let transformed = grades.map(grade => ({
       id: grade.id,
       studentId: grade.studentId,
       subjectId: grade.evaluation?.competency?.subjectId || null,
       evaluationId: grade.evaluationId,
-      grade: grade.score ? grade.score * 2 : null, // Convertir de /10 à /20 pour l'affichage
-      score: grade.score, // Garder le score original sur 10
+      grade: grade.score,
+      score: grade.score,
       evaluationText: grade.evaluationText,
       teacherComments: grade.teacherComments,
-      status: 'pending', // Par défaut, peut être géré différemment selon les besoins
+      status: grade.status?.toLowerCase() || 'pending',
       date: grade.evaluation?.date ? grade.evaluation.date.toISOString().split('T')[0] : grade.createdAt.toISOString().split('T')[0],
       student: {
         id: grade.student.id,
@@ -212,14 +214,12 @@ export const listGrades = async (req, res) => {
       } : null,
     }));
 
-    // Filtrer par statut si fourni (pour l'instant, tous sont "pending")
-    let filtered = transformed;
     if (status) {
-      // Pour l'instant, on retourne tous les résultats car le statut n'est pas encore implémenté en base
-      // On peut ajouter un champ status au modèle Grade plus tard si nécessaire
+      const statusLower = status.toLowerCase();
+      transformed = transformed.filter(g => g.status === statusLower);
     }
 
-    res.json(filtered);
+    res.json(transformed);
   } catch (err) {
     console.error('listGrades error:', err);
     res.status(500).json({ error: 'Erreur lors de la récupération des notes' });
@@ -275,11 +275,11 @@ export const getGradeById = async (req, res) => {
       studentId: grade.studentId,
       subjectId: grade.evaluation?.competency?.subjectId || null,
       evaluationId: grade.evaluationId,
-      grade: grade.score ? grade.score * 2 : null,
+      grade: grade.score,
       score: grade.score,
       evaluationText: grade.evaluationText,
       teacherComments: grade.teacherComments,
-      status: 'pending',
+      status: grade.status?.toLowerCase() || 'pending',
       date: grade.evaluation?.date ? grade.evaluation.date.toISOString().split('T')[0] : grade.createdAt.toISOString().split('T')[0],
       student: {
         id: grade.student.id,
@@ -347,12 +347,12 @@ export const createGrade = async (req, res) => {
       return res.status(400).json({ error: 'Une note existe déjà pour cet élève et cette évaluation' });
     }
 
-    // Convertir le score de /20 à /10 si fourni
+    // Score sur 10 (saisie enseignant)
     let scoreValue = null;
     if (score !== undefined && score !== null) {
-      scoreValue = parseFloat(score) / 2; // Convertir de /20 à /10
+      scoreValue = parseFloat(score);
       if (scoreValue < 0 || scoreValue > 10) {
-        return res.status(400).json({ error: 'La note doit être entre 0 et 20' });
+        return res.status(400).json({ error: 'La note doit être entre 0 et 10' });
       }
     }
 
@@ -387,11 +387,11 @@ export const createGrade = async (req, res) => {
       studentId: grade.studentId,
       subjectId: grade.evaluation?.competency?.subjectId || null,
       evaluationId: grade.evaluationId,
-      grade: grade.score ? grade.score * 2 : null,
+      grade: grade.score,
       score: grade.score,
       evaluationText: grade.evaluationText,
       teacherComments: grade.teacherComments,
-      status: 'pending',
+      status: grade.status?.toLowerCase() || 'pending',
       date: grade.evaluation?.date ? grade.evaluation.date.toISOString().split('T')[0] : grade.createdAt.toISOString().split('T')[0],
       student: {
         id: grade.student.id,
@@ -434,11 +434,11 @@ export const updateGrade = async (req, res) => {
 
     const updateData = {};
 
-    // Convertir le score de /20 à /10 si fourni
+    // Score sur 10
     if (score !== undefined && score !== null) {
-      const scoreValue = parseFloat(score) / 2; // Convertir de /20 à /10
+      const scoreValue = parseFloat(score);
       if (scoreValue < 0 || scoreValue > 10) {
-        return res.status(400).json({ error: 'La note doit être entre 0 et 20' });
+        return res.status(400).json({ error: 'La note doit être entre 0 et 10' });
       }
       updateData.score = scoreValue;
     }
@@ -477,12 +477,12 @@ export const updateGrade = async (req, res) => {
       studentId: grade.studentId,
       subjectId: grade.evaluation?.competency?.subjectId || null,
       evaluationId: grade.evaluationId,
-      grade: grade.score ? grade.score * 2 : null,
+      grade: grade.score,
       score: grade.score,
       evaluationText: grade.evaluationText,
       teacherComments: grade.teacherComments,
       coefficient: coefficient || 1,
-      status: 'pending',
+      status: grade.status?.toLowerCase() || 'pending',
       date: grade.evaluation?.date ? grade.evaluation.date.toISOString().split('T')[0] : grade.createdAt.toISOString().split('T')[0],
       student: {
         id: grade.student.id,
@@ -529,49 +529,45 @@ export const deleteGrade = async (req, res) => {
 };
 
 /**
- * Valide une note (pour l'instant, juste un placeholder)
+ * Valide une note (status → VALIDATED, visible par les parents)
  */
 export const validateGrade = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const grade = await prisma.grade.findUnique({
+    const grade = await prisma.grade.update({
       where: { id: parseInt(id) },
+      data: { status: 'VALIDATED' },
     });
 
-    if (!grade) {
-      return res.status(404).json({ error: 'Note non trouvée' });
-    }
-
-    // Pour l'instant, on retourne juste un succès
-    // Plus tard, on pourra ajouter un champ status au modèle Grade
     res.json({ message: 'Note validée avec succès', grade });
   } catch (err) {
     console.error('validateGrade error:', err);
+    if (err.code === 'P2025') {
+      return res.status(404).json({ error: 'Note non trouvée' });
+    }
     res.status(500).json({ error: 'Erreur lors de la validation de la note' });
   }
 };
 
 /**
- * Rejette une note (pour l'instant, juste un placeholder)
+ * Rejette une note (status → REJECTED)
  */
 export const rejectGrade = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const grade = await prisma.grade.findUnique({
+    const grade = await prisma.grade.update({
       where: { id: parseInt(id) },
+      data: { status: 'REJECTED' },
     });
 
-    if (!grade) {
-      return res.status(404).json({ error: 'Note non trouvée' });
-    }
-
-    // Pour l'instant, on retourne juste un succès
-    // Plus tard, on pourra ajouter un champ status au modèle Grade
     res.json({ message: 'Note rejetée', grade });
   } catch (err) {
     console.error('rejectGrade error:', err);
+    if (err.code === 'P2025') {
+      return res.status(404).json({ error: 'Note non trouvée' });
+    }
     res.status(500).json({ error: 'Erreur lors du rejet de la note' });
   }
 };
@@ -747,16 +743,102 @@ export const createBulkGrades = async (req, res) => {
 };
 
 /**
- * Valide toutes les notes en attente
+ * Valide toutes les notes en attente (status PENDING → VALIDATED)
  */
 export const validateAllPendingGrades = async (req, res) => {
   try {
-    // Pour l'instant, on retourne juste un succès
-    // Plus tard, on pourra implémenter la logique de validation en masse
-    res.json({ message: 'Toutes les notes en attente ont été validées' });
+    const result = await prisma.grade.updateMany({
+      where: { status: 'PENDING' },
+      data: { status: 'VALIDATED' },
+    });
+    res.json({
+      message: 'Toutes les notes en attente ont été validées',
+      count: result.count,
+    });
   } catch (err) {
     console.error('validateAllPendingGrades error:', err);
     res.status(500).json({ error: 'Erreur lors de la validation des notes' });
+  }
+};
+
+/**
+ * Notifie l'enseignant de la classe (titulaire) pour lui demander de corriger une note.
+ * Utilise Class.teacherId car les notes sont saisies par l'enseignant de la classe sur RemplitNote,
+ * sans lien matière en base (domaines/compétences/activités).
+ */
+export const notifyTeacherForGrade = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { message } = req.body || {};
+
+    const grade = await prisma.grade.findUnique({
+      where: { id: parseInt(id) },
+      include: {
+        student: {
+          include: { class: true },
+        },
+        evaluation: {
+          include: {
+            competency: {
+              include: { subject: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!grade) {
+      return res.status(404).json({ error: 'Note non trouvée' });
+    }
+
+    const classId = grade.student?.classId;
+    const teacherId = grade.student?.class?.teacherId;
+
+    if (!classId) {
+      return res.status(400).json({
+        error: 'Impossible de déterminer la classe de l\'élève pour cette note.',
+      });
+    }
+
+    if (!teacherId) {
+      return res.status(404).json({
+        error: 'Aucun enseignant assigné à cette classe.',
+      });
+    }
+
+    const studentName = grade.student
+      ? `${grade.student.firstName} ${grade.student.lastName}`
+      : 'l\'élève';
+    const className = grade.student?.class?.name || 'cette classe';
+    const subjectName = grade.evaluation?.competency?.subject?.name || null;
+    const detail = subjectName ? `${studentName} (${subjectName})` : `${studentName} - ${className}`;
+    const customMessage =
+      message && String(message).trim()
+        ? String(message).trim()
+        : `Veuillez vérifier ou corriger la note de ${detail}.`;
+
+    await createNotification(
+      teacherId,
+      'GRADE',
+      'Correction de note demandée',
+      customMessage,
+      grade.id,
+      {
+        gradeId: grade.id,
+        studentId: grade.studentId,
+        classId,
+      }
+    );
+
+    res.json({
+      message: 'Notification envoyée à l\'enseignant de la classe avec succès',
+      teacherId,
+    });
+  } catch (err) {
+    console.error('notifyTeacherForGrade error:', err);
+    res.status(500).json({
+      error: 'Erreur lors de l\'envoi de la notification à l\'enseignant',
+    });
   }
 };
 

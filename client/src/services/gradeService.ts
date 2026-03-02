@@ -5,7 +5,7 @@ export interface Grade {
   studentId: number;
   subjectId: number | null;
   evaluationId: number;
-  grade: number | null; // Note sur 20
+  grade: number | null; // Note sur 10 (affichage unifié)
   score?: number | null; // Note sur 10 (original)
   evaluationText?: string | null;
   teacherComments?: string | null;
@@ -40,7 +40,7 @@ export interface CreateGradeData {
 }
 
 export interface UpdateGradeData {
-  score?: number; // Note sur 20
+  score?: number; // Note sur 10
   evaluationText?: string;
   teacherComments?: string;
   coefficient?: number;
@@ -268,4 +268,27 @@ export const validateAllPendingGrades = async (): Promise<void> => {
     const error = await response.json();
     throw new Error(error.error || 'Erreur lors de la validation des notes');
   }
+};
+
+/**
+ * Notifie l'enseignant assigné pour lui demander de corriger une note
+ */
+export const notifyTeacherForGrade = async (gradeId: number, message?: string): Promise<{ message: string; teacherId: number }> => {
+  const token = getToken();
+  if (!token) throw new Error('Non authentifié');
+
+  const response = await fetch(`${API_BASE_URL}/api/grades/${gradeId}/notify-teacher`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ message: message || '' }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors de l\'envoi de la notification');
+  }
+  return response.json();
 };

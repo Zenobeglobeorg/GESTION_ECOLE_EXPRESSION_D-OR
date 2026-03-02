@@ -101,17 +101,11 @@ const NotesBulletinsPage: React.FC = () => {
     return acc;
   }, {} as { [key: string]: gradeService.Grade[] });
   
-  // Calculer les moyennes par matière
+  // Calculer les moyennes par matière (notes sur 10 partout)
   const subjectAverages = Object.entries(gradesBySubject).map(([subject, subjectGrades]) => {
-    // Utiliser grade (sur 20) ou score (sur 10) converti en /20
     const validGrades = subjectGrades
       .filter(g => (g.grade !== null && g.grade !== undefined) || (g.score !== null && g.score !== undefined))
-      .map(g => {
-        if (g.grade !== null && g.grade !== undefined) {
-          return g.grade; // Déjà sur 20
-        }
-        return (g.score || 0) * 2; // Convertir de /10 à /20
-      });
+      .map(g => (g.grade !== null && g.grade !== undefined ? g.grade : g.score ?? 0));
     const average = validGrades.length > 0
       ? validGrades.reduce((sum, g) => sum + g, 0) / validGrades.length
       : 0;
@@ -121,7 +115,7 @@ const NotesBulletinsPage: React.FC = () => {
       grades: subjectGrades.map(g => {
         let gradeDisplay = 'N/A';
         if (g.grade !== null && g.grade !== undefined) {
-          gradeDisplay = `${g.grade.toFixed(1)}/20`;
+          gradeDisplay = `${g.grade.toFixed(1)}/10`;
         } else if (g.score !== null && g.score !== undefined) {
           gradeDisplay = `${g.score.toFixed(1)}/10`;
         } else if (g.evaluationText) {
@@ -214,7 +208,7 @@ const NotesBulletinsPage: React.FC = () => {
                     <h3 className="text-lg font-semibold text-blue-800 dark:text-blue-400">{subject.subject}</h3>
                     <div className="text-right">
                       <span className="text-2xl font-bold text-blue-700 dark:text-blue-300">{subject.average.toFixed(2)}</span>
-                      <span className="text-sm text-gray-500 dark:text-gray-400">/20</span>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">/10</span>
                       <p className="text-xs text-gray-500 dark:text-gray-400">Moyenne</p>
                     </div>
                   </div>

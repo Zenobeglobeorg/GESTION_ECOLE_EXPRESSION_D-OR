@@ -230,6 +230,13 @@ model Class {
   @@map("classes")
 }
 
+// Statut de validation d'une note
+enum GradeStatus {
+  PENDING    // En attente de validation par l'admin
+  VALIDATED  // Validée, visible par les parents
+  REJECTED   // Rejetée par l'admin
+}
+
 // Modèle Note
 model Grade {
   id              Int        @id @default(autoincrement())
@@ -240,6 +247,7 @@ model Grade {
   score           Float? // Note sur 10 (pour primaire)
   evaluationText  String? // "Acquis", "Non acquis", smileys (pour pré-primaire)
   teacherComments String?
+  status          GradeStatus @default(PENDING) // Validation admin : visible par les parents si VALIDATED
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 

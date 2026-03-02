@@ -49,7 +49,7 @@ export const OverviewPage = () => {
     { title: t('overview.adminAccounts'), value: stats.totalAdmins, icon: '👔', path: '/superadmin/admins', description: t('overview.adminMembers') },
     { title: t('overview.teachers'), value: stats.totalTeachers, icon: '👨‍🏫', path: '/superadmin/users', description: t('overview.activeTeachers') },
     { title: t('overview.parents'), value: stats.totalParents, icon: '👨‍👩‍👧', path: '/superadmin/users', description: t('overview.registeredFamilies') },
-    { title: t('overview.students'), value: stats.totalStudents, icon: '🎓', path: '/superadmin/users', description: t('overview.registeredStudents') },
+    { title: t('overview.students'), value: stats.totalStudents, icon: '🎓', path: '/superadmin/users?view=students', description: t('overview.registeredStudents') },
   ];
 
   const quickLinks = [

@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Card } from '../../components/ui/Card';
 import { AdminLayout } from '../../components/admin/AdminLayout';
@@ -57,25 +57,39 @@ export const Users = () => {
 
   const statCards = [
     {
-      label: 'Total Utilisateurs',
-      value: stats.total,
-      gradient: 'from-blue-500 via-blue-600 to-blue-700',
+      title: 'Total Utilisateurs',
+      value: isLoading ? '--' : stats.total,
+      icon: '👥',
+      path: '/admin/users',
+      description: 'Tous les comptes',
     },
     {
-      label: 'Enseignants',
-      value: stats.teachers,
-      gradient: 'from-yellow-400 via-yellow-500 to-yellow-600',
+      title: 'Enseignants',
+      value: isLoading ? '--' : stats.teachers,
+      icon: '👨‍🏫',
+      path: '/admin/users/teachers',
+      description: 'Enseignants actifs',
     },
     {
-      label: 'Parents',
-      value: stats.parents,
-      gradient: 'from-blue-400 via-blue-500 to-blue-600',
+      title: 'Parents',
+      value: isLoading ? '--' : stats.parents,
+      icon: '👨‍👩‍👧',
+      path: '/admin/users/parents',
+      description: 'Familles inscrites',
     },
     {
-      label: 'Administrateurs',
-      value: stats.admins,
-      gradient: 'from-yellow-500 via-yellow-600 to-yellow-700',
+      title: 'Administrateurs',
+      value: isLoading ? '--' : stats.admins,
+      icon: '👔',
+      path: '/admin/users/admins',
+      description: 'Comptes administration',
     },
+  ];
+
+  const categoryLinks = [
+    { label: 'Enseignants', path: '/admin/users/teachers', count: stats.teachers, icon: '👨‍🏫', description: 'Gérer les enseignants' },
+    { label: 'Parents', path: '/admin/users/parents', count: stats.parents, icon: '👨‍👩‍👧', description: 'Gérer les parents' },
+    { label: 'Administrateurs', path: '/admin/users/admins', count: stats.admins, icon: '👔', description: 'Gérer les administrateurs' },
   ];
 
   return (
@@ -88,57 +102,56 @@ export const Users = () => {
           Vous n'avez pas la permission de consulter les utilisateurs.
         </div>
       }>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {statCards.map((card) => (
-          <Card
-            key={card.label}
-            className={`overflow-hidden border-0 bg-linear-to-br ${card.gradient} shadow-lg text-white`}
-          >
-            <div className="p-6 text-center space-y-2">
-              <p className="text-3xl font-bold">{card.value}</p>
-              <p className="text-sm text-white/80">{card.label}</p>
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      <Card
-        title="Accès direct aux catégories"
-        className="border-0 shadow-lg"
-        headerActions={<div className="w-1 h-8 rounded-full bg-yellow-400" />}
-      >
-        <p className="text-blue-900 mb-6">
-          Sélectionnez un type d&apos;utilisateur pour accéder aux fonctionnalités détaillées.
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Link
-            to="/admin/users/teachers"
-            className="p-5 rounded-xl border border-blue-100 bg-white hover:border-yellow-300 hover:shadow-lg transition-all"
-          >
-            <h3 className="font-semibold text-lg text-blue-900 mb-2">Enseignants</h3>
-            <p className="text-sm text-blue-700/80">{stats.teachers} enseignants enregistrés</p>
-            <p className="text-sm mt-3 font-semibold text-yellow-700">Gérer les enseignants →</p>
-          </Link>
-
-          <Link
-            to="/admin/users/parents"
-            className="p-5 rounded-xl border border-blue-100 bg-white hover:border-yellow-300 hover:shadow-lg transition-all"
-          >
-            <h3 className="font-semibold text-lg text-blue-900 mb-2">Parents</h3>
-            <p className="text-sm text-blue-700/80">{stats.parents} parents enregistrés</p>
-            <p className="text-sm mt-3 font-semibold text-yellow-700">Gérer les parents →</p>
-          </Link>
-
-          <Link
-            to="/admin/users/admins"
-            className="p-5 rounded-xl border border-blue-100 bg-white hover:border-yellow-300 hover:shadow-lg transition-all"
-          >
-            <h3 className="font-semibold text-lg text-blue-900 mb-2">Administrateurs</h3>
-            <p className="text-sm text-blue-700/80">{stats.admins} administrateur{stats.admins > 1 ? 's' : ''}</p>
-            <p className="text-sm mt-3 font-semibold text-yellow-700">Gérer les administrateurs →</p>
-          </Link>
+        {/* StatCards : style OverviewPage, jaune uniquement, cliquables */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
+          {statCards.map((stat, index) => (
+            <Link key={index} to={stat.path} className="block">
+              <div className="rounded-xl bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 p-4 text-white shadow-md hover:shadow-lg transition-shadow border border-yellow-500/20">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-white/25 flex items-center justify-center text-lg shrink-0">
+                    {stat.icon}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-2xl font-bold leading-tight">{stat.value}</p>
+                    <p className="text-xs font-medium text-white/95 truncate" title={stat.title}>{stat.title}</p>
+                    <p className="text-[11px] text-white/80 truncate" title={stat.description}>{stat.description}</p>
+                  </div>
+                </div>
+              </div>
+            </Link>
+          ))}
         </div>
-      </Card>
+
+        {/* Accès direct aux catégories : liens mis en avant */}
+        <Card
+          title="Accès direct aux catégories"
+          className="border-0 shadow-lg mb-8"
+          headerActions={<div className="w-1 h-8 rounded-full bg-yellow-400" />}
+        >
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            Cliquez sur une catégorie pour accéder à la liste et aux actions.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {categoryLinks.map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                className="flex items-center gap-4 p-5 rounded-xl border-2 border-yellow-200 dark:border-yellow-800 bg-yellow-50/50 dark:bg-yellow-900/20 hover:border-yellow-400 hover:bg-yellow-100/80 dark:hover:bg-yellow-900/30 hover:shadow-lg transition-all"
+              >
+                <div className="w-12 h-12 rounded-xl bg-yellow-400/20 dark:bg-yellow-600/30 flex items-center justify-center text-2xl shrink-0">
+                  {item.icon}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-semibold text-lg text-gray-900 dark:text-white">{item.label}</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {isLoading ? '--' : item.count} {item.label.toLowerCase()} · {item.description}
+                  </p>
+                </div>
+                <span className="text-yellow-600 dark:text-yellow-400 font-medium shrink-0">→</span>
+              </Link>
+            ))}
+          </div>
+        </Card>
 
       {error && (
         <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
