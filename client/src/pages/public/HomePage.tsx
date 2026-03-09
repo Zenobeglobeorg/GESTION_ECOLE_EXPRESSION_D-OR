@@ -75,16 +75,9 @@ export const HomePage = () => {
           <h2 className="text-3xl font-bold text-white mb-4 leading-tight drop-shadow-md">
             {currentSlideData.title}
           </h2>
-          <p className="text-white/95 text-lg leading-relaxed drop-shadow">
-            {currentSlideData.description}
-          </p>
-        </div>
-
-        {/* Action Button */}
-        {currentSlide === 1 ? (
-          <div className="w-full max-w-md space-y-4 animate-fade-in">
-            {/* Boutons par profil : Parent, Enseignant, Administrateur */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {currentSlide === 1 ? (
+            /* Slide connexion : boutons par profil à la place de la description */
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
               <Link to="/login" state={{ roleHint: 'PARENT' }} className="block">
                 <button type="button" className="w-full bg-white/20 hover:bg-white/30 backdrop-blur-md text-white font-bold py-4 rounded-xl shadow-lg transition-all transform hover:scale-105 border border-white/30">
                   👨‍👩‍👧 Parent
@@ -101,8 +94,16 @@ export const HomePage = () => {
                 </button>
               </Link>
             </div>
+          ) : (
+            <p className="text-white/95 text-lg leading-relaxed drop-shadow">
+              {currentSlideData.description}
+            </p>
+          )}
+        </div>
 
-            {/* Terms */}
+        {/* Terms (affiché uniquement sur la slide connexion) */}
+        {currentSlide === 1 && (
+          <div className="w-full max-w-md mb-4 animate-fade-in">
             <div className="backdrop-blur-md bg-white/10 rounded-2xl p-4 border border-white/20">
               <p className="text-white/90 text-xs text-center">
                 En vous connectant ou en sautant cette étape, vous acceptez les{' '}
@@ -112,14 +113,17 @@ export const HomePage = () => {
               </p>
             </div>
           </div>
-        ) : (
+        )}
+
+        {/* Action Button (bouton "Continuer" pour les autres slides) */}
+        {currentSlide !== 1 ? (
           <button
             onClick={currentSlideData.buttonAction}
             className="w-full max-w-md bg-yellow-400 hover:bg-yellow-500 text-blue-900 font-bold py-4 rounded-xl shadow-lg hover:shadow-2xl transition-all transform hover:scale-105 uppercase tracking-wide"
           >
             {currentSlideData.buttonText}
           </button>
-        )}
+        ) : null}
 
         {/* Pagination Dots */}
         <div className="flex items-center justify-center gap-2 mt-8 backdrop-blur-md bg-white/10 rounded-full px-4 py-2 border border-white/20">

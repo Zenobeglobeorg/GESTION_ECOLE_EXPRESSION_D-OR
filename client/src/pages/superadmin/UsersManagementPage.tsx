@@ -493,7 +493,7 @@ export const UsersManagementPage = () => {
                       <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-white font-semibold mr-3">
+                            <div className="w-10 h-10 rounded-full bg-linear-to-br from-blue-600 to-blue-800 flex items-center justify-center text-white font-semibold mr-3">
                               {user.firstName.charAt(0)}
                               {user.lastName.charAt(0)}
                             </div>
@@ -618,7 +618,7 @@ export const UsersManagementPage = () => {
                         <tr key={student.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
-                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center text-white font-semibold mr-3">
+                              <div className="w-10 h-10 rounded-full bg-linear-to-br from-yellow-400 to-yellow-600 flex items-center justify-center text-white font-semibold mr-3">
                                 {student.firstName.charAt(0)}
                                 {student.lastName.charAt(0)}
                               </div>
@@ -835,7 +835,7 @@ export const UsersManagementPage = () => {
         {viewingUser && (
           <div className="space-y-4">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-white text-xl font-semibold">
+              <div className="w-16 h-16 rounded-full bg-linear-to-br from-blue-600 to-blue-800 flex items-center justify-center text-white text-xl font-semibold">
                 {viewingUser.firstName.charAt(0)}{viewingUser.lastName.charAt(0)}
               </div>
               <div>
@@ -880,7 +880,7 @@ export const UsersManagementPage = () => {
         {viewingStudent && (
           <div className="space-y-4">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center text-white text-xl font-semibold">
+              <div className="w-16 h-16 rounded-full bg-linear-to-br from-yellow-400 to-yellow-600 flex items-center justify-center text-white text-xl font-semibold">
                 {viewingStudent.firstName.charAt(0)}{viewingStudent.lastName.charAt(0)}
               </div>
               <div>

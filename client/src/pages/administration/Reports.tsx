@@ -202,7 +202,7 @@ export const Reports = () => {
                   <Button
                     type="submit"
                     disabled={loading}
-                    className="w-full text-lg py-3 bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-400 text-blue-900 hover:from-yellow-500 hover:to-yellow-500 disabled:opacity-50"
+                    className="w-full text-lg py-3 bg-linear-to-r from-yellow-400 via-yellow-500 to-yellow-400 text-blue-900 hover:from-yellow-500 hover:to-yellow-500 disabled:opacity-50"
                   >
                     {loading ? "Génération..." : "Générer le rapport"}
                   </Button>

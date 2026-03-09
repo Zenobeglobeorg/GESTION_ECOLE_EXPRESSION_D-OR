@@ -93,7 +93,7 @@ export const DashboardAdmin = () => {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
         {statsDisplay.map((stat, index) => (
           <Link key={index} to={stat.path || '#'} className="block">
-            <div className={`rounded-xl bg-gradient-to-br ${stat.gradient} p-4 text-white shadow-md hover:shadow-lg transition-shadow border border-yellow-500/20`}>
+            <div className={`rounded-xl bg-linear-to-br ${stat.gradient} p-4 text-white shadow-md hover:shadow-lg transition-shadow border border-yellow-500/20`}>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-white/25 flex items-center justify-center text-lg shrink-0">
                   {stat.icon}

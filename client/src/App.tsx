@@ -11,6 +11,8 @@ import { ForgotPasswordPage } from './pages/public/ForgotPasswordPage';
 import { ResetPasswordPage } from './pages/public/ResetPasswordPage';
 import { DashboardSuperAdmin } from './pages/superadmin/DashboardSuperAdmin';
 import { AdminAccountsPage } from './pages/superadmin/AdminAccountsPage';
+import { TeacherAccountsPage } from './pages/superadmin/TeacherAccountsPage';
+import { ParentAccountsPage } from './pages/superadmin/ParentAccountsPage';
 import { UsersManagementPage } from './pages/superadmin/UsersManagementPage';
 import { RolesPermissionsPage } from './pages/superadmin/RolesPermissionsPage';
 import { OverviewPage } from './pages/superadmin/OverviewPage';
@@ -135,6 +137,24 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
                 <AdminAccountsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/superadmin/teachers"
+            element={
+              <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                <TeacherAccountsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/superadmin/parents"
+            element={
+              <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                <ParentAccountsPage />
               </ProtectedRoute>
             }
           />

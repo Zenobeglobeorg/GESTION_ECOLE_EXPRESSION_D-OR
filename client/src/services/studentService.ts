@@ -63,7 +63,10 @@ export interface CreateStudentData {
   authorizedPerson2Tel?: string;
   paymentOption?: 'MONTHLY' | 'QUARTERLY' | 'ANNUAL';
   lastPaymentDate?: string;
-  parentEmail: string;
+  /** Email du parent pour associer (optionnel si createWithoutAssociation est true) */
+  parentEmail?: string;
+  /** Créer l'élève sans associer de parent ; un parent « placeholder » est créé pour association ultérieure */
+  createWithoutAssociation?: boolean;
 }
 
 export interface CreateStudentResponse {
@@ -74,6 +77,7 @@ export interface CreateStudentResponse {
     firstName: string;
     lastName: string;
     wasCreated: boolean;
+    isPlaceholder?: boolean;
   };
 }
 

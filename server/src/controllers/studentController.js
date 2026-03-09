@@ -79,6 +79,31 @@ async function findOrCreateParent(email, studentData) {
 }
 
 /**
+ * Crée un parent « placeholder » pour un élève créé sans association.
+ * Permet d'associer un vrai parent plus tard via la page dédiée.
+ */
+async function createPlaceholderParent() {
+  const temporaryPassword = generateTemporaryPassword();
+  const passwordHash = await bcrypt.hash(temporaryPassword, 10);
+  const unique = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  const email = `a-associer-${unique}@placeholder.expressiondor.local`;
+
+  const parent = await prisma.user.create({
+    data: {
+      email: email.toUpperCase(),
+      passwordHash,
+      firstName: 'À associer',
+      lastName: '—',
+      role: 'PARENT',
+      phone: null,
+    },
+  });
+  parent._wasCreated = true;
+  parent._isPlaceholder = true;
+  return parent;
+}
+
+/**
  * Liste tous les élèves (réservé aux admins)
  */
 export const listStudents = async (req, res) => {
@@ -183,22 +208,32 @@ export const createStudent = async (req, res) => {
       paymentOption,
       lastPaymentDate,
       parentEmail,
+      createWithoutAssociation,
     } = req.body;
 
-    // Validation des champs requis
-    if (!firstName || !lastName || !dateOfBirth || !parentEmail) {
-      return res.status(400).json({ error: 'Champs requis manquants: firstName, lastName, dateOfBirth, parentEmail' });
+    // Validation des champs requis (parentEmail optionnel si createWithoutAssociation)
+    if (!firstName || !lastName || !dateOfBirth) {
+      return res.status(400).json({ error: 'Champs requis manquants: firstName, lastName, dateOfBirth' });
+    }
+    const skipAssociation = createWithoutAssociation === true || createWithoutAssociation === 'true';
+    if (!skipAssociation && !parentEmail) {
+      return res.status(400).json({ error: 'Indiquez l\'email du parent ou cochez "Créer sans associer pour le moment"' });
     }
 
-    // Créer ou trouver le parent
-    const parent = await findOrCreateParent(parentEmail, {
+    let parent;
+    if (skipAssociation) {
+      parent = await createPlaceholderParent();
+    } else {
+      parent = await findOrCreateParent(parentEmail, {
       fatherName,
       motherName,
       lastName,
       fatherContact,
       motherContact,
     });
+    }
     const wasCreated = parent._wasCreated ?? false;
+    const isPlaceholder = parent._isPlaceholder ?? false;
 
     // Récupérer la classe pour obtenir le niveau (pour calculer les montants)
     let classLevel = null;
@@ -279,6 +314,7 @@ export const createStudent = async (req, res) => {
         firstName: parent.firstName,
         lastName: parent.lastName,
         wasCreated,
+        isPlaceholder: !!isPlaceholder,
       },
     });
   } catch (err) {

@@ -47,8 +47,8 @@ export const OverviewPage = () => {
   const statCards = [
     { title: t('overview.totalUsers'), value: stats.totalUsers, icon: '👥', path: '/superadmin/users', description: t('overview.allAccounts') },
     { title: t('overview.adminAccounts'), value: stats.totalAdmins, icon: '👔', path: '/superadmin/admins', description: t('overview.adminMembers') },
-    { title: t('overview.teachers'), value: stats.totalTeachers, icon: '👨‍🏫', path: '/superadmin/users', description: t('overview.activeTeachers') },
-    { title: t('overview.parents'), value: stats.totalParents, icon: '👨‍👩‍👧', path: '/superadmin/users', description: t('overview.registeredFamilies') },
+    { title: t('overview.teachers'), value: stats.totalTeachers, icon: '👨‍🏫', path: '/superadmin/teachers', description: t('overview.activeTeachers') },
+    { title: t('overview.parents'), value: stats.totalParents, icon: '👨‍👩‍👧', path: '/superadmin/parents', description: t('overview.registeredFamilies') },
     { title: t('overview.students'), value: stats.totalStudents, icon: '🎓', path: '/superadmin/users?view=students', description: t('overview.registeredStudents') },
   ];
 
@@ -220,14 +220,14 @@ export const OverviewPage = () => {
                       <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('overview.registeredStudents')}</p>
                       <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalStudents}</p>
                     </div>
-                    <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    {/* <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                       <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{t('overview.enrollmentRate')}</p>
                       <p className="text-2xl font-bold text-gray-900 dark:text-white">
                         {stats.totalUsers > 0 
                           ? Math.round((stats.totalStudents / stats.totalUsers) * 100) 
                           : 0}%
                       </p>
-                    </div>
+                    </div> */}
                   </div>
                 </Card>
               </div>

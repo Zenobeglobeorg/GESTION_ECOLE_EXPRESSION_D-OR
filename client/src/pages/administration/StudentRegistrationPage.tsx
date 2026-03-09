@@ -75,6 +75,8 @@ export const StudentRegistrationPage = () => {
   const [isSearchParentModalOpen, setIsSearchParentModalOpen] = useState(false);
   const [searchEmail, setSearchEmail] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  /** true = associer à un parent (email) ; false = créer sans associer pour le moment */
+  const [associateWithParent, setAssociateWithParent] = useState(true);
 
   // Charger les classes au montage du composant
   useEffect(() => {
@@ -143,12 +145,18 @@ export const StudentRegistrationPage = () => {
         authorizedPerson2Name: formData.authorizedPerson2Name || undefined,
         authorizedPerson2Tel: formData.authorizedPerson2Tel || undefined,
         paymentOption: formData.paymentOption,
-        parentEmail: formData.parentEmail,
+        ...(associateWithParent
+          ? { parentEmail: formData.parentEmail }
+          : { createWithoutAssociation: true }),
       };
 
       const response = await studentService.createStudent(studentData);
 
-      setSuccess(`Élève créé avec succès ! ${response.parent.wasCreated ? 'Un compte parent a été créé automatiquement.' : 'Parent existant associé.'}`);
+      if (response.parent?.isPlaceholder) {
+        setSuccess('Élève créé avec succès. Aucun parent associé pour le moment. Vous pourrez créer un parent et l\'associer à cet élève depuis les pages dédiées.');
+      } else {
+        setSuccess(`Élève créé avec succès ! ${response.parent.wasCreated ? 'Un compte parent a été créé automatiquement.' : 'Parent existant associé.'}`);
+      }
       
       // Réinitialiser le formulaire
       setFormData({
@@ -597,30 +605,71 @@ export const StudentRegistrationPage = () => {
                 <h3 className="text-blue-900 dark:text-blue-900 font-bold text-xl text-center">{t('student.parentAssociation')}</h3>
               </div>
               <div className="space-y-4">
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {t('student.parentSearchDesc')}
-                </p>
-                <div className="flex gap-3">
-                  <Input
-                    label={t('student.parentEmail')}
-                    type="email"
-                    value={formData.parentEmail}
-                    onChange={(e) => setFormData({ ...formData, parentEmail: e.target.value })}
-                    placeholder={t('student.parentEmailPlaceholder')}
-                    className="flex-1"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsSearchParentModalOpen(true)}
-                    className="mt-7"
-                  >
-                    {t('student.search')}
-                  </Button>
+                <div>
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Mode d&apos;inscription</p>
+                  <div className="space-y-3">
+                    <label className="flex items-start gap-3 p-4 border-2 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <input
+                        type="radio"
+                        name="associateMode"
+                        checked={associateWithParent === true}
+                        onChange={() => setAssociateWithParent(true)}
+                        className="mt-1"
+                      />
+                      <div>
+                        <p className="font-semibold dark:text-white">Associer à un parent existant (par email)</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Le parent a déjà un compte ou sera créé avec l&apos;email indiqué. Indiquez son email ci-dessous.
+                        </p>
+                      </div>
+                    </label>
+                    <label className="flex items-start gap-3 p-4 border-2 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <input
+                        type="radio"
+                        name="associateMode"
+                        checked={associateWithParent === false}
+                        onChange={() => setAssociateWithParent(false)}
+                        className="mt-1"
+                      />
+                      <div>
+                        <p className="font-semibold dark:text-white">Créer sans associer pour le moment</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Tous les parents n&apos;ont pas encore d&apos;email. Vous pourrez créer un parent et l&apos;associer à cet élève plus tard depuis les pages dédiées.
+                        </p>
+                      </div>
+                    </label>
+                  </div>
                 </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {t('student.parentAutoCreate')}
-                </p>
+
+                {associateWithParent && (
+                  <>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {t('student.parentSearchDesc')}
+                    </p>
+                    <div className="flex gap-3">
+                      <Input
+                        label={t('student.parentEmail')}
+                        type="email"
+                        value={formData.parentEmail}
+                        onChange={(e) => setFormData({ ...formData, parentEmail: e.target.value })}
+                        placeholder={t('student.parentEmailPlaceholder')}
+                        className="flex-1"
+                        required={associateWithParent}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setIsSearchParentModalOpen(true)}
+                        className="mt-7"
+                      >
+                        {t('student.search')}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {t('student.parentAutoCreate')}
+                    </p>
+                  </>
+                )}
               </div>
             </Card>
 

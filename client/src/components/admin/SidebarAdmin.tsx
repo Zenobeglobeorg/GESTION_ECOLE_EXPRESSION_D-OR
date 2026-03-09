@@ -52,7 +52,7 @@ const MENU_ITEMS: MenuItem[] = [
         </svg>
       ),
       submenu: [
-        { label: 'Gestion Utilisateurs', path: '/admin/users' },
+        //{ label: 'Gestion Utilisateurs', path: '/admin/users' },
         { label: 'Parents', path: '/admin/users/parents' },
         { label: 'Enseignants', path: '/admin/users/teachers' },
         { label: 'Administrateurs', path: '/admin/users/admins' },
@@ -295,7 +295,7 @@ export const SidebarAdmin = ({ isCollapsed, onToggle }: SidebarAdminProps) => {
       } hidden lg:flex lg:flex-col shadow-[2px_0_12px_rgba(30,64,175,0.08)]`}
     >
       {/* Header avec logo et bouton hamburger */}
-      <div className={`relative h-16 flex items-center justify-between px-4 border-b ${getBorderColor()} ${getHeaderBg()} flex-shrink-0`}>
+      <div className={`relative h-16 flex items-center justify-between px-4 border-b ${getBorderColor()} ${getHeaderBg()} shrink-0`}>
         {!isCollapsed && (
           <div className="flex items-center gap-2">
             <div className="w-10 h-10 rounded-full bg-yellow-400 flex items-center justify-center text-blue-900 font-bold shadow-inner">
