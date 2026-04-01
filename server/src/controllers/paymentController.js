@@ -380,16 +380,117 @@ export const recordPayment = async (req, res) => {
       return res.status(400).json({ error: 'paymentId, amount et paidDate sont requis' });
     }
     
-    const payment = await prisma.payment.update({
-      where: { id: parseInt(paymentId) },
-      data: {
-        amount: parseFloat(amount),
-        paidDate: new Date(paidDate),
-        status: 'PAID',
-        paymentMethod: paymentMethod || null,
-        receiptNumber: receiptNumber || null,
-        notes: notes || null,
+    const paymentIdInt = parseInt(paymentId);
+    
+    const existingPayment = await prisma.payment.findUnique({
+      where: { id: paymentIdInt },
+      include: {
+        student: {
+          include: {
+            class: true,
+          },
+        },
       },
+    });
+
+    if (!existingPayment) {
+      return res.status(404).json({ error: 'Paiement non trouvé' });
+    }
+
+    const student = existingPayment.student;
+    
+    await prisma.$transaction(async (tx) => {
+      // 1. Mettre à jour le paiement actuel avec le montant saisi
+      await tx.payment.update({
+        where: { id: paymentIdInt },
+        data: {
+          amount: parseFloat(amount),
+          paidDate: new Date(paidDate),
+          status: 'PAID',
+          paymentMethod: paymentMethod || null,
+          receiptNumber: receiptNumber || null,
+          notes: notes || null,
+        },
+      });
+
+      // 2. Calculer le total déjà payé par l'élève
+      const allPaid = await tx.payment.findMany({
+        where: {
+          studentId: student.id,
+          status: 'PAID'
+        },
+        orderBy: { dueDate: 'asc' }
+      });
+      
+      const totalDejaPaye = allPaid.reduce((sum, p) => sum + p.amount, 0);
+      
+      // 3. Calculer le reste à payer en gardant le total annuel INCHANGÉ
+      const totalAnnuel = getAnnualAmount(student.class?.level);
+      const reste = totalAnnuel - totalDejaPaye;
+
+      // 4. Mettre à jour les paiements manquants
+      if (reste <= 0) {
+        // Le solde est atteint (ou dépassé), on supprime toutes les prochaines tranches en attente
+        await tx.payment.deleteMany({
+          where: {
+            studentId: student.id,
+            status: { not: 'PAID' }
+          }
+        });
+      } else {
+        // Il y a un reste à payer.
+        // Récupérer toutes les tranches restantes (non payées) DE CET ÉLÈVE, triées par date
+        const futurePayments = await tx.payment.findMany({
+          where: { 
+            studentId: student.id, 
+            status: { not: 'PAID' } 
+          },
+          orderBy: { dueDate: 'asc' },
+        });
+
+        if (futurePayments.length > 0) {
+          // On répartit équitablement le reste sur les échéances prévues, SANS CHANGER LES DATES
+          const numberOfPayments = futurePayments.length;
+          const newAmountPerPayment = Math.round(reste / numberOfPayments);
+          let totalDistributed = 0;
+
+          for (let i = 0; i < futurePayments.length; i++) {
+            const fp = futurePayments[i];
+            const isLast = i === futurePayments.length - 1;
+            const assignedAmount = isLast ? (reste - totalDistributed) : newAmountPerPayment;
+
+            await tx.payment.update({
+              where: { id: fp.id },
+              data: { amount: assignedAmount },
+            });
+
+            totalDistributed += assignedAmount;
+          }
+        } else {
+          // S'il n'y a plus d'échéances prévues mais qu'il reste à payer
+          // (ex: l'utilisateur a payé en partie la toute dernière tranche).
+          // On recrée une dernière échéance pour le solde.
+          const { getFinalPaymentDueDate } = await import('../utils/paymentUtils.js');
+          const finalDueDate = getFinalPaymentDueDate();
+          // La date limite sera le finalDueDate, ou aujourd'hui si le finalDueDate est passé
+          const nextDueDate = finalDueDate > new Date() ? finalDueDate : new Date();
+
+          await tx.payment.create({
+            data: {
+              studentId: student.id,
+              installmentNumber: allPaid.length + 1,
+              amount: reste,
+              dueDate: nextDueDate,
+              status: 'PENDING'
+            }
+          });
+        }
+      }
+    });
+    
+    // 5. Renvoyer le paiement final mis à jour avec la relation student pour le front
+    const finalPayment = await prisma.payment.findUnique({
+      where: { id: paymentIdInt },
       include: {
         student: {
           include: {
@@ -399,7 +500,7 @@ export const recordPayment = async (req, res) => {
       },
     });
     
-    res.json(payment);
+    res.json(finalPayment);
   } catch (err) {
     console.error('recordPayment error:', err);
     res.status(500).json({ error: 'Erreur lors de l\'enregistrement du paiement' });
