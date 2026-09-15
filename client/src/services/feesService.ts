@@ -1,8 +1,18 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
+export interface AcademicYear {
+  id: number;
+  name: string;
+  startDate: string;
+  endDate: string;
+  isActive: boolean;
+  _count?: { payments: number };
+}
+
 export interface Payment {
   id: number;
   studentId: number;
+  academicYearId?: number | null;
   student: {
     id: number;
     firstName: string;
@@ -60,6 +70,7 @@ export const getPayments = async (params?: {
   classId?: number;
   search?: string;
   status?: string;
+  academicYearId?: number;
 }): Promise<Payment[]> => {
   const token = getToken();
   if (!token) throw new Error('Non authentifié');
@@ -68,6 +79,7 @@ export const getPayments = async (params?: {
   if (params?.classId) queryParams.append('classId', params.classId.toString());
   if (params?.search) queryParams.append('search', params.search);
   if (params?.status) queryParams.append('status', params.status);
+  if (params?.academicYearId) queryParams.append('academicYearId', params.academicYearId.toString());
 
   const response = await fetch(`${API_BASE_URL}/api/payments?${queryParams.toString()}`, {
     headers: {
@@ -109,11 +121,15 @@ export const getPaymentStats = async (): Promise<PaymentStats> => {
 /**
  * Récupère les paiements d'un élève
  */
-export const getStudentPayments = async (studentId: number): Promise<Payment[]> => {
+export const getStudentPayments = async (studentId: number, academicYearId?: number): Promise<Payment[]> => {
   const token = getToken();
   if (!token) throw new Error('Non authentifié');
 
-  const response = await fetch(`${API_BASE_URL}/api/payments/student/${studentId}`, {
+  const queryParams = new URLSearchParams();
+  if (academicYearId) queryParams.append('academicYearId', academicYearId.toString());
+  const query = queryParams.toString();
+
+  const response = await fetch(`${API_BASE_URL}/api/payments/student/${studentId}${query ? `?${query}` : ''}`, {
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
@@ -147,6 +163,76 @@ export const recordPayment = async (data: RecordPaymentData): Promise<Payment> =
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Erreur lors de l\'enregistrement du paiement');
+  }
+
+  return response.json();
+};
+
+/**
+ * Récupère la liste des années académiques (pour le filtre et la réinitialisation des frais)
+ */
+export const getAcademicYears = async (): Promise<AcademicYear[]> => {
+  const token = getToken();
+  if (!token) throw new Error('Non authentifié');
+
+  const response = await fetch(`${API_BASE_URL}/api/payments/academic-years`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors de la récupération des années académiques');
+  }
+
+  return response.json();
+};
+
+/**
+ * Démarre l'année académique suivante (désactive l'année active, active/crée la suivante).
+ * Réservé au Super-Admin.
+ */
+export const startNewAcademicYear = async (): Promise<{ success: boolean; message: string; previousYear: string | null; academicYear: AcademicYear }> => {
+  const token = getToken();
+  if (!token) throw new Error('Non authentifié');
+
+  const response = await fetch(`${API_BASE_URL}/api/payments/academic-years/start-new`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors du démarrage de la nouvelle année académique');
+  }
+
+  return response.json();
+};
+
+/**
+ * Supprime définitivement tous les paiements d'une année académique (Super-Admin uniquement)
+ */
+export const resetPaymentsForYear = async (academicYearId: number): Promise<{ success: boolean; message: string; count: number }> => {
+  const token = getToken();
+  if (!token) throw new Error('Non authentifié');
+
+  const response = await fetch(`${API_BASE_URL}/api/payments/reset`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ academicYearId }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors de la réinitialisation des frais');
   }
 
   return response.json();

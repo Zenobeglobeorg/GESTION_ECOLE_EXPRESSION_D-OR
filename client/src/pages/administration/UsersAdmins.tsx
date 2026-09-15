@@ -6,6 +6,7 @@ import { Input } from "../../components/ui/Input";
 import { Modal } from "../../components/ui/Modal";
 import { ProtectedContent } from "../../components/permissions/ProtectedContent";
 import * as userService from "../../services/userService";
+import { isValidPassword } from "../../utils/validators";
 
 export const UsersAdmins = () => {
   const [admins, setAdmins] = useState<userService.UserWithDate[]>([]);
@@ -51,8 +52,12 @@ export const UsersAdmins = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    if (!isValidPassword(form.password)) {
+      setError('Le mot de passe doit contenir au moins 8 caractères, une majuscule et un chiffre.');
+      return;
+    }
     try {
-      setError(null);
       await userService.createUser({
         ...form,
         role: 'ADMINISTRATION',
@@ -483,7 +488,7 @@ export const UsersAdmins = () => {
             onChange={(e) => setForm({ ...form, password: e.target.value })}
             required
             minLength={8}
-            helperText="Minimum 8 caractères"
+            helperText="Au moins 8 caractères, une majuscule et un chiffre"
           />
 
           <div className="flex items-center gap-3">

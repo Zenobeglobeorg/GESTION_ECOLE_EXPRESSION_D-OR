@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSelectedChild } from '../../contexts/SelectedChildContext';
 import * as feesService from '../../services/feesService';
+import { generatePaymentReceiptPDF } from '../../utils/receiptGenerator';
 
 const FraisScolaritePage: React.FC = () => {
   const { selectedChild } = useSelectedChild();
@@ -266,6 +267,7 @@ const FraisScolaritePage: React.FC = () => {
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant</th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Méthode</th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">N° Reçu</th>
+                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Reçu</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -279,6 +281,14 @@ const FraisScolaritePage: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{payment.method}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                         {payment.receiptNumber || '—'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                        <button
+                          onClick={() => generatePaymentReceiptPDF(payment.payment, selectedChild)}
+                          className="text-blue-600 hover:text-blue-800 font-medium hover:underline"
+                        >
+                          📄 Télécharger
+                        </button>
                       </td>
                     </tr>
                   ))}

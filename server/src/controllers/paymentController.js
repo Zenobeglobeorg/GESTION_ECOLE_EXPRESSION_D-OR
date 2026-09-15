@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { getPrisma } from '../utils/prisma.js';
-import { getFinalPaymentDueDate } from '../utils/paymentUtils.js';
+import { getFinalPaymentDueDate, getOrCreateActiveAcademicYear } from '../utils/paymentUtils.js';
 
 const prisma = getPrisma();
 
@@ -194,10 +194,14 @@ const calculatePaymentStatus = (dueDate, paidDate) => {
  */
 export const getPayments = async (req, res) => {
   try {
-    const { classId, search, status } = req.query;
-    
+    const { classId, search, status, academicYearId } = req.query;
+
     const where = {};
-    
+
+    if (academicYearId) {
+      where.academicYearId = parseInt(academicYearId);
+    }
+
     if (classId) {
       where.student = {
         classId: parseInt(classId),
@@ -313,7 +317,9 @@ export const getPaymentStats = async (req, res) => {
  */
 export const createPaymentsForStudent = async (studentId, paymentOption, enrollmentDate, level) => {
   const schedule = calculatePaymentSchedule(paymentOption, enrollmentDate, level);
-  
+  const academicYear = await getOrCreateActiveAcademicYear(prisma);
+  const academicYearId = academicYear.id;
+
   // Créer tous les paiements en une seule transaction pour éviter les problèmes de pool
   // Utiliser une transaction interactive Prisma pour créer tous les paiements atomiquement
   try {
@@ -323,6 +329,7 @@ export const createPaymentsForStudent = async (studentId, paymentOption, enrollm
         const payment = await tx.payment.create({
           data: {
             studentId,
+            academicYearId,
             amount: item.amount,
             dueDate: item.dueDate,
             installmentNumber: item.installmentNumber,
@@ -338,7 +345,7 @@ export const createPaymentsForStudent = async (studentId, paymentOption, enrollm
       timeout: 30000, // 30 secondes de timeout
       maxWait: 10000, // Attendre max 10s pour obtenir une connexion
     });
-    
+
     return payments;
   } catch (error) {
     console.error('Erreur lors de la création des paiements dans la transaction:', error);
@@ -350,6 +357,7 @@ export const createPaymentsForStudent = async (studentId, paymentOption, enrollm
         const payment = await prisma.payment.create({
           data: {
             studentId,
+            academicYearId,
             amount: item.amount,
             dueDate: item.dueDate,
             installmentNumber: item.installmentNumber,
@@ -413,17 +421,19 @@ export const recordPayment = async (req, res) => {
         },
       });
 
-      // 2. Calculer le total déjà payé par l'élève
+      // 2. Calculer le total déjà payé par l'élève POUR CETTE ANNÉE ACADÉMIQUE UNIQUEMENT
+      // (sans ce filtre, les paiements d'années précédentes fausseraient le solde de l'année en cours)
       const allPaid = await tx.payment.findMany({
         where: {
           studentId: student.id,
+          academicYearId: existingPayment.academicYearId,
           status: 'PAID'
         },
         orderBy: { dueDate: 'asc' }
       });
-      
+
       const totalDejaPaye = allPaid.reduce((sum, p) => sum + p.amount, 0);
-      
+
       // 3. Calculer le reste à payer en gardant le total annuel INCHANGÉ
       const totalAnnuel = getAnnualAmount(student.class?.level);
       const reste = totalAnnuel - totalDejaPaye;
@@ -431,19 +441,22 @@ export const recordPayment = async (req, res) => {
       // 4. Mettre à jour les paiements manquants
       if (reste <= 0) {
         // Le solde est atteint (ou dépassé), on supprime toutes les prochaines tranches en attente
+        // de CETTE année académique uniquement
         await tx.payment.deleteMany({
           where: {
             studentId: student.id,
+            academicYearId: existingPayment.academicYearId,
             status: { not: 'PAID' }
           }
         });
       } else {
         // Il y a un reste à payer.
-        // Récupérer toutes les tranches restantes (non payées) DE CET ÉLÈVE, triées par date
+        // Récupérer toutes les tranches restantes (non payées) DE CET ÉLÈVE POUR CETTE ANNÉE, triées par date
         const futurePayments = await tx.payment.findMany({
-          where: { 
-            studentId: student.id, 
-            status: { not: 'PAID' } 
+          where: {
+            studentId: student.id,
+            academicYearId: existingPayment.academicYearId,
+            status: { not: 'PAID' }
           },
           orderBy: { dueDate: 'asc' },
         });
@@ -478,6 +491,7 @@ export const recordPayment = async (req, res) => {
           await tx.payment.create({
             data: {
               studentId: student.id,
+              academicYearId: existingPayment.academicYearId,
               installmentNumber: allPaid.length + 1,
               amount: reste,
               dueDate: nextDueDate,
@@ -513,10 +527,13 @@ export const recordPayment = async (req, res) => {
 export const getStudentPayments = async (req, res) => {
   try {
     const { studentId } = req.params;
-    
+    const { academicYearId } = req.query;
+
     const payments = await prisma.payment.findMany({
       where: {
         studentId: parseInt(studentId),
+        // Par défaut (aucun academicYearId fourni) : historique complet, toutes années confondues.
+        ...(academicYearId ? { academicYearId: parseInt(academicYearId) } : {}),
       },
       orderBy: [
         { installmentNumber: 'asc' },
@@ -546,24 +563,29 @@ export const getStudentPayments = async (req, res) => {
 export const generatePaymentsForStudent = async (req, res) => {
   try {
     const { studentId } = req.params;
-    
+
     const student = await prisma.student.findUnique({
       where: { id: parseInt(studentId) },
       include: {
         class: true,
-        payments: true,
       },
     });
-    
+
     if (!student) {
       return res.status(404).json({ error: 'Élève non trouvé' });
     }
-    
-    // Vérifier si des paiements existent déjà
-    if (student.payments && student.payments.length > 0) {
-      return res.status(400).json({ error: 'Des paiements existent déjà pour cet élève' });
+
+    // Vérifier si des paiements existent déjà POUR L'ANNÉE ACTIVE (et non toutes années
+    // confondues : un élève qui redouble/passe en classe supérieure doit pouvoir se voir
+    // générer de nouveaux frais chaque année sans que son historique ne bloque l'opération).
+    const activeAcademicYear = await getOrCreateActiveAcademicYear(prisma);
+    const existingPaymentsThisYear = await prisma.payment.findFirst({
+      where: { studentId: student.id, academicYearId: activeAcademicYear.id },
+    });
+    if (existingPaymentsThisYear) {
+      return res.status(400).json({ error: `Des paiements existent déjà pour cet élève pour l'année ${activeAcademicYear.name}. Utilisez la réinitialisation si vous voulez les régénérer.` });
     }
-    
+
     // Générer les paiements
     const payments = await createPaymentsForStudent(
       student.id,
@@ -718,6 +740,115 @@ export const sendPaymentReminder = async (req, res) => {
   } catch (err) {
     console.error('sendPaymentReminder error:', err);
     res.status(500).json({ error: 'Erreur lors de l\'envoi du rappel de paiement' });
+  }
+};
+
+/**
+ * Liste les années académiques, avec le nombre de paiements rattachés à chacune
+ * (utilisé pour le filtre par année et l'écran de réinitialisation des frais).
+ */
+export const listAcademicYears = async (req, res) => {
+  try {
+    const academicYears = await prisma.academicYear.findMany({
+      orderBy: { startDate: 'desc' },
+      include: {
+        _count: { select: { payments: true } },
+      },
+    });
+    res.json(academicYears);
+  } catch (err) {
+    console.error('listAcademicYears error:', err);
+    res.status(500).json({ error: 'Erreur lors de la récupération des années académiques' });
+  }
+};
+
+/**
+ * Démarre l'année académique suivante : désactive l'année active actuelle et
+ * active (ou crée) l'année suivante. À partir de là, toute nouvelle génération
+ * de frais (inscription, régénération manuelle) se rattache à cette nouvelle
+ * année. L'ancienne année et son historique restent intacts et consultables
+ * via le filtre par année. Action réservée au Super-Admin (voir paymentRoutes.js).
+ */
+export const startNewAcademicYear = async (req, res) => {
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const current = await tx.academicYear.findFirst({
+        where: { isActive: true },
+        orderBy: { startDate: 'desc' },
+      });
+
+      const nextStartYear = current ? current.startDate.getFullYear() + 1 : new Date().getFullYear();
+      const name = `${nextStartYear}-${nextStartYear + 1}`;
+
+      if (current?.name === name) {
+        throw new Error(`L'année ${name} est déjà l'année active.`);
+      }
+
+      await tx.academicYear.updateMany({ where: { isActive: true }, data: { isActive: false } });
+
+      const newYear = await tx.academicYear.upsert({
+        where: { name },
+        update: { isActive: true },
+        create: {
+          name,
+          startDate: new Date(nextStartYear, 8, 1), // 1er septembre
+          endDate: new Date(nextStartYear + 1, 6, 30), // 30 juin
+          isActive: true,
+        },
+      });
+
+      return { previous: current, newYear };
+    });
+
+    res.json({
+      success: true,
+      message: result.previous
+        ? `Nouvelle année académique ${result.newYear.name} démarrée (${result.previous.name} reste consultable)`
+        : `Année académique ${result.newYear.name} démarrée`,
+      previousYear: result.previous?.name || null,
+      academicYear: result.newYear,
+    });
+  } catch (err) {
+    console.error('startNewAcademicYear error:', err);
+    res.status(400).json({ error: err.message || 'Erreur lors du démarrage de la nouvelle année académique' });
+  }
+};
+
+/**
+ * Supprime définitivement TOUS les paiements d'une année académique donnée
+ * (action destructrice réservée au Super-Admin, avec confirmation forte côté client).
+ * L'année académique elle-même n'est pas supprimée, seuls les paiements le sont.
+ */
+export const resetPaymentsForYear = async (req, res) => {
+  try {
+    const { academicYearId } = req.body;
+
+    if (!academicYearId) {
+      return res.status(400).json({ error: 'academicYearId est requis' });
+    }
+
+    const academicYear = await prisma.academicYear.findUnique({
+      where: { id: parseInt(academicYearId) },
+    });
+
+    if (!academicYear) {
+      return res.status(404).json({ error: 'Année académique non trouvée' });
+    }
+
+    const { count } = await prisma.payment.deleteMany({
+      where: { academicYearId: academicYear.id },
+    });
+
+    console.warn(`⚠️ [RESET] ${count} paiement(s) de l'année ${academicYear.name} supprimé(s) par l'utilisateur ${req.user?.id}`);
+
+    res.json({
+      success: true,
+      message: `${count} paiement(s) de l'année ${academicYear.name} supprimé(s)`,
+      count,
+    });
+  } catch (err) {
+    console.error('resetPaymentsForYear error:', err);
+    res.status(500).json({ error: 'Erreur lors de la réinitialisation des frais' });
   }
 };
 

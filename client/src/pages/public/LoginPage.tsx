@@ -29,60 +29,12 @@ export const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
-  const [passwordStrength, setPasswordStrength] = useState('');
-  
+
   // 2FA state
   const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
   const [twoFactorCode, setTwoFactorCode] = useState('');
   const [twoFactorLoading, setTwoFactorLoading] = useState(false);
   const [twoFactorEmailSent, setTwoFactorEmailSent] = useState(false);
-
-  const checkPasswordStrength = (pwd: string) => {
-    if (pwd.length === 0) {
-      setPasswordStrength('');
-      return { isValid: false, score: 0 };
-    }
-
-    const checks = {
-      length: pwd.length >= 8,
-      lowercase: /[a-z]/.test(pwd),
-      uppercase: /[A-Z]/.test(pwd),
-      number: /[0-9]/.test(pwd),
-      special: /[^A-Za-z0-9]/.test(pwd)
-    };
-
-    let score = 0;
-    if (checks.length) score++;
-    if (checks.lowercase) score++;
-    if (checks.uppercase) score++;
-    if (checks.number) score++;
-    if (checks.special) score++;
-
-    let level = '';
-    let color = '';
-    if (score < 3) {
-      level = 'Faible';
-      color = '#ef4444';
-    } else if (score === 3) {
-      level = 'Moyen';
-      color = '#f59e0b';
-    } else if (score === 4) {
-      level = 'Bon';
-      color = '#10b981';
-    } else {
-      level = 'Excellent';
-      color = '#059669';
-    }
-
-    setPasswordStrength(`${score * 20}%|${level}|${color}`);
-    return { isValid: score >= 3, score };
-  };
-
-  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setPassword(value);
-    checkPasswordStrength(value);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,11 +45,10 @@ export const LoginPage = () => {
       return;
     }
 
-    const strength = checkPasswordStrength(password);
-    if (!strength.isValid) {
-      setError('Le mot de passe ne remplit pas les conditions de sécurité requises.');
-      return;
-    }
+    // Le login ne fait que vérifier l'identité (email + mot de passe déjà défini) :
+    // il ne doit pas juger de la "force" du mot de passe. Cette règle se contrôle
+    // à la création du compte / au changement de mot de passe, jamais à la connexion,
+    // sinon un compte créé avec un mot de passe simple ne peut plus jamais se connecter.
 
     try {
       const result = await login(email, password);
@@ -150,10 +101,6 @@ export const LoginPage = () => {
       setTwoFactorLoading(false);
     }
   };
-
-  const strengthInfo = passwordStrength.split('|');
-  const strengthWidth = strengthInfo[0] || '0%';
-  const strengthLevel = strengthInfo[1] || '';
 
   return (
     <div className="min-h-screen bg-linear-to-br from-blue-600 via-blue-500 to-yellow-400 flex items-center justify-center p-4 relative overflow-hidden">
@@ -217,10 +164,9 @@ export const LoginPage = () => {
                 <Input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
-                  onChange={handlePasswordChange}
+                  onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  minLength={8}
                   className="w-full pr-12"
                 />
                 <button
@@ -240,36 +186,6 @@ export const LoginPage = () => {
                   )}
                 </button>
               </div>
-              {passwordStrength && (
-                <div className="mt-2">
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                      {/* eslint-disable-next-line react/forbid-dom-props */}
-                      <div
-                        className={`h-full transition-all duration-300 ${
-                          strengthLevel === 'Faible' ? 'bg-red-500' :
-                          strengthLevel === 'Moyen' ? 'bg-yellow-500' :
-                          strengthLevel === 'Bon' ? 'bg-green-500' :
-                          'bg-green-600'
-                        }`}
-                        style={{ width: strengthWidth }}
-                        title={`Force du mot de passe: ${strengthLevel}`}
-                      />
-                    </div>
-                    <span 
-                      className={`text-xs font-semibold ${
-                        strengthLevel === 'Faible' ? 'text-red-500' :
-                        strengthLevel === 'Moyen' ? 'text-yellow-500' :
-                        strengthLevel === 'Bon' ? 'text-green-500' :
-                        'text-green-600'
-                      }`}
-                      title={strengthLevel}
-                    >
-                      {strengthLevel}
-                    </span>
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Bouton de connexion */}

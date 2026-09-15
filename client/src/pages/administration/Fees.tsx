@@ -8,24 +8,34 @@ import { ProtectedContent } from '../../components/permissions/ProtectedContent'
 import * as feesService from '../../services/feesService';
 import * as classService from '../../services/classService';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useAuth } from '../../hooks/useAuth';
 
 export const Fees = () => {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  
+
   const [payments, setPayments] = useState<feesService.Payment[]>([]);
   const [stats, setStats] = useState<feesService.PaymentStats>({ total: 0, paid: 0, pending: 0 });
   const [classes, setClasses] = useState<classService.Class[]>([]);
-  
+  const [academicYears, setAcademicYears] = useState<feesService.AcademicYear[]>([]);
+
   // Vue active (table, student, calendar)
   const [activeView, setActiveView] = useState<'table' | 'student' | 'calendar'>('table');
-  
+
   // Filtres
   const [classFilter, setClassFilter] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [academicYearFilter, setAcademicYearFilter] = useState<number | null>(null);
+
+  // Réinitialisation des frais d'une année (Super-Admin uniquement)
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [resetTargetYearId, setResetTargetYearId] = useState<number | null>(null);
+  const [resetConfirmText, setResetConfirmText] = useState('');
+  const [resetting, setResetting] = useState(false);
   
   // Vue calendrier
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -69,22 +79,24 @@ export const Fees = () => {
     if (!loading) {
       loadPayments();
     }
-  }, [classFilter, searchTerm, statusFilter]);
+  }, [classFilter, searchTerm, statusFilter, academicYearFilter]);
 
   const loadData = async () => {
     try {
       setLoading(true);
       setError(null);
-      
-      const [paymentsData, statsData, classesData] = await Promise.all([
+
+      const [paymentsData, statsData, classesData, academicYearsData] = await Promise.all([
         feesService.getPayments(),
         feesService.getPaymentStats(),
         classService.getClasses(),
+        feesService.getAcademicYears(),
       ]);
-      
+
       setPayments(paymentsData);
       setStats(statsData);
       setClasses(classesData);
+      setAcademicYears(academicYearsData);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       setError(errorMessage);
@@ -100,11 +112,76 @@ export const Fees = () => {
         classId: classFilter || undefined,
         search: searchTerm || undefined,
         status: statusFilter !== 'all' ? statusFilter : undefined,
+        academicYearId: academicYearFilter || undefined,
       });
       setPayments(paymentsData);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       setError(errorMessage);
+    }
+  };
+
+  const [startingNewYear, setStartingNewYear] = useState(false);
+
+  const activeAcademicYear = academicYears.find((y) => y.isActive) || null;
+  const nextAcademicYearName = activeAcademicYear
+    ? (() => {
+        const nextStart = new Date(activeAcademicYear.startDate).getFullYear() + 1;
+        return `${nextStart}-${nextStart + 1}`;
+      })()
+    : null;
+
+  const handleStartNewYear = async () => {
+    const confirmMsg = activeAcademicYear
+      ? `Démarrer l'année académique ${nextAcademicYearName} ? L'année ${activeAcademicYear.name} restera consultable (filtre par année) mais ne recevra plus de nouveaux frais générés automatiquement.`
+      : 'Démarrer une nouvelle année académique ?';
+    if (!confirm(confirmMsg)) return;
+
+    try {
+      setStartingNewYear(true);
+      setError(null);
+      const result = await feesService.startNewAcademicYear();
+      setSuccess(result.message);
+      await loadData();
+      setTimeout(() => setSuccess(null), 4000);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      setError(errorMessage);
+    } finally {
+      setStartingNewYear(false);
+    }
+  };
+
+  const handleOpenResetModal = (academicYearId: number) => {
+    setResetTargetYearId(academicYearId);
+    setResetConfirmText('');
+    setIsResetModalOpen(true);
+  };
+
+  const handleCloseResetModal = () => {
+    setIsResetModalOpen(false);
+    setResetTargetYearId(null);
+    setResetConfirmText('');
+  };
+
+  const resetTargetYear = academicYears.find((y) => y.id === resetTargetYearId) || null;
+
+  const handleConfirmReset = async () => {
+    if (!resetTargetYear || resetConfirmText !== resetTargetYear.name) return;
+
+    try {
+      setResetting(true);
+      setError(null);
+      const result = await feesService.resetPaymentsForYear(resetTargetYear.id);
+      setSuccess(result.message);
+      handleCloseResetModal();
+      await loadData();
+      setTimeout(() => setSuccess(null), 4000);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      setError(errorMessage);
+    } finally {
+      setResetting(false);
     }
   };
 
@@ -399,6 +476,77 @@ export const Fees = () => {
             </Card>
           </div>
 
+        {/* Année académique active + passage à l'année suivante (Super-Admin uniquement) */}
+        {user?.role === 'SUPER_ADMIN' && (
+          <Card className="border-0 shadow-lg dark:bg-gray-800">
+            <div className="p-6 flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold text-blue-900 dark:text-blue-400 flex items-center gap-2">
+                  <span>📅</span> Année académique
+                </h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  {activeAcademicYear
+                    ? <>Année active : <strong>{activeAcademicYear.name}</strong>. Les nouveaux frais générés (inscriptions, régénérations) s'y rattachent automatiquement.</>
+                    : 'Aucune année active pour le moment — elle sera créée automatiquement à la première inscription, ou démarrez-en une manuellement.'}
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                onClick={handleStartNewYear}
+                isLoading={startingNewYear}
+                className="border-blue-400 dark:border-blue-600 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30"
+              >
+                {startingNewYear
+                  ? 'Démarrage...'
+                  : `➡️ Démarrer l'année ${nextAcademicYearName || 'suivante'}`}
+              </Button>
+            </div>
+          </Card>
+        )}
+
+        {/* Zone de danger : réinitialisation des frais par année (Super-Admin uniquement) */}
+        {user?.role === 'SUPER_ADMIN' && academicYears.length > 0 && (
+          <Card className="border-0 shadow-lg dark:bg-gray-800 border-l-4 border-l-red-500">
+            <div className="p-6">
+              <h2 className="text-lg font-semibold text-red-700 dark:text-red-400 flex items-center gap-2 mb-1">
+                <span>⚠️</span> Zone de danger
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Supprime définitivement tous les paiements (payés et en attente) d'une année académique. Action irréversible.
+              </p>
+              <div className="space-y-2">
+                {academicYears.map((year) => (
+                  <div
+                    key={year.id}
+                    className="flex items-center justify-between gap-4 p-3 rounded-lg border border-gray-200 dark:border-gray-700"
+                  >
+                    <div>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">{year.name}</span>
+                      {year.isActive && (
+                        <span className="ml-2 px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+                          active
+                        </span>
+                      )}
+                      <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
+                        {year._count?.payments ?? 0} paiement{(year._count?.payments ?? 0) > 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={!year._count?.payments}
+                      onClick={() => handleOpenResetModal(year.id)}
+                      className="border-red-400 dark:border-red-700 text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-40"
+                    >
+                      Réinitialiser
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Card>
+        )}
+
         {/* Historique des paiements */}
         <Card className="border-0 shadow-lg dark:bg-gray-800">
           <div className="p-6 space-y-4">
@@ -443,7 +591,26 @@ export const Fees = () => {
             </div>
 
             {/* Filtres */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-blue-900 dark:text-blue-400 mb-2">
+                  Année académique
+                </label>
+                <select
+                  title="Filtrer par année académique"
+                  value={academicYearFilter || ''}
+                  onChange={(e) => setAcademicYearFilter(e.target.value ? parseInt(e.target.value) : null)}
+                  className="form-control dark:bg-gray-700 dark:text-white dark:border-gray-600"
+                >
+                  <option value="">Toutes les années</option>
+                  {academicYears.map((year) => (
+                    <option key={year.id} value={year.id}>
+                      {year.name}{year.isActive ? ' (active)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-blue-900 dark:text-blue-400 mb-2">
                   {t('fees.filterByClass') || 'Filtrer par classe'}
@@ -1015,6 +1182,54 @@ export const Fees = () => {
               </ProtectedContent>
             </div>
           </form>
+        )}
+      </Modal>
+
+      {/* Modal de confirmation de réinitialisation des frais d'une année */}
+      <Modal
+        isOpen={isResetModalOpen}
+        onClose={handleCloseResetModal}
+        title="Réinitialiser les frais de l'année"
+      >
+        {resetTargetYear && (
+          <div className="space-y-4">
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-sm text-red-800 dark:text-red-300">
+              Vous êtes sur le point de supprimer définitivement <strong>{resetTargetYear._count?.payments ?? 0} paiement(s)</strong> de
+              l'année <strong>{resetTargetYear.name}</strong> (payés et en attente, tous élèves confondus). Cette action est
+              irréversible.
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Pour confirmer, tapez <strong>{resetTargetYear.name}</strong> ci-dessous :
+              </label>
+              <Input
+                type="text"
+                value={resetConfirmText}
+                onChange={(e) => setResetConfirmText(e.target.value)}
+                placeholder={resetTargetYear.name}
+                className="dark:bg-gray-700 dark:text-white dark:border-gray-600"
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCloseResetModal}
+                className="border-blue-300 dark:border-gray-600 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-gray-700"
+              >
+                Annuler
+              </Button>
+              <Button
+                type="button"
+                isLoading={resetting}
+                disabled={resetConfirmText !== resetTargetYear.name}
+                onClick={handleConfirmReset}
+                className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-40"
+              >
+                {resetting ? 'Suppression...' : 'Supprimer définitivement'}
+              </Button>
+            </div>
+          </div>
         )}
       </Modal>
       </ProtectedContent>

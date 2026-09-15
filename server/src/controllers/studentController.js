@@ -56,21 +56,29 @@ async function findOrCreateParent(email, studentData) {
 
     // Envoyer un email avec les identifiants de connexion
     // Normaliser l'email en minuscule pour l'envoi (même si stocké en majuscule)
+    // Volontairement non "awaité" : l'envoi (SMTP/EmailJS) peut prendre plusieurs secondes,
+    // et bloquer dessus ralentit/fait planter l'inscription individuelle et surtout l'import
+    // en masse (N élèves = N envois séquentiels dans une seule requête HTTP).
     const normalizedEmail = email.toLowerCase().trim();
-    const emailResult = await sendWelcomeEmail(
+    sendWelcomeEmail(
       normalizedEmail,
       temporaryPassword,
       `${firstName} ${lastName}`
-    );
-
-    if (emailResult.success) {
-      console.log(`✅ Email de bienvenue envoyé à ${email}`);
-    } else {
-      console.log(`⚠️ Email non envoyé (${emailResult.error || emailResult.message}).`);
+    ).then((emailResult) => {
+      if (emailResult.success) {
+        console.log(`✅ Email de bienvenue envoyé à ${email}`);
+      } else {
+        console.log(`⚠️ Email non envoyé (${emailResult.error || emailResult.message}).`);
+        console.log(`📧 [IMPORTANT] Nouveau parent créé: ${email}`);
+        console.log(`   Mot de passe temporaire: ${temporaryPassword}`);
+        console.log(`   ⚠️ Veuillez envoyer ces identifiants manuellement au parent !`);
+      }
+    }).catch((err) => {
+      console.error(`❌ Erreur lors de l'envoi de l'email de bienvenue à ${email}:`, err);
       console.log(`📧 [IMPORTANT] Nouveau parent créé: ${email}`);
       console.log(`   Mot de passe temporaire: ${temporaryPassword}`);
       console.log(`   ⚠️ Veuillez envoyer ces identifiants manuellement au parent !`);
-    }
+    });
   }
 
   // Ajouter un flag pour savoir si le parent était nouveau
@@ -108,7 +116,16 @@ async function createPlaceholderParent() {
  */
 export const listStudents = async (req, res) => {
   try {
+    const { archived } = req.query;
+    // Par défaut : uniquement les élèves actifs (non archivés).
+    // ?archived=true : uniquement les archivés. ?archived=all : tous.
+    const where =
+      archived === 'true' ? { isArchived: true }
+      : archived === 'all' ? {}
+      : { isArchived: false };
+
     const students = await prisma.student.findMany({
+      where,
       include: {
         parent: {
           select: {
@@ -150,6 +167,7 @@ export const getMyChildren = async (req, res) => {
     const students = await prisma.student.findMany({
       where: {
         parentId: user.id,
+        isArchived: false,
       },
       include: {
         parent: {
@@ -404,13 +422,51 @@ export const updateStudent = async (req, res) => {
 };
 
 /**
- * Supprime un élève
+ * Archive un élève : ne l'affiche plus dans les listes actives mais conserve
+ * tout son historique (notes, présences, paiements, bulletins) pour le suivi.
+ */
+export const archiveStudent = async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const student = await prisma.student.update({
+      where: { id },
+      data: { isArchived: true, archivedAt: new Date() },
+    });
+    res.json({ success: true, student });
+  } catch (err) {
+    console.error('archiveStudent error:', err);
+    res.status(500).json({ error: 'Erreur lors de l\'archivage de l\'élève' });
+  }
+};
+
+/**
+ * Désarchive un élève (le fait réapparaître dans les listes actives).
+ */
+export const unarchiveStudent = async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const student = await prisma.student.update({
+      where: { id },
+      data: { isArchived: false, archivedAt: null },
+    });
+    res.json({ success: true, student });
+  } catch (err) {
+    console.error('unarchiveStudent error:', err);
+    res.status(500).json({ error: 'Erreur lors du désarchivage de l\'élève' });
+  }
+};
+
+/**
+ * Supprime DÉFINITIVEMENT un élève et tout son historique lié (notes, présences,
+ * paiements, bulletins - suppression en cascade). Irréversible : à ne jamais confondre
+ * avec l'archivage. Réservé au Super-Admin (voir studentRoutes.js).
  */
 export const deleteStudent = async (req, res) => {
   try {
     const id = Number(req.params.id);
     await prisma.student.delete({ where: { id } });
-    res.json({ success: true, message: 'Élève supprimé avec succès' });
+    console.warn(`⚠️ [DELETE] Élève ${id} supprimé définitivement par l'utilisateur ${req.user?.id}`);
+    res.json({ success: true, message: 'Élève supprimé définitivement' });
   } catch (err) {
     console.error('deleteStudent error:', err);
     res.status(500).json({ error: 'Erreur lors de la suppression de l\'élève' });
@@ -500,6 +556,10 @@ export const importStudents = async (req, res) => {
       total: rows.length,
     };
 
+    // Cache des classes déjà résolues pendant cet import : évite une requête DB
+    // par ligne quand de nombreux élèves partagent la même classe (cas courant).
+    const classCache = new Map();
+
     // Traiter chaque ligne
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
@@ -539,28 +599,34 @@ export const importStudents = async (req, res) => {
         // Vérifier et trouver ou créer la classe si nécessaire
         let classId = null;
         if (className) {
-          try {
-            const existingClass = await prisma.class.findFirst({
-              where: {
-                name: { equals: className, mode: 'insensitive' },
-              },
-            });
-
-            if (existingClass) {
-              classId = existingClass.id;
-            } else {
-              // Créer la classe si elle n'existe pas
-              const newClass = await prisma.class.create({
-                data: {
-                  name: className,
-                  level: 'Primaire', // Par défaut, peut être ajusté
-                  academicYear: new Date().getFullYear().toString(),
+          const classCacheKey = className.trim().toLowerCase();
+          if (classCache.has(classCacheKey)) {
+            classId = classCache.get(classCacheKey);
+          } else {
+            try {
+              const existingClass = await prisma.class.findFirst({
+                where: {
+                  name: { equals: className, mode: 'insensitive' },
                 },
               });
-              classId = newClass.id;
+
+              if (existingClass) {
+                classId = existingClass.id;
+              } else {
+                // Créer la classe si elle n'existe pas
+                const newClass = await prisma.class.create({
+                  data: {
+                    name: className,
+                    level: 'Primaire', // Par défaut, peut être ajusté
+                    academicYear: new Date().getFullYear().toString(),
+                  },
+                });
+                classId = newClass.id;
+              }
+              classCache.set(classCacheKey, classId);
+            } catch (classError) {
+              console.error(`Erreur lors de la création/recherche de la classe pour la ligne ${rowNumber}:`, classError);
             }
-          } catch (classError) {
-            console.error(`Erreur lors de la création/recherche de la classe pour la ligne ${rowNumber}:`, classError);
           }
         }
 

@@ -7,6 +7,7 @@ import { Input } from "../../components/ui/Input";
 import { Modal } from "../../components/ui/Modal";
 import * as userService from "../../services/userService";
 import * as classService from "../../services/classService";
+import { isValidPassword } from "../../utils/validators";
 
 interface TeacherWithDetails extends userService.UserWithDate {
   teacherLevel?: 'MATERNELLE' | 'PRE_PRIMAIRE' | 'PRIMAIRE' | null;
@@ -89,8 +90,12 @@ export const UsersTeachers = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    if (!isValidPassword(form.password)) {
+      setError('Le mot de passe doit contenir au moins 8 caractères, une majuscule et un chiffre.');
+      return;
+    }
     try {
-      setError(null);
       await userService.createUser({
         firstName: form.firstName,
         lastName: form.lastName,
@@ -760,7 +765,7 @@ export const UsersTeachers = () => {
             onChange={(e) => setForm({ ...form, password: e.target.value })}
             required
             minLength={8}
-            helperText="Minimum 8 caractères"
+            helperText="Au moins 8 caractères, une majuscule et un chiffre"
           />
 
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">

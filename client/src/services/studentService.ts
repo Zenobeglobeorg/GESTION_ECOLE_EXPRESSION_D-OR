@@ -13,9 +13,12 @@ export interface Student {
   };
   schoolOfOrigin?: string;
   hasDisability: boolean;
+  disabilityDescription?: string;
   isOrphan: boolean;
   orphanType?: string;
   enrollmentDate: string;
+  isArchived?: boolean;
+  archivedAt?: string | null;
   fatherName?: string;
   fatherAddress?: string;
   fatherContact?: string;
@@ -91,11 +94,15 @@ const getToken = (): string | null => {
 /**
  * Récupère tous les élèves
  */
-export const getStudents = async (): Promise<Student[]> => {
+export const getStudents = async (params?: { archived?: 'true' | 'all' }): Promise<Student[]> => {
   const token = getToken();
   if (!token) throw new Error('Non authentifié');
 
-  const response = await fetch(`${API_BASE_URL}/api/students`, {
+  const queryParams = new URLSearchParams();
+  if (params?.archived) queryParams.append('archived', params.archived);
+  const query = queryParams.toString();
+
+  const response = await fetch(`${API_BASE_URL}/api/students${query ? `?${query}` : ''}`, {
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
@@ -205,7 +212,49 @@ export const updateStudent = async (studentId: number, studentData: Partial<Crea
 };
 
 /**
- * Supprime un élève
+ * Archive un élève : le masque des listes actives, garde tout son historique.
+ */
+export const archiveStudent = async (studentId: number): Promise<void> => {
+  const token = getToken();
+  if (!token) throw new Error('Non authentifié');
+
+  const response = await fetch(`${API_BASE_URL}/api/students/${studentId}/archive`, {
+    method: 'PATCH',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors de l\'archivage de l\'élève');
+  }
+};
+
+/**
+ * Désarchive un élève (le fait réapparaître dans les listes actives).
+ */
+export const unarchiveStudent = async (studentId: number): Promise<void> => {
+  const token = getToken();
+  if (!token) throw new Error('Non authentifié');
+
+  const response = await fetch(`${API_BASE_URL}/api/students/${studentId}/unarchive`, {
+    method: 'PATCH',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Erreur lors du désarchivage de l\'élève');
+  }
+};
+
+/**
+ * Supprime DÉFINITIVEMENT un élève et tout son historique (irréversible).
  */
 export const deleteStudent = async (studentId: number): Promise<void> => {
   const token = getToken();

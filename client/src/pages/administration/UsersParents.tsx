@@ -7,6 +7,7 @@ import { Input } from "../../components/ui/Input";
 import { Modal } from "../../components/ui/Modal";
 import * as userService from "../../services/userService";
 import * as studentService from "../../services/studentService";
+import { isValidPassword } from "../../utils/validators";
 
 interface ParentWithStudents extends userService.UserWithDate {
   students?: studentService.Student[];
@@ -70,8 +71,12 @@ export const UsersParents = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    if (!isValidPassword(form.password)) {
+      setError('Le mot de passe doit contenir au moins 8 caractères, une majuscule et un chiffre.');
+      return;
+    }
     try {
-      setError(null);
       await userService.createUser({
         ...form,
         role: 'PARENT',
@@ -655,7 +660,7 @@ export const UsersParents = () => {
             onChange={(e) => setForm({ ...form, password: e.target.value })}
             required
             minLength={8}
-            helperText="Minimum 8 caractères"
+            helperText="Au moins 8 caractères, une majuscule et un chiffre"
           />
 
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">

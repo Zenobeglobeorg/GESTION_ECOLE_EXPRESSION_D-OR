@@ -65,6 +65,12 @@ export const createUser = async (req, res) => {
       return res.status(400).json({ error: 'Champs requis manquants' });
     }
 
+    // Vérification côté serveur (le contrôle côté client peut être contourné) :
+    // même règle que celle appliquée lors d'un changement de mot de passe.
+    if (password.length < 8 || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
+      return res.status(400).json({ error: 'Le mot de passe doit contenir au moins 8 caractères, une majuscule et un chiffre.' });
+    }
+
     // Vérifier que l'email n'existe pas déjà
     const existingUser = await prisma.user.findUnique({
       where: { email: email.toUpperCase() },
@@ -395,8 +401,8 @@ export const changePassword = async (req, res) => {
       return res.status(400).json({ error: 'Ancien mot de passe et nouveau mot de passe requis' });
     }
 
-    if (newPassword.length < 6) {
-      return res.status(400).json({ error: 'Le nouveau mot de passe doit contenir au moins 6 caractères' });
+    if (newPassword.length < 8 || !/[A-Z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+      return res.status(400).json({ error: 'Le nouveau mot de passe doit contenir au moins 8 caractères, une majuscule et un chiffre.' });
     }
 
     // Récupérer l'utilisateur avec le mot de passe hashé

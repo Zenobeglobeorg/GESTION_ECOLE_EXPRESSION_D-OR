@@ -169,6 +169,11 @@ model Student {
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
+  // Archivage : masque l'élève des listes actives sans supprimer son historique
+  // (notes, présences, paiements, bulletins). Différent de la suppression définitive.
+  isArchived Boolean   @default(false)
+  archivedAt DateTime?
+
   // Informations sur les parents/tuteurs
   fatherName      String?
   fatherAddress   String?
@@ -304,7 +309,8 @@ model AcademicYear {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  paliers Palier[]
+  paliers  Palier[]
+  payments Payment[]
 
   @@map("academic_years")
 }
@@ -544,6 +550,8 @@ model Payment {
   id                Int           @id @default(autoincrement())
   studentId         Int
   student           Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  academicYearId    Int? // Année académique concernée (null = anciens paiements créés avant cette fonctionnalité)
+  academicYear      AcademicYear? @relation(fields: [academicYearId], references: [id])
   amount            Float // Montant payé
   dueDate           DateTime // Date limite de paiement
   paidDate          DateTime? // Date de paiement effectif
@@ -557,6 +565,8 @@ model Payment {
 
   reminders         PaymentReminder[] // Historique des rappels envoyés
 
+  @@unique([studentId, academicYearId, installmentNumber])
+  @@index([academicYearId])
   @@map("payments")
 }
 

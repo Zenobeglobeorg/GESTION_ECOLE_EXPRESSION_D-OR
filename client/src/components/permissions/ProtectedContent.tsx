@@ -19,7 +19,18 @@ export const ProtectedContent = ({
   fallback = null,
   children,
 }: ProtectedContentProps) => {
-  const { hasPermission, hasAnyPermission, hasAllPermissions } = usePermissions();
+  const { hasPermission, hasAnyPermission, hasAllPermissions, loading } = usePermissions();
+
+  // Tant que les permissions ne sont pas encore chargées, ne rien décider :
+  // sinon hasAccess vaut faussement "false" (permissions vides par défaut) et on
+  // affiche le message "accès refusé" pendant un instant, même pour un utilisateur autorisé.
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   let hasAccess = false;
 

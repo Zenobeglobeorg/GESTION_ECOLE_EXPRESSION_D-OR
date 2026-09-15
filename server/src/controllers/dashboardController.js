@@ -8,17 +8,23 @@ const prisma = getPrisma();
  */
 export const getAdminStats = async (req, res) => {
   try {
-    const [students, classes, teachers, payments] = await Promise.all([
+    const [students, classes, teachers, pendingPaymentsAgg, pendingGrades] = await Promise.all([
       prisma.student.count(),
       prisma.class.count(),
       prisma.user.count({ where: { role: 'TEACHER' } }),
-      prisma.payment.findMany({
+      // Agrégation SQL (COUNT/SUM) plutôt qu'un findMany qui rapatrie chaque ligne :
+      // ce endpoint est appelé à chaque chargement du dashboard, et le nombre de
+      // paiements en attente grossit avec le nombre d'élèves.
+      prisma.payment.aggregate({
         where: { status: 'PENDING' },
+        _count: { _all: true },
+        _sum: { amount: true },
       }),
+      prisma.grade.count({ where: { status: 'PENDING' } }),
     ]);
 
-    const pendingPaymentsCount = payments.length;
-    const pendingPaymentsAmount = payments.reduce((sum, p) => sum + p.amount, 0);
+    const pendingPaymentsCount = pendingPaymentsAgg._count._all;
+    const pendingPaymentsAmount = pendingPaymentsAgg._sum.amount || 0;
 
     res.json({
       students,
@@ -28,6 +34,7 @@ export const getAdminStats = async (req, res) => {
         count: pendingPaymentsCount,
         amount: Math.round(pendingPaymentsAmount),
       },
+      pendingGrades,
     });
   } catch (err) {
     console.error('getAdminStats error:', err);

@@ -30,4 +30,32 @@ export const getFinalPaymentDueDateForAcademicYear = (academicYear) => {
   return new Date(academicYear + 1, 2, 5);
 };
 
+/**
+ * Récupère l'année académique active (celle utilisée par le système de notes/paliers),
+ * ou en crée une si aucune n'existe encore. Permet de rattacher les paiements générés
+ * à une année précise (gestion par année) au lieu de tout mélanger dans une seule table.
+ * @param {import('@prisma/client').PrismaClient} prisma
+ * @returns {Promise<{id: number, name: string, startDate: Date, endDate: Date}>}
+ */
+export const getOrCreateActiveAcademicYear = async (prisma) => {
+  let academicYear = await prisma.academicYear.findFirst({
+    where: { isActive: true },
+    orderBy: { startDate: 'desc' },
+  });
+
+  if (!academicYear) {
+    const currentYear = new Date().getFullYear();
+    academicYear = await prisma.academicYear.create({
+      data: {
+        name: `${currentYear}-${currentYear + 1}`,
+        startDate: new Date(currentYear, 8, 1), // 1er septembre
+        endDate: new Date(currentYear + 1, 6, 30), // 30 juin
+        isActive: true,
+      },
+    });
+  }
+
+  return academicYear;
+};
+
 

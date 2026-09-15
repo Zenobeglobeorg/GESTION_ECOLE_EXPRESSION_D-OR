@@ -4,11 +4,13 @@ import { AdminLayout } from "../../components/admin/AdminLayout";
 import { ProtectedContent } from "../../components/permissions/ProtectedContent";
 import { useAuth } from "../../hooks/useAuth";
 import { useSocket } from "../../hooks/useSocket";
+import { useMessageCount } from "../../hooks/useMessageCount";
 import * as messageService from "../../services/messageService";
 
 export const Messages = () => {
   const { user } = useAuth();
   const { socket, isConnected } = useSocket();
+  const { refresh: refreshUnreadCount } = useMessageCount();
   const [conversations, setConversations] = useState<messageService.Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<messageService.Conversation | null>(null);
   const [messages, setMessages] = useState<messageService.Message[]>([]);
@@ -144,6 +146,8 @@ export const Messages = () => {
       setError(null);
       const data = await messageService.getMessages(otherUserId);
       setMessages(data);
+      // getMessages marque les messages reçus comme lus côté serveur : synchroniser le badge partout
+      await refreshUnreadCount();
     } catch (err) {
       console.error('Erreur lors du chargement des messages:', err);
       setError(err instanceof Error ? err.message : 'Erreur lors du chargement des messages');

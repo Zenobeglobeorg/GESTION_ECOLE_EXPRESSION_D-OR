@@ -17,7 +17,13 @@ router.post('/associate', requireRole('SUPER_ADMIN', 'ADMINISTRATION'), studentC
 router.post('/import', requireRole('SUPER_ADMIN', 'ADMINISTRATION'), studentController.importStudents);
 router.get('/:id', requireRole('SUPER_ADMIN', 'ADMINISTRATION', 'TEACHER', 'PARENT'), studentController.getStudentById);
 router.put('/:id', requireRole('SUPER_ADMIN', 'ADMINISTRATION'), studentController.updateStudent);
-router.delete('/:id', requireRole('SUPER_ADMIN', 'ADMINISTRATION'), studentController.deleteStudent);
+
+// Archiver : masque l'élève des listes actives, garde tout son historique (notes, présences, paiements)
+router.patch('/:id/archive', requireRole('SUPER_ADMIN', 'ADMINISTRATION'), studentController.archiveStudent);
+router.patch('/:id/unarchive', requireRole('SUPER_ADMIN', 'ADMINISTRATION'), studentController.unarchiveStudent);
+
+// Suppression définitive (irréversible, supprime aussi notes/présences/paiements) - Super-Admin uniquement
+router.delete('/:id', requireRole('SUPER_ADMIN'), studentController.deleteStudent);
 
 export default router;
 

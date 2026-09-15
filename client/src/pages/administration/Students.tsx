@@ -2,26 +2,38 @@ import { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
+import { Modal } from '../../components/ui/Modal';
+import { Input } from '../../components/ui/Input';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { ProtectedContent } from '../../components/permissions/ProtectedContent';
 import * as studentService from '../../services/studentService';
 import * as userService from '../../services/userService';
 import * as classService from '../../services/classService';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useAuth } from '../../hooks/useAuth';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 export const Students = () => {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const [students, setStudents] = useState<studentService.Student[]>([]);
   const [parents, setParents] = useState<userService.UserWithDate[]>([]);
   const [classes, setClasses] = useState<classService.Class[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Vue active/archivés
+  const [viewMode, setViewMode] = useState<'active' | 'archived'>('active');
+
   // Filter and search states
   const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // Suppression définitive (Super-Admin uniquement)
+  const [deleteTarget, setDeleteTarget] = useState<studentService.Student | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   // Associate form
   const [assocStudentId, setAssocStudentId] = useState<number | null>(null);
@@ -35,7 +47,7 @@ export const Students = () => {
       setError(null);
       try {
         const [s, u, c] = await Promise.all([
-          studentService.getStudents(),
+          studentService.getStudents(viewMode === 'archived' ? { archived: 'true' } : undefined),
           userService.getUsers(),
           classService.getClasses(),
         ]);
@@ -50,12 +62,12 @@ export const Students = () => {
       }
     };
     load();
-  }, []);
+  }, [viewMode]);
 
   const refresh = async () => {
     try {
       const [s, c] = await Promise.all([
-        studentService.getStudents(),
+        studentService.getStudents(viewMode === 'archived' ? { archived: 'true' } : undefined),
         classService.getClasses(),
       ]);
       setStudents(s);
@@ -96,15 +108,48 @@ export const Students = () => {
     });
   }, [students, selectedClassId, searchQuery]);
 
-  const handleDelete = async (studentId: number) => {
-    if (!confirm(t('students.confirmArchive') || "Êtes-vous sûr de vouloir archiver cet élève ?")) return;
+  const handleArchive = async (student: studentService.Student) => {
+    if (!confirm(`Archiver ${student.firstName} ${student.lastName} ? Il n'apparaîtra plus dans la liste active, mais tout son historique (notes, présences, paiements) est conservé et il pourra être désarchivé à tout moment.`)) return;
     try {
-      await studentService.deleteStudent(studentId);
-      setStudents((prev) => prev.filter((p) => p.id !== studentId));
-      // Simple feedback
-      alert(t('students.archivedSuccess') || 'Élève archivé avec succès');
+      await studentService.archiveStudent(student.id);
+      setStudents((prev) => prev.filter((s) => s.id !== student.id));
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : (t('students.archiveError') || 'Erreur lors de la suppression'));
+      alert(err instanceof Error ? err.message : 'Erreur lors de l\'archivage');
+    }
+  };
+
+  const handleUnarchive = async (student: studentService.Student) => {
+    try {
+      await studentService.unarchiveStudent(student.id);
+      setStudents((prev) => prev.filter((s) => s.id !== student.id));
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Erreur lors du désarchivage');
+    }
+  };
+
+  const handleOpenDeleteModal = (student: studentService.Student) => {
+    setDeleteTarget(student);
+    setDeleteConfirmText('');
+  };
+
+  const handleCloseDeleteModal = () => {
+    setDeleteTarget(null);
+    setDeleteConfirmText('');
+  };
+
+  const deleteTargetFullName = deleteTarget ? `${deleteTarget.firstName} ${deleteTarget.lastName}` : '';
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget || deleteConfirmText !== deleteTargetFullName) return;
+    try {
+      setDeleting(true);
+      await studentService.deleteStudent(deleteTarget.id);
+      setStudents((prev) => prev.filter((s) => s.id !== deleteTarget.id));
+      handleCloseDeleteModal();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Erreur lors de la suppression');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -180,6 +225,30 @@ export const Students = () => {
         )}
 
       <Card title="Liste des Élèves" className="border-0 shadow-lg">
+        {/* Bascule Actifs / Archivés */}
+        <div className="mb-4 flex gap-2">
+          <Button
+            variant={viewMode === 'active' ? undefined : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('active')}
+            className={viewMode === 'active'
+              ? 'bg-yellow-400 text-blue-900 border-yellow-400'
+              : 'border-blue-300 text-blue-700'}
+          >
+            Actifs
+          </Button>
+          <Button
+            variant={viewMode === 'archived' ? undefined : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('archived')}
+            className={viewMode === 'archived'
+              ? 'bg-yellow-400 text-blue-900 border-yellow-400'
+              : 'border-blue-300 text-blue-700'}
+          >
+            🗄️ Archivés
+          </Button>
+        </div>
+
         {/* Filtres et recherche */}
         <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="flex flex-col gap-2">
@@ -235,8 +304,12 @@ export const Students = () => {
             <div className="py-10 text-center text-blue-700">Chargement...</div>
           ) : students.length === 0 ? (
             <div className="py-12 text-center text-blue-900">
-              <p className="font-semibold">Aucun élève enregistré</p>
-              <p className="text-sm text-blue-700/70 mt-1">Commencez par créer une fiche élève.</p>
+              <p className="font-semibold">
+                {viewMode === 'archived' ? 'Aucun élève archivé' : 'Aucun élève enregistré'}
+              </p>
+              <p className="text-sm text-blue-700/70 mt-1">
+                {viewMode === 'archived' ? 'Les élèves archivés apparaîtront ici.' : 'Commencez par créer une fiche élève.'}
+              </p>
             </div>
           ) : filteredStudents.length === 0 ? (
             <div className="py-12 text-center text-blue-900">
@@ -311,33 +384,69 @@ export const Students = () => {
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="px-3 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-700">
-                          Actif
-                        </span>
+                        {student.isArchived ? (
+                          <span
+                            className="px-3 py-1 text-xs font-semibold rounded-full bg-gray-200 text-gray-700"
+                            title={student.archivedAt ? `Archivé le ${new Date(student.archivedAt).toLocaleDateString('fr-FR')}` : undefined}
+                          >
+                            Archivé
+                          </span>
+                        ) : (
+                          <span className="px-3 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-700">
+                            Actif
+                          </span>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                         <div className="flex items-center justify-end gap-2">
-                          <ProtectedContent permission="students.update">
-                            <Link to={`/admin/students/${student.id}/edit`}>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="border-yellow-400 text-yellow-700 hover:bg-yellow-50 hover:border-yellow-500"
-                              >
-                                Modifier
-                              </Button>
-                            </Link>
-                          </ProtectedContent>
-                          <ProtectedContent permission="students.delete">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
-                              onClick={() => handleDelete(student.id)}
-                            >
-                              Archiver
-                            </Button>
-                          </ProtectedContent>
+                          {viewMode === 'active' ? (
+                            <>
+                              <ProtectedContent permission="students.update">
+                                <Link to={`/admin/students/${student.id}/edit`}>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="border-yellow-400 text-yellow-700 hover:bg-yellow-50 hover:border-yellow-500"
+                                  >
+                                    Modifier
+                                  </Button>
+                                </Link>
+                              </ProtectedContent>
+                              <ProtectedContent permission="students.delete">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="border-gray-300 text-gray-600 hover:bg-gray-50 hover:border-gray-400"
+                                  onClick={() => handleArchive(student)}
+                                >
+                                  🗄️ Archiver
+                                </Button>
+                              </ProtectedContent>
+                            </>
+                          ) : (
+                            <>
+                              <ProtectedContent permission="students.update">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="border-green-400 text-green-700 hover:bg-green-50 hover:border-green-500"
+                                  onClick={() => handleUnarchive(student)}
+                                >
+                                  ↩️ Désarchiver
+                                </Button>
+                              </ProtectedContent>
+                              {user?.role === 'SUPER_ADMIN' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="border-red-400 text-red-700 hover:bg-red-50 hover:border-red-500"
+                                  onClick={() => handleOpenDeleteModal(student)}
+                                >
+                                  Supprimer définitivement
+                                </Button>
+                              )}
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -422,6 +531,48 @@ export const Students = () => {
           </div>
         </form>
       </Card>
+
+      {/* Modal de confirmation de suppression définitive */}
+      <Modal
+        isOpen={!!deleteTarget}
+        onClose={handleCloseDeleteModal}
+        title="Supprimer définitivement l'élève"
+      >
+        {deleteTarget && (
+          <div className="space-y-4">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-800">
+              Vous êtes sur le point de supprimer définitivement <strong>{deleteTargetFullName}</strong>, ainsi que
+              tout son historique (notes, présences, paiements, bulletins). Cette action est irréversible et
+              différente de l'archivage.
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Pour confirmer, tapez <strong>{deleteTargetFullName}</strong> ci-dessous :
+              </label>
+              <Input
+                type="text"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder={deleteTargetFullName}
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-2">
+              <Button type="button" variant="outline" onClick={handleCloseDeleteModal} className="border-blue-300 text-blue-700 hover:bg-blue-50">
+                Annuler
+              </Button>
+              <Button
+                type="button"
+                isLoading={deleting}
+                disabled={deleteConfirmText !== deleteTargetFullName}
+                onClick={handleConfirmDelete}
+                className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-40"
+              >
+                {deleting ? 'Suppression...' : 'Supprimer définitivement'}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
       </ProtectedContent>
     </AdminLayout>
   );

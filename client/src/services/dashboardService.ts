@@ -16,6 +16,7 @@ export interface AdminStats {
     count: number;
     amount: number;
   };
+  pendingGrades: number;
 }
 
 export interface SuperAdminStats {

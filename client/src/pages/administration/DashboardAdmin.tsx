@@ -11,6 +11,7 @@ export const DashboardAdmin = () => {
     classes: 0,
     teachers: 0,
     pendingPayments: { count: 0, amount: 0 },
+    pendingGrades: 0,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -132,21 +133,48 @@ export const DashboardAdmin = () => {
         </div>
       </Card>
 
-      <Card
-        title="Informations Importantes"
-        className="border-0 shadow-lg"
-        headerActions={<div className="px-3 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">À traiter</div>}
-      >
-        <div className="space-y-3">
-          <div className="flex items-start gap-3 p-3 bg-yellow-50 rounded-lg">
-            <span className="text-yellow-600 text-xl">⚠️</span>
-            <div>
-              <p className="text-sm font-medium text-gray-900">Notes en attente de validation</p>
-              <p className="text-xs text-gray-600">Des notes ont été saisies et nécessitent votre validation</p>
-            </div>
+      {!loading && (
+        <Card
+          title="Informations Importantes"
+          className="border-0 shadow-lg"
+          headerActions={
+            stats.pendingGrades > 0 ? (
+              <div className="px-3 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">À traiter</div>
+            ) : (
+              <div className="px-3 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">À jour</div>
+            )
+          }
+        >
+          <div className="space-y-3">
+            {stats.pendingGrades > 0 ? (
+              <Link
+                to="/admin/grades"
+                className="flex items-start gap-3 p-3 bg-yellow-50 rounded-lg hover:bg-yellow-100 transition-colors"
+              >
+                <span className="text-yellow-600 text-xl">⚠️</span>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">
+                    {stats.pendingGrades} note{stats.pendingGrades > 1 ? 's' : ''} en attente de validation
+                  </p>
+                  <p className="text-xs text-gray-600">
+                    {stats.pendingGrades > 1
+                      ? 'Des notes ont été saisies et nécessitent votre validation'
+                      : 'Une note a été saisie et nécessite votre validation'}
+                  </p>
+                </div>
+              </Link>
+            ) : (
+              <div className="flex items-start gap-3 p-3 bg-green-50 rounded-lg">
+                <span className="text-green-600 text-xl">✅</span>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Aucune note en attente de validation</p>
+                  <p className="text-xs text-gray-600">Toutes les notes saisies ont été traitées</p>
+                </div>
+              </div>
+            )}
           </div>
-        </div>
-      </Card>
+        </Card>
+      )}
       </ProtectedContent>
     </AdminLayout>
   );

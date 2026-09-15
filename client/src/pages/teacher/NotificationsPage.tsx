@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { TeacherLayout } from '../../components/teacher/TeacherLayout';
 import * as notificationService from '../../services/notificationService';
 import { useSocket } from '../../hooks/useSocket';
+import { useNotificationCount } from '../../hooks/useNotificationCount';
 
 // Icônes pour chaque type
 const notificationIcons: { [key: string]: string } = {
@@ -31,6 +32,7 @@ const formatTime = (dateString: string) => {
 
 const NotificationsPage: React.FC = () => {
   const { socket } = useSocket();
+  const { refresh: refreshUnreadCount } = useNotificationCount();
   const [notifications, setNotifications] = useState<notificationService.Notification[]>([]);
   const [activeTab, setActiveTab] = useState<'all' | 'unread'>('all');
   const [loading, setLoading] = useState(true);
@@ -89,6 +91,7 @@ const NotificationsPage: React.FC = () => {
     try {
       await notificationService.markAllAsRead();
       await loadNotifications();
+      await refreshUnreadCount();
     } catch (err) {
       console.error('Erreur lors de la mise à jour:', err);
       setError(err instanceof Error ? err.message : 'Erreur lors de la mise à jour');
@@ -100,6 +103,7 @@ const NotificationsPage: React.FC = () => {
     try {
       await notificationService.markAsRead(notificationId);
       await loadNotifications();
+      await refreshUnreadCount();
     } catch (err) {
       console.error('Erreur lors de la mise à jour:', err);
     }

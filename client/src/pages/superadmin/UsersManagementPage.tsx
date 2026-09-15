@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
 import type { UserRole } from '../../contexts/AuthContext';
+import { isValidPassword } from '../../utils/validators';
 import * as userService from '../../services/userService';
 import type { UserWithDate } from '../../services/userService';
 import * as studentService from '../../services/studentService';
@@ -123,8 +124,12 @@ export const UsersManagementPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    if (!isValidPassword(formData.password)) {
+      setError('Le mot de passe doit contenir au moins 8 caractères, une majuscule et un chiffre.');
+      return;
+    }
     try {
-      setError(null);
       await userService.createUser(formData);
       setIsCreateModalOpen(false);
       setFormData({

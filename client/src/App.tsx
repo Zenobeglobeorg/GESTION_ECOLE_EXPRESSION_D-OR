@@ -1,5 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { PermissionsProvider } from './contexts/PermissionsContext';
+import { NotificationCountProvider } from './contexts/NotificationCountContext';
+import { MessageCountProvider } from './contexts/MessageCountContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { AdminThemeProvider } from './contexts/AdminThemeContext';
@@ -102,6 +105,9 @@ const DashboardRoute = () => {
 function App() {
   return (
     <AuthProvider>
+      <PermissionsProvider>
+      <NotificationCountProvider>
+      <MessageCountProvider>
       <ThemeProvider>
         <LanguageProvider>
           <AdminThemeProvider>
@@ -375,6 +381,9 @@ function App() {
           </AdminThemeProvider>
         </LanguageProvider>
       </ThemeProvider>
+      </MessageCountProvider>
+      </NotificationCountProvider>
+      </PermissionsProvider>
     </AuthProvider>
   );
 }
